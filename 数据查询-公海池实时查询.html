@@ -504,6 +504,60 @@
             margin-bottom: 15px;
         }
         
+        /* ========== 员工管理表格列宽 ========== */
+        #employeeTable th:nth-child(1),
+        #employeeTable td:nth-child(1) {
+            min-width: 30px; /* 序号 */
+        }
+        #employeeTable th:nth-child(2),
+        #employeeTable td:nth-child(2) {
+            min-width: 60px; /* 员工ID */
+        }
+        #employeeTable th:nth-child(3),
+        #employeeTable td:nth-child(3) {
+            min-width: 90px; /* 员工empID */
+        }
+        #employeeTable th:nth-child(4),
+        #employeeTable td:nth-child(4) {
+            min-width: 60px; /* 员工姓名 */
+        }
+        #employeeTable th:nth-child(5),
+        #employeeTable td:nth-child(5) {
+            min-width: 50px; /* 在职状态 */
+        }
+        #employeeTable th:nth-child(6),
+        #employeeTable td:nth-child(6) {
+            min-width: 50px; /* 账号状态 */
+        }
+        #employeeTable th:nth-child(7),
+        #employeeTable td:nth-child(7) {
+            min-width: 100px; /* 创建日期 */
+        }
+        #employeeTable th:nth-child(8),
+        #employeeTable td:nth-child(8) {
+            min-width: 80px; /* 操作 */
+        }
+        
+        /* 员工管理表单 - 桌面端 */
+        #employeeManagement .form-group.inline select,
+        #employeeManagement .form-group.inline input {
+            width: 130px;
+            box-sizing: border-box;
+        }
+        
+        /* 员工编辑模态框样式 */
+        #employeeEditModal label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+        #employeeEditModal input[type="text"],
+        #employeeEditModal select {
+            margin-bottom: 0;
+        }
+        
         /* ========== 响应式样式 - 手机适配 ========== */
         @media screen and (max-width: 768px) {
             body {
@@ -920,6 +974,107 @@
                 width: 100%;
                 margin-top: 10px;
             }
+            
+            /* 员工管理表格移动端 */
+            #employeeTable {
+                min-width: 400px;
+                font-size: 12px;
+            }
+            #employeeTable th,
+            #employeeTable td {
+                padding: 4px 4px;
+                font-size: 12px;
+            }
+            #employeeTable th:nth-child(1),
+            #employeeTable td:nth-child(1) {
+                min-width: 20px;
+            }
+            #employeeTable th:nth-child(2),
+            #employeeTable td:nth-child(2) {
+                min-width: 50px;
+            }
+            #employeeTable th:nth-child(3),
+            #employeeTable td:nth-child(3) {
+                min-width: 70px;
+            }
+            #employeeTable th:nth-child(4),
+            #employeeTable td:nth-child(4) {
+                min-width: 50px;
+            }
+            #employeeTable th:nth-child(5),
+            #employeeTable td:nth-child(5) {
+                min-width: 40px;
+            }
+            #employeeTable th:nth-child(6),
+            #employeeTable td:nth-child(6) {
+                min-width: 40px;
+            }
+            #employeeTable th:nth-child(7),
+            #employeeTable td:nth-child(7) {
+                min-width: 85px;
+            }
+            #employeeTable th:nth-child(8),
+            #employeeTable td:nth-child(8) {
+                min-width: 70px;
+            }
+            
+            /* 员工管理按钮移动端 */
+            .edit-employee-btn,
+            .toggle-status-btn,
+            .reset-pwd-btn {
+                padding: 3px 8px;
+                font-size: 12px;
+                width: 100%;
+            }
+            
+            /* 员工编辑模态框移动端 */
+            #employeeEditModal > div {
+                margin: 2% auto;
+                padding: 15px;
+                width: 95%;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            #employeeEditModal h2 {
+                font-size: 18px;
+            }
+            #editPermissionList label {
+                font-size: 12px;
+            }
+            
+            /* 员工管理筛选条件移动端 - 一行多列紧凑布局 */
+            #employeeManagement .date-conditions {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                align-items: flex-start !important;
+            }
+            #employeeManagement .form-group.inline {
+                width: calc(50% - 3px) !important;
+                min-width: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            #employeeManagement .form-group.inline select,
+            #employeeManagement .form-group.inline input {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                padding: 5px 4px !important;
+                font-size: 13px !important;
+            }
+            #employeeManagement .form-group.inline label {
+                font-size: 12px !important;
+                margin-bottom: 1px !important;
+                display: block !important;
+            }
+            #employeeManagement .date-conditions > div:last-child {
+                width: 100% !important;
+                justify-content: flex-end !important;
+            }
+            #employeeManagement #queryEmployeeBtn,
+            #employeeManagement #exportEmployeeBtn {
+                padding: 6px 14px !important;
+                font-size: 13px !important;
+            }
         }
         
         /* ========== 下拉菜单样式（移动端） ========== */
@@ -1217,6 +1372,7 @@
                     <option value="specialHold">保有量配置</option>
                     <option value="accountBinding">跟进账号绑定</option>
                     <option value="rechargeOrder">充值订单明细</option>
+                    <option value="employeeManagement">员工管理</option>
                 </select>
             </div>
             <!-- 桌面端按钮 -->
@@ -1227,6 +1383,7 @@
                 <button class="tab-button" data-tab="specialHold">保有量配置</button>
                 <button class="tab-button" data-tab="accountBinding">跟进账号绑定</button>
                 <button class="tab-button" data-tab="rechargeOrder">充值订单明细</button>
+                <button class="tab-button" data-tab="employeeManagement">员工管理</button>
             </div>
             
             <!-- 登录Tab -->
@@ -1961,6 +2118,135 @@
         </div>
         
         <div id="rechargeOrderStatus" style="margin-top: 20px;"></div>
+    </div>
+    
+    <!-- 员工管理Tab -->
+    <div id="employeeManagement" class="tab-content">
+        <h2>员工管理</h2>
+        
+        <!-- 筛选条件 -->
+        <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div class="form-group inline">
+                <label for="empJobStatus">在职状态:</label>
+                <select id="empJobStatus" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">全部</option>
+                    <option value="0">在职</option>
+                    <option value="1">离职</option>
+                </select>
+            </div>
+            
+            <div class="form-group inline">
+                <label for="empStaffUserInfo">员工ID:</label>
+                <input type="text" id="empStaffUserInfo" placeholder="如 empxgs819" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div class="form-group inline">
+                <label for="empStaffType">类型:</label>
+                <select id="empStaffType" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">全部</option>
+                    <option value="1">课程顾问</option>
+                </select>
+            </div>
+            
+            <div class="form-group inline">
+                <label for="empConfigCertificate">证书配置:</label>
+                <select id="empConfigCertificate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">全部</option>
+                    <option value="1">已配置</option>
+                    <option value="2">未配置</option>
+                </select>
+            </div>
+            
+            <div class="form-group inline">
+                <label for="empStatus">账号状态:</label>
+                <select id="empStatus" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">全部</option>
+                    <option value="0">正常</option>
+                    <option value="1">禁用</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="queryEmployeeBtn" style="padding: 8px 20px; width: auto;">查询</button>
+                <button type="button" id="exportEmployeeBtn" style="padding: 8px 20px; width: auto; display: none;">导出</button>
+            </div>
+        </div>
+        
+        <!-- 查询结果 -->
+        <div id="employeeResult" style="margin-top: 20px; display: none;">
+            <div id="employeeStatus" style="margin-bottom: 15px;"></div>
+            <div class="table-container">
+                <table id="employeeTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>员工ID</th>
+                            <th>员工empID</th>
+                            <th>员工姓名</th>
+                            <th>在职状态</th>
+                            <th>账号状态</th>
+                            <th>创建日期</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="employeeStatusMsg" style="margin-top: 20px;"></div>
+    </div>
+    
+    <!-- 员工编辑模态框 -->
+    <div id="employeeEditModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+        <div style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>编辑员工信息</h2>
+                <button id="closeEmployeeEditModal" style="font-size: 20px; font-weight: bold; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div id="employeeEditLoading" style="text-align: center; padding: 30px; color: #666;">加载中...</div>
+            
+            <div id="employeeEditForm" style="display: none;">
+                <div style="margin-bottom: 15px;">
+                    <label>帐号:</label>
+                    <input type="text" id="editTalkId" disabled style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>*员工类型:</label>
+                    <select id="editStaffType" disabled style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;">
+                        <option value="">全部</option>
+                        <option value="1">课程顾问</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>*姓名:</label>
+                    <input type="text" id="editUserName" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>QQ:</label>
+                    <input type="text" id="editQq" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>*手机:</label>
+                    <input type="text" id="editLeval" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>权限:</label>
+                    <div id="editPermissionList" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;"></div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="cancelEmployeeEdit" style="padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">取消</button>
+                    <button id="submitEmployeeEdit" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">编辑</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- 导入模态框 -->
@@ -7690,6 +7976,448 @@
         
         // 绑定充值订单导出按钮事件
         document.getElementById('exportRechargeOrderBtn').addEventListener('click', exportRechargeOrderToExcel);
+        
+        // ========== 员工管理功能 ==========
+        
+        let employeeData = [];
+        
+        // 查询员工数据
+        async function queryEmployees() {
+            const token = localStorage.getItem('talk915_token');
+            const statusMsg = document.getElementById('employeeStatusMsg');
+            const empStatus = document.getElementById('employeeStatus');
+            const empResult = document.getElementById('employeeResult');
+            const queryBtn = document.getElementById('queryEmployeeBtn');
+            
+            if (!token) {
+                statusMsg.innerHTML = '<div class="error-message">请先登录</div>';
+                return;
+            }
+            
+            const jobStatus = document.getElementById('empJobStatus').value;
+            const staffUserInfo = document.getElementById('empStaffUserInfo').value.trim();
+            const staffType = document.getElementById('empStaffType').value;
+            const configCertificate = document.getElementById('empConfigCertificate').value;
+            const status = document.getElementById('empStatus').value;
+            
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
+            empStatus.innerHTML = '<div class="success-message">正在查询员工数据...</div>';
+            empResult.style.display = 'none';
+            
+            try {
+                const payload = {
+                    "jobStatus": jobStatus,
+                    "staffUserInfo": staffUserInfo,
+                    "staffType": staffType ? parseInt(staffType) : '',
+                    "configCertificate": configCertificate,
+                    "status": status,
+                    "currPage": 0,
+                    "pageSize": 10000
+                };
+                
+                const response = await fetch('https://www.talk915.com/users/adminStaff/queryStaff', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/userManagement/staff/staffManage',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.resultCode === 0) {
+                    employeeData = data.resultData || [];
+                    const totalCount = data.totalCount || 0;
+                    
+                    empStatus.innerHTML = `<div class="success-message">查询成功！共${totalCount}条记录</div>`;
+                    
+                    renderEmployeeTable(employeeData);
+                    empResult.style.display = 'block';
+                    document.getElementById('exportEmployeeBtn').style.display = 'inline-block';
+                } else {
+                    empStatus.innerHTML = `<div class="error-message">查询失败：${data.resultMessage || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                console.error('查询员工数据错误:', error);
+                empStatus.innerHTML = `<div class="error-message">请求失败: ${error.message}</div>`;
+            } finally {
+                queryBtn.disabled = false;
+                queryBtn.textContent = '查询';
+            }
+        }
+        
+        // 渲染员工表格
+        function renderEmployeeTable(data) {
+            const tbody = document.querySelector('#employeeTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach((item, index) => {
+                const row = document.createElement('tr');
+                
+                const jobStatusText = item.jobStatus === 0 ? '在职' : (item.jobStatus === 1 ? '离职' : '-');
+                const statusText = item.status === 0 ? '正常' : (item.status === 1 ? '禁用' : '-');
+                const statusBtnText = item.status === 0 ? '禁用' : '恢复';
+                const statusBtnColor = item.status === 0 ? '#dc3545' : '#28a745';
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.userId || '-'}</td>
+                    <td>${item.talkId || '-'}</td>
+                    <td>${item.userName || '-'}</td>
+                    <td>${jobStatusText}</td>
+                    <td>${statusText}</td>
+                    <td>${item.createTime || '-'}</td>
+                    <td style="display: flex; flex-direction: column; gap: 3px;">
+                        <button class="edit-employee-btn" data-userid="${item.userId}" style="padding: 4px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">编辑</button>
+                        <button class="toggle-status-btn" data-userid="${item.userId}" data-status="${item.status}" style="padding: 4px 10px; background-color: ${statusBtnColor}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">${statusBtnText}</button>
+                        <button class="reset-pwd-btn" data-userid="${item.userId}" style="padding: 4px 10px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">重置密码</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 绑定编辑按钮事件
+            tbody.querySelectorAll('.edit-employee-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    openEmployeeEditModal(userId);
+                });
+            });
+            
+            // 绑定状态切换按钮事件
+            tbody.querySelectorAll('.toggle-status-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    const currentStatus = parseInt(this.getAttribute('data-status'));
+                    toggleEmployeeStatus(userId, currentStatus);
+                });
+            });
+            
+            // 绑定重置密码按钮事件
+            tbody.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    resetEmployeePassword(userId);
+                });
+            });
+        }
+        
+        // 员工编辑相关
+        let permissionListCache = [];
+        let currentEditEmployee = null;
+        
+        async function openEmployeeEditModal(userId) {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            const modal = document.getElementById('employeeEditModal');
+            const loading = document.getElementById('employeeEditLoading');
+            const form = document.getElementById('employeeEditForm');
+            
+            modal.style.display = 'block';
+            loading.style.display = 'block';
+            form.style.display = 'none';
+            
+            try {
+                // 第一步：获取权限列表
+                if (permissionListCache.length === 0) {
+                    const permResponse = await fetch('https://www.talk915.com/users/adminStaff/staffAllPermission', {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json, text/plain, */*',
+                            'token': token
+                        },
+                        credentials: 'include'
+                    });
+                    const permData = await permResponse.json();
+                    if (permData.resultCode === 0) {
+                        permissionListCache = permData.resultData || [];
+                    }
+                }
+                
+                // 第二步：获取员工详情
+                const infoResponse = await fetch(`https://www.talk915.com/users/adminStaff/viewStaffInfo/${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'token': token
+                    },
+                    credentials: 'include'
+                });
+                const infoData = await infoResponse.json();
+                
+                if (infoData.resultCode === 0) {
+                    const info = infoData.resultData;
+                    currentEditEmployee = info;
+                    
+                    // 填充表单
+                    document.getElementById('editTalkId').value = info.talkId || '';
+                    document.getElementById('editStaffType').value = info.staffType || '';
+                    document.getElementById('editUserName').value = info.userName || '';
+                    document.getElementById('editQq').value = info.qq || '';
+                    document.getElementById('editLeval').value = info.leval || '';
+                    
+                    // 生成权限checkbox列表
+                    const permissionContainer = document.getElementById('editPermissionList');
+                    permissionContainer.innerHTML = '';
+                    const userPermissions = info.permissionValues || [];
+                    
+                    permissionListCache.forEach(perm => {
+                        const label = document.createElement('label');
+                        label.style.cssText = 'display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; margin: 0;';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = perm.permissionValue;
+                        checkbox.checked = userPermissions.includes(perm.permissionValue);
+                        checkbox.style.margin = '0';
+                        
+                        const text = document.createTextNode(perm.permissionName);
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(text);
+                        permissionContainer.appendChild(label);
+                    });
+                    
+                    loading.style.display = 'none';
+                    form.style.display = 'block';
+                } else {
+                    loading.innerHTML = `<div style="color: #dc3545;">加载失败：${infoData.resultMessage || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                console.error('加载员工详情错误:', error);
+                loading.innerHTML = `<div style="color: #dc3545;">请求失败: ${error.message}</div>`;
+            }
+        }
+        
+        // 提交编辑
+        async function submitEmployeeEdit() {
+            const token = localStorage.getItem('talk915_token');
+            if (!token || !currentEditEmployee) {
+                alert('请先登录并选择员工');
+                return;
+            }
+            
+            const userName = document.getElementById('editUserName').value.trim();
+            const leval = document.getElementById('editLeval').value.trim();
+            const qq = document.getElementById('editQq').value.trim();
+            
+            if (!userName) {
+                alert('请输入姓名');
+                return;
+            }
+            if (!leval) {
+                alert('请输入手机');
+                return;
+            }
+            
+            // 收集选中的权限
+            const checkedBoxes = document.querySelectorAll('#editPermissionList input[type="checkbox"]:checked');
+            const permissionValues = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            const payload = {
+                "permissionValues": permissionValues,
+                "userId": currentEditEmployee.userId,
+                "talkId": document.getElementById('editTalkId').value,
+                "staffType": currentEditEmployee.staffType,
+                "userName": userName,
+                "qq": qq,
+                "leval": leval
+            };
+            
+            const submitBtn = document.getElementById('submitEmployeeEdit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
+            
+            try {
+                const response = await fetch('https://www.talk915.com/users/adminStaff/updateStaff', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': `https://www.talk915.com/admin/userManagement/staff/staffEdit/${currentEditEmployee.userId}`,
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.resultCode === 0) {
+                    alert('编辑成功！');
+                    closeEmployeeEditModal();
+                    // 重新查询员工数据
+                    queryEmployees();
+                } else {
+                    alert('编辑失败：' + (data.resultMessage || '未知错误'));
+                }
+            } catch (error) {
+                console.error('编辑员工错误:', error);
+                alert('请求失败: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '编辑';
+            }
+        }
+        
+        function closeEmployeeEditModal() {
+            document.getElementById('employeeEditModal').style.display = 'none';
+            document.getElementById('employeeEditForm').style.display = 'none';
+            document.getElementById('employeeEditLoading').style.display = 'block';
+            currentEditEmployee = null;
+        }
+        
+        // 切换员工状态
+        async function toggleEmployeeStatus(userId, currentStatus) {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            const newStatus = currentStatus === 0 ? 1 : 0;
+            const statusText = newStatus === 0 ? '恢复为正常' : '禁用';
+            
+            if (!confirm(`确定要${statusText}该员工吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('https://www.talk915.com/users/adminStaff/updateStaffStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/userManagement/staff/staffManage',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify({
+                        "userId": userId,
+                        "status": newStatus
+                    }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.resultCode === 0) {
+                    alert(statusText + '成功！');
+                    queryEmployees();
+                } else {
+                    alert('操作失败：' + (data.resultMessage || '未知错误'));
+                }
+            } catch (error) {
+                console.error('切换员工状态错误:', error);
+                alert('请求失败: ' + error.message);
+            }
+        }
+        
+        // 重置员工密码
+        async function resetEmployeePassword(userId) {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            if (!confirm('确定要重置该员工的密码吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://www.talk915.com/users/adminStaff/updateUserPassword/${userId}/3`, {
+                    method: 'PUT',
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/userManagement/staff/staffManage',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.resultCode === 0) {
+                    const newPassword = data.resultData;
+                    alert('密码重置成功！新密码：' + newPassword);
+                } else {
+                    alert('重置失败：' + (data.resultMessage || '未知错误'));
+                }
+            } catch (error) {
+                console.error('重置密码错误:', error);
+                alert('请求失败: ' + error.message);
+            }
+        }
+        
+        // 导出员工数据
+        function exportEmployeeToExcel() {
+            if (!employeeData || employeeData.length === 0) {
+                alert('没有可导出的数据');
+                return;
+            }
+            
+            const headers = ['序号', '员工ID', '员工empID', '员工姓名', '在职状态', '账号状态', '创建日期'];
+            const rows = employeeData.map((item, index) => [
+                index + 1,
+                item.userId || '',
+                item.talkId || '',
+                item.userName || '',
+                item.jobStatus === 0 ? '在职' : (item.jobStatus === 1 ? '离职' : ''),
+                item.status === 0 ? '正常' : (item.status === 1 ? '禁用' : ''),
+                item.createTime || ''
+            ]);
+            
+            const csvContent = [headers, ...rows]
+                .map(row => row.map(cell => `"${cell}"`).join(','))
+                .join('\n');
+            
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.href = URL.createObjectURL(blob);
+            link.download = `员工列表_${dateStr}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        // 绑定员工管理按钮事件
+        document.getElementById('queryEmployeeBtn').addEventListener('click', queryEmployees);
+        document.getElementById('exportEmployeeBtn').addEventListener('click', exportEmployeeToExcel);
+        
+        // 员工编辑模态框事件
+        document.getElementById('closeEmployeeEditModal').addEventListener('click', closeEmployeeEditModal);
+        document.getElementById('cancelEmployeeEdit').addEventListener('click', closeEmployeeEditModal);
+        document.getElementById('submitEmployeeEdit').addEventListener('click', submitEmployeeEdit);
         
     </script>
 </body>
