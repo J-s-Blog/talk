@@ -158,6 +158,18 @@
             display: inline-block;
         }
         
+        table {
+            width: auto !important;
+        }
+        th {
+            white-space: normal !important;
+            padding: 3px 6px !important;
+        }
+        td {
+            padding: 3px 6px !important;
+            white-space: nowrap !important;
+        }
+        
         /* 定时任务样式 */
         .scheduled-task-container {
             max-width: 1200px;
@@ -524,10 +536,17 @@
             /* 表格字体和间距调整 */
             table {
                 font-size: 12px;
+                width: auto !important;
+                min-width: 400px;
             }
             table th,
             table td {
-                padding: 4px 6px !important;
+                padding: 3px 6px !important;
+            }
+            table th {
+                white-space: normal !important;
+            }
+            table td {
                 white-space: nowrap;
             }
             

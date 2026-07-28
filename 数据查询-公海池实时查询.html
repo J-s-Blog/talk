@@ -132,72 +132,76 @@
         
         .data-table {
             width: auto;
-            min-width: 1500px;
+            min-width: auto;
             border-collapse: collapse;
             margin-top: 10px;
         }
         
         /* 推荐码汇总表 */
         #courseSummaryTable {
-            min-width: 500px;
+            min-width: auto;
         }
         
         /* 推荐码汇总表列宽度 */
         #courseSummaryTable th:nth-child(1),
         #courseSummaryTable td:nth-child(1) {
-            min-width: 80px; /* 序号 */
+            min-width: 40px; /* 序号 */
         }
         
         #courseSummaryTable th:nth-child(2),
         #courseSummaryTable td:nth-child(2) {
-            min-width: 200px; /* 推荐码 */
+            min-width: 100px; /* 推荐码 */
         }
         
         #courseSummaryTable th:nth-child(3),
         #courseSummaryTable td:nth-child(3) {
-            min-width: 120px; /* 公海池用户数 */
+            min-width: 60px; /* 公海池用户数 */
             text-align: right;
         }
         
         .data-table th,
         .data-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 3px 6px;
             text-align: left;
             white-space: nowrap;
+        }
+        
+        .data-table th {
+            white-space: normal;
         }
         
         /* 为特定列设置宽度 */
         .data-table th:nth-child(2),
         .data-table td:nth-child(2) {
-            min-width: 100px; /* 顾问姓名 */
+            min-width: 40px; /* 顾问姓名 */
         }
         
         .data-table th:nth-child(7),
         .data-table td:nth-child(7) {
-            min-width: 180px; /* 注册时间 */
+            min-width: 70px; /* 注册时间 */
         }
         
         .data-table th:nth-child(8),
         .data-table td:nth-child(8) {
-            min-width: 180px; /* 被领取时间 */
+            min-width: 70px; /* 被领取时间 */
         }
         
         .data-table th:nth-child(9),
         .data-table td:nth-child(9) {
-            min-width: 100px; /* 领取时间差 */
+            min-width: 35px; /* 领取时间差 */
             text-align: right;
         }
         
         .data-table th:nth-child(10),
         .data-table td:nth-child(10) {
-            min-width: 100px; /* 跟进时间差 */
+            min-width: 35px; /* 跟进时间差 */
             text-align: right;
         }
         
         .data-table th:nth-child(13),
         .data-table td:nth-child(13) {
-            min-width: 300px; /* 跟进记录 */
+            min-width: 150px; /* 跟进记录 */
         }
         
         /* 关键字管理区域样式 */
@@ -299,6 +303,7 @@
         .data-table th {
             background-color: #f2f2f2;
             font-weight: bold;
+            white-space: normal;
         }
         
         .data-table tr:nth-child(even) {
@@ -631,7 +636,7 @@
             
             /* 数据表格样式优化 */
             .data-table {
-                min-width: 1000px;
+                min-width: 500px;
                 font-size: 12px;
             }
             
@@ -642,180 +647,188 @@
                 white-space: nowrap;
             }
             
+            .data-table th {
+                white-space: normal;
+            }
+            
+            .data-table td {
+                white-space: nowrap;
+            }
+            
             /* 推荐码汇总表 */
             #courseSummaryTable {
-                min-width: 350px;
+                min-width: 175px;
             }
             
             /* 表格列宽优化 - 移动端减小列宽 */
             .data-table th:nth-child(1),
             .data-table td:nth-child(1) {
-                min-width: 40px; /* 序号 */
+                min-width: 20px; /* 序号 */
             }
             
             .data-table th:nth-child(2),
             .data-table td:nth-child(2) {
-                min-width: 70px; /* 顾问姓名 */
+                min-width: 30px; /* 顾问姓名 */
             }
             
             .data-table th:nth-child(3),
             .data-table td:nth-child(3) {
-                min-width: 70px; /* 顾问empID */
+                min-width: 35px; /* 顾问empID */
             }
             
             .data-table th:nth-child(4),
             .data-table td:nth-child(4) {
-                min-width: 80px; /* 推荐码 */
+                min-width: 40px; /* 推荐码 */
             }
             
             .data-table th:nth-child(5),
             .data-table td:nth-child(5) {
-                min-width: 70px; /* 所属业务员 */
+                min-width: 35px; /* 所属业务员 */
             }
             
             .data-table th:nth-child(6),
             .data-table td:nth-child(6) {
-                min-width: 70px; /* 用户ID */
+                min-width: 35px; /* 用户ID */
             }
             
             .data-table th:nth-child(7),
             .data-table td:nth-child(7) {
-                min-width: 130px; /* 注册时间 */
+                min-width: 50px; /* 注册时间 */
             }
             
             .data-table th:nth-child(8),
             .data-table td:nth-child(8) {
-                min-width: 130px; /* 被领取时间 */
+                min-width: 50px; /* 被领取时间 */
             }
             
             .data-table th:nth-child(9),
             .data-table td:nth-child(9) {
-                min-width: 80px; /* 领取时间差 */
+                min-width: 25px; /* 领取时间差 */
             }
             
             .data-table th:nth-child(10),
             .data-table td:nth-child(10) {
-                min-width: 80px; /* 跟进时间差 */
+                min-width: 25px; /* 跟进时间差 */
             }
             
             .data-table th:nth-child(11),
             .data-table td:nth-child(11) {
-                min-width: 50px; /* 总课时 */
+                min-width: 25px; /* 总课时 */
             }
             
             .data-table th:nth-child(12),
             .data-table td:nth-child(12) {
-                min-width: 60px; /* 剩余课时 */
+                min-width: 30px; /* 剩余课时 */
             }
             
             .data-table th:nth-child(13),
             .data-table td:nth-child(13) {
-                min-width: 200px; /* 跟进记录 */
+                min-width: 100px; /* 跟进记录 */
             }
             
             /* 顾问汇总表 - 移动端列宽 */
             #staffSummaryTable {
-                min-width: 900px;
+                min-width: 450px;
             }
             
             #staffSummaryTable th:nth-child(1),
             #staffSummaryTable td:nth-child(1) {
-                min-width: 40px; /* 序号 */
+                min-width: 20px; /* 序号 */
             }
             
             #staffSummaryTable th:nth-child(2),
             #staffSummaryTable td:nth-child(2) {
-                min-width: 70px; /* 顾问姓名 */
+                min-width: 35px; /* 顾问姓名 */
             }
             
             #staffSummaryTable th:nth-child(3),
             #staffSummaryTable td:nth-child(3) {
-                min-width: 70px; /* 顾问empID */
+                min-width: 35px; /* 顾问empID */
             }
             
             #staffSummaryTable th:nth-child(4),
             #staffSummaryTable td:nth-child(4) {
-                min-width: 60px; /* 单日领取上限 */
+                min-width: 30px; /* 单日领取上限 */
             }
             
             #staffSummaryTable th:nth-child(5),
             #staffSummaryTable td:nth-child(5) {
-                min-width: 60px; /* 当日实际领取 */
+                min-width: 30px; /* 当日实际领取 */
             }
             
             #staffSummaryTable th:nth-child(6),
             #staffSummaryTable td:nth-child(6) {
-                min-width: 50px; /* 注销用户数 */
+                min-width: 25px; /* 注销用户数 */
             }
             
             #staffSummaryTable th:nth-child(7),
             #staffSummaryTable td:nth-child(7) {
-                min-width: 60px; /* 公海池用户数 */
+                min-width: 30px; /* 公海池用户数 */
             }
             
             #staffSummaryTable th:nth-child(8),
             #staffSummaryTable td:nth-child(8) {
-                min-width: 80px; /* 领取时间差 */
+                min-width: 40px; /* 领取时间差 */
             }
             
             #staffSummaryTable th:nth-child(9),
             #staffSummaryTable td:nth-child(9) {
-                min-width: 80px; /* 跟进时间差 */
+                min-width: 40px; /* 跟进时间差 */
             }
             
             #staffSummaryTable th:nth-child(10),
             #staffSummaryTable td:nth-child(10) {
-                min-width: 60px; /* 未跟进用户数 */
+                min-width: 30px; /* 未跟进用户数 */
             }
             
             /* 注销用户列表 - 移动端列宽 */
             #canceledUsersTable {
-                min-width: 400px;
+                min-width: 200px;
             }
             
             #canceledUsersTable th:nth-child(1),
             #canceledUsersTable td:nth-child(1) {
-                min-width: 40px; /* 序号 */
+                min-width: 20px; /* 序号 */
             }
             
             #canceledUsersTable th:nth-child(2),
             #canceledUsersTable td:nth-child(2) {
-                min-width: 70px; /* 顾问姓名 */
+                min-width: 35px; /* 顾问姓名 */
             }
             
             #canceledUsersTable th:nth-child(3),
             #canceledUsersTable td:nth-child(3) {
-                min-width: 70px; /* 顾问empID */
+                min-width: 35px; /* 顾问empID */
             }
             
             #canceledUsersTable th:nth-child(4),
             #canceledUsersTable td:nth-child(4) {
-                min-width: 80px; /* 推荐码 */
+                min-width: 40px; /* 推荐码 */
             }
             
             #canceledUsersTable th:nth-child(5),
             #canceledUsersTable td:nth-child(5) {
-                min-width: 70px; /* 用户ID */
+                min-width: 35px; /* 用户ID */
             }
             
             /* 待分配用户列表 - 移动端列宽 */
             #unallocatedTable {
-                min-width: 400px;
+                min-width: 200px;
             }
             
             #unallocatedTable th:nth-child(1),
             #unallocatedTable td:nth-child(1) {
-                min-width: 40px; /* 序号 */
+                min-width: 20px; /* 序号 */
             }
             
             #unallocatedTable th:nth-child(2),
             #unallocatedTable td:nth-child(2) {
-                min-width: 70px; /* 用户ID */
+                min-width: 35px; /* 用户ID */
             }
             
             #unallocatedTable th:nth-child(3),
             #unallocatedTable td:nth-child(3) {
-                min-width: 120px; /* 注册时间 */
+                min-width: 60px; /* 注册时间 */
             }
             
             /* 关键字管理区域 */
@@ -1065,7 +1078,7 @@
             }
             
             .data-table {
-                min-width: 850px;
+                min-width: 425px;
                 font-size: 11px;
             }
             
@@ -1073,6 +1086,15 @@
             .data-table td {
                 padding: 4px 3px;
                 font-size: 11px;
+                white-space: nowrap;
+            }
+            
+            .data-table th {
+                white-space: normal;
+            }
+            
+            .data-table td {
+                white-space: nowrap;
             }
             
             .tab-button {
@@ -1112,21 +1134,36 @@
             }
             
             /* 表格进一步减小列宽 */
+            .data-table th:nth-child(2),
+            .data-table td:nth-child(2) {
+                min-width: 25px; /* 顾问姓名 */
+            }
+            
             .data-table th:nth-child(7),
             .data-table td:nth-child(7),
             .data-table th:nth-child(8),
             .data-table td:nth-child(8) {
-                min-width: 110px; /* 时间列 */
+                min-width: 45px; /* 时间列 */
+            }
+            
+            .data-table th:nth-child(9),
+            .data-table td:nth-child(9) {
+                min-width: 20px; /* 领取时间差 */
+            }
+            
+            .data-table th:nth-child(10),
+            .data-table td:nth-child(10) {
+                min-width: 20px; /* 跟进时间差 */
             }
             
             .data-table th:nth-child(13),
             .data-table td:nth-child(13) {
-                min-width: 150px; /* 跟进记录 */
+                min-width: 75px; /* 跟进记录 */
             }
             
             /* 顾问汇总表进一步压缩 */
             #staffSummaryTable {
-                min-width: 800px;
+                min-width: 400px;
             }
         }
         

@@ -143,6 +143,9 @@
             font-size: 14px;
             background-color: white;
         }
+        table { width: auto; }
+        table th { white-space: normal !important; padding: 3px 6px !important; }
+        table td { padding: 3px 6px !important; white-space: nowrap !important; }
         @media screen and (max-width: 768px) {
             body {
                 padding: 10px;
@@ -159,8 +162,12 @@
             table {
                 font-size: 12px;
             }
-            table th, table td {
-                padding: 6px 8px;
+            table th {
+                padding: 2px 4px;
+                white-space: normal;
+            }
+            table td {
+                padding: 2px 4px;
                 white-space: nowrap;
             }
             .tab-buttons {
