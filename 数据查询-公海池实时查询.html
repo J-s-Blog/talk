@@ -2350,10 +2350,11 @@
         
         <!-- 待分配列表 -->
         <div class="batch-list-section" style="margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                 <h3>2. 待分配用户列表 <span id="batchListCount" style="font-size: 14px; color: #666;"></span></h3>
                 <div>
                     <button type="button" id="batchQueryBtn" style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">批量查询、分配</button>
+                    <button type="button" id="batchExportBtn" style="padding: 8px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">导出Excel</button>
                     <button type="button" id="batchClearBtn" style="padding: 8px 20px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空列表</button>
                 </div>
             </div>
@@ -9012,6 +9013,64 @@
             renderBatchList();
             document.getElementById('batchResultSection').style.display = 'none';
         });
+        
+        // 导出批量分配结果到Excel
+        function exportBatchAssignResults() {
+            if (batchAssignData.length === 0) {
+                alert('没有批量分配数据可导出');
+                return;
+            }
+            
+            const now = new Date();
+            const dateTimeStr = now.toISOString().replace(/[-:]/g, '').split('.')[0];
+            const fileName = `公海池批量分配结果_${dateTimeStr}.xlsx`;
+            
+            const wb = XLSX.utils.book_new();
+            
+            // 准备导出数据
+            const exportData = batchAssignData.map((record, index) => {
+                let queryStatusText = '待查询';
+                if (record.queryStatus === 'success') queryStatusText = '查询成功';
+                else if (record.queryStatus === 'failed') queryStatusText = '查询失败';
+                else if (record.queryStatus === 'querying') queryStatusText = '查询中';
+                
+                let allocStatusText = '-';
+                if (record.allocationStatus === 'success') allocStatusText = record.allocationMessage || '分配成功';
+                else if (record.allocationStatus === 'failed') allocStatusText = record.allocationMessage || '分配失败';
+                else if (record.allocationStatus === 'allocating') allocStatusText = '分配中';
+                
+                return {
+                    '序号': index + 1,
+                    '用户ID': record.userId || '',
+                    '顾问ID': record.advisorId || '',
+                    '查询状态': queryStatusText,
+                    '分配状态': allocStatusText,
+                    '用户名': record.userInfo?.userName || '',
+                    '注册时间': record.userInfo?.createTime || '',
+                    '最近登录时间': record.userInfo?.finalActiveTime || ''
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            // 设置列宽
+            ws['!cols'] = [
+                { wch: 8 },   // 序号
+                { wch: 15 },  // 用户ID
+                { wch: 15 },  // 顾问ID
+                { wch: 12 },  // 查询状态
+                { wch: 20 },  // 分配状态
+                { wch: 12 },  // 用户名
+                { wch: 20 },  // 注册时间
+                { wch: 20 }   // 最近登录时间
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, '批量分配结果');
+            XLSX.writeFile(wb, fileName);
+        }
+        
+        // 绑定导出按钮事件
+        document.getElementById('batchExportBtn').addEventListener('click', exportBatchAssignResults);
         
         // 批量查询、分配按钮
         document.getElementById('batchQueryBtn').addEventListener('click', async function() {
