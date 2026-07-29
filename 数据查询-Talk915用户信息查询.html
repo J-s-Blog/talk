@@ -213,6 +213,10 @@
                 padding: 4px 6px;
                 font-size: 12px;
             }
+            #userCourseQueryTab #courseQueryExportBtn {
+                width: auto !important;
+                flex-shrink: 0;
+            }
         }
     </style>
 </head>
@@ -1373,7 +1377,7 @@
                 <div id="courseQueryResultSection" style="margin-top: 15px; display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <h3 style="color: #333; margin: 0; font-size: 14px;">查询结果</h3>
-                        <button id="courseQueryExportBtn" style="padding: 6px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">导出Excel</button>
+                        <button id="courseQueryExportBtn" style="padding: 6px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; width: auto; flex-shrink: 0;">导出Excel</button>
                     </div>
                     <div id="courseQueryResultContainer" style="max-height: 400px; overflow: auto; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;"></div>
                 </div>
@@ -2393,6 +2397,40 @@
             const tabButton = document.getElementById(selectedTab);
             if (tabButton) {
                 tabButton.click();
+            }
+        });
+        
+        // 窗口大小变化时同步下拉框选项
+        window.addEventListener('resize', function() {
+            // 同步主Tab下拉框
+            const activeButton = document.querySelector('.tab-btn.active');
+            if (activeButton) {
+                document.getElementById('mainTabDropdown').value = activeButton.id;
+            }
+            // 同步子Tab下拉框（注册用户Tab）
+            const activeSubTab = document.querySelector('.sub-tab-btn.active');
+            if (activeSubTab) {
+                const subTabId = activeSubTab.id;
+                const subTabDropdown = document.getElementById('subTabDropdown');
+                if (subTabDropdown) {
+                    const valueMap = {
+                        'subTabUserList': 'userList',
+                        'subTabSourceStats': 'sourceStats',
+                        'subTabReferrerStats': 'referrerStats',
+                        'subTabDailyStats': 'dailyStats'
+                    };
+                    if (valueMap[subTabId]) {
+                        subTabDropdown.value = valueMap[subTabId];
+                    }
+                }
+                const accBindingDropdown = document.getElementById('accountBindingSubTabDropdown');
+                if (accBindingDropdown) {
+                    if (subTabId === 'subTabDetailed') {
+                        accBindingDropdown.value = 'detailed';
+                    } else if (subTabId === 'subTabStatistics') {
+                        accBindingDropdown.value = 'statistics';
+                    }
+                }
             }
         });
         

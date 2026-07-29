@@ -1164,6 +1164,7 @@
             #batchAssign #batchImportBtn,
             #batchAssign #batchManualAllocBtn,
             #batchAssign #batchQueryBtn,
+            #batchAssign #batchExportBtn,
             #batchAssign #batchClearBtn {
                 padding: 8px 15px;
                 font-size: 13px;
@@ -1171,6 +1172,17 @@
             }
             #batchAssign .batch-list-section h3 {
                 font-size: 15px;
+            }
+            #batchAssign .batch-list-section > div:first-child {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            #batchAssign .batch-list-section > div:first-child > div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+                margin-top: 10px;
             }
             #batchAssign table#batchListTable {
                 font-size: 12px;
@@ -3333,6 +3345,32 @@
                 document.getElementById(tabId).classList.add('active');
             });
         }
+        
+        // 窗口大小变化时同步下拉框选项
+        window.addEventListener('resize', function() {
+            // 同步主Tab下拉框
+            const activeButton = document.querySelector('.tab-button.active');
+            if (activeButton) {
+                document.getElementById('mainTabDropdown').value = activeButton.getAttribute('data-tab');
+            }
+            // 同步子Tab下拉框
+            const activeSubTab = document.querySelector('.sub-tab-button.active');
+            if (activeSubTab) {
+                const tabValue = activeSubTab.getAttribute('data-tab');
+                // 尝试同步到所有可能的子Tab下拉框
+                const subDropdowns = ['subTabDropdown', 'followUpTabDropdown', 'rechargeTabDropdown'];
+                subDropdowns.forEach(id => {
+                    const dropdown = document.getElementById(id);
+                    if (dropdown) {
+                        // 检查该下拉框是否包含当前选项
+                        const option = dropdown.querySelector(`option[value="${tabValue}"]`);
+                        if (option) {
+                            dropdown.value = tabValue;
+                        }
+                    }
+                });
+            }
+        });
 
         // 折叠面板切换功能
         function toggleCollapse(panelId) {
