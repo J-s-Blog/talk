@@ -1424,13 +1424,19 @@
             });
         }
         
-        // 获取token的函数，优先从IndexedDB获取，然后从localStorage获取
+        // 获取token的函数，优先从localStorage获取（所有工具共享），然后从IndexedDB获取
         async function getToken() {
+            // 优先从localStorage获取（共享存储，确保登录状态一致）
+            const token = localStorage.getItem('talk915_token');
+            if (token) {
+                return token;
+            }
+            // 回退到IndexedDB
             const loginInfo = await getLoginInfoFromIndexedDB();
             if (loginInfo && loginInfo.token) {
                 return loginInfo.token;
             }
-            return localStorage.getItem('talk915_token');
+            return null;
         }
         
         // 初始化IndexedDB
@@ -1590,37 +1596,30 @@
 
         // 页面加载时检查是否有存储的登录信息
         window.addEventListener('load', async function() {
-            // 从IndexedDB获取登录信息
-            const indexedDbData = await getLoginInfoFromIndexedDB();
-            if (indexedDbData) {
-                console.log('之前保存的登录信息 (IndexedDB):', indexedDbData);
-            } else {
-                // 如果IndexedDB中没有，从localStorage获取
-                const storedData = localStorage.getItem('talk915_login_data');
-                if (storedData) {
-                    try {
-                        const data = JSON.parse(storedData);
-                        console.log('之前保存的登录信息 (localStorage):', data);
-                    } catch (e) {
-                        console.error('解析存储的登录信息失败:', e);
-                    }
+            // 优先从localStorage获取登录信息（所有工具共享）
+            const storedData = localStorage.getItem('talk915_login_data');
+            if (storedData) {
+                try {
+                    const data = JSON.parse(storedData);
+                    console.log('之前保存的登录信息 (localStorage):', data);
+                } catch (e) {
+                    console.error('解析存储的登录信息失败:', e);
                 }
             }
             
             // 显示存储的token和userId（如果存在）
-            let storedToken = null;
-            let storedUserId = null;
-            
-            if (indexedDbData) {
-                storedToken = indexedDbData.token;
-                storedUserId = indexedDbData.userId;
-            } else {
-                storedToken = localStorage.getItem('talk915_token');
-                storedUserId = localStorage.getItem('talk915_userId');
-            }
+            const storedToken = localStorage.getItem('talk915_token');
+            const storedUserId = localStorage.getItem('talk915_userId');
             
             if (storedToken) {
                 console.log('存储的Token:', storedToken);
+                // 同步到IndexedDB，保持数据一致
+                const loginInfo = await getLoginInfoFromIndexedDB();
+                if (!loginInfo || loginInfo.token !== storedToken) {
+                    const loginData = storedData ? JSON.parse(storedData) : { token: storedToken, userId: storedUserId };
+                    await saveLoginInfoToIndexedDB(loginData);
+                    console.log('已将localStorage中的登录信息同步到IndexedDB');
+                }
             }
             if (storedUserId) {
                 console.log('存储的用户ID:', storedUserId);
@@ -1656,13 +1655,15 @@
             // 保存到IndexedDB
             await saveLoginInfoToIndexedDB(loginData);
             
-            // 保存token到localStorage作为备份
+            // 保存到localStorage（所有工具共享）
             localStorage.setItem('talk915_token', manualToken);
+            localStorage.setItem('talk915_login_data', JSON.stringify(loginData));
             
             // 如果提供了用户ID，也保存用户ID
             if (manualUserId) {
                 localStorage.setItem('talk915_userId', manualUserId);
             }
+            localStorage.setItem('talk915_userName', '手动输入');
             
             // 显示保存成功消息
             const statusMessage = document.getElementById('statusMessage');
@@ -2953,8 +2954,8 @@
             tableBody.innerHTML = '';
             
             try {
-                // 获取token
-                token = document.getElementById('tokenDisplay').textContent || localStorage.getItem('talk915_token');
+                // 获取token（从共享的localStorage获取）
+                token = localStorage.getItem('talk915_token');
                 if (!token) {
                     statusMessage.innerHTML = '<div class="error-message">请先登录获取token</div>';
                     return;

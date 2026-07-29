@@ -3450,19 +3450,22 @@
         let allOrderQueryIndex = 0;
         let allOrderTotalQueries = 0;
 
-        // 从IndexedDB或localStorage获取token
+        // 从localStorage获取token（所有工具共享localStorage，确保登录状态一致）
         async function getToken() {
             try {
-                // 优先从IndexedDB获取
+                // 优先从localStorage获取（共享存储）
+                const token = localStorage.getItem('talk915_token');
+                if (token) {
+                    return token;
+                }
+                // 回退到IndexedDB
                 const loginData = await idbGet(STORE_NAMES.LOGIN, 'login_data');
                 if (loginData && loginData.token) {
                     return loginData.token;
                 }
-                // 回退到localStorage
-                return localStorage.getItem('talk915_token') || '';
+                return '';
             } catch (error) {
                 console.warn('Error getting token:', error);
-                // 回退到localStorage
                 try {
                     return localStorage.getItem('talk915_token') || '';
                 } catch (localStorageError) {
