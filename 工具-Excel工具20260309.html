@@ -824,8 +824,8 @@
                     <div>
                         <h3>1. 选择文件</h3>
                         <div class="file-input">
-                            <label for="mergeFiles">选择要合并的Excel文件（可多选）</label>
-                            <input type="file" id="mergeFiles" accept=".xlsx, .xls" multiple>
+                            <label for="mergeFiles">选择要合并的文件（支持Excel、CSV、TXT，可多选）</label>
+                            <input type="file" id="mergeFiles" accept=".xlsx, .xls, .csv, .txt" multiple>
                         </div>
                     </div>
                     
@@ -839,9 +839,11 @@
                     <div class="merge-notes">
                         <h3>合并要求：</h3>
                         <ul>
-                            <li>每个文件只有一个sheet</li>
+                            <li>支持 .xlsx、.xls、.csv、.txt 格式</li>
+                            <li>每个文件只有一个sheet（Excel文件）</li>
                             <li>每个表格格式一致</li>
                             <li>第一行为表头</li>
+                            <li>合并结果第一列将添加"来源文件"以区分数据来源</li>
                         </ul>
                     </div>
                 </div>
@@ -1723,14 +1725,58 @@
             
             // 读取所有选择的文件
             mergeFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    mergeWorkbooks[index] = workbook;
-                };
-                reader.readAsArrayBuffer(file);
+                const fileName = file.name.toLowerCase();
+                
+                if (fileName.endsWith('.csv')) {
+                    // CSV文件 - 直接用XLSX读取
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        mergeWorkbooks[index] = workbook;
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else if (fileName.endsWith('.txt')) {
+                    // TXT文件 - 读取文本并转换为工作表
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const text = e.target.result;
+                        const workbook = parseTxtToWorkbook(text);
+                        mergeWorkbooks[index] = workbook;
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                } else {
+                    // Excel文件 (.xlsx, .xls)
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        mergeWorkbooks[index] = workbook;
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
             });
+        }
+        
+        // 将TXT文本解析为XLSX工作簿
+        function parseTxtToWorkbook(text) {
+            const lines = text.split(/\r?\n/);
+            const data = lines.map(line => {
+                // 支持tab、逗号、分号分隔
+                if (line.includes('\t')) {
+                    return line.split('\t');
+                } else if (line.includes(',') || line.includes(';')) {
+                    const sep = line.includes(',') ? ',' : ';';
+                    return line.split(sep);
+                } else {
+                    return [line];
+                }
+            }).filter(row => row.length > 0 && row.some(cell => cell.trim() !== ''));
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+            return workbook;
         }
         
         // 渲染文件列表
@@ -1823,7 +1869,7 @@
         // 合并Excel文件
         function mergeExcel() {
             if (mergeFiles.length === 0) {
-                showMergeMessage('请选择要合并的Excel文件', 'error');
+                showMergeMessage('请选择要合并的文件', 'error');
                 return;
             }
             
@@ -1838,7 +1884,7 @@
             // 创建新工作表
             const newWorksheet = {};
             
-            // 保留第一个文件的表头
+            // 保留第一个文件的表头，并添加"来源文件"作为第一列
             let headerRow = null;
             let currentRow = 0;
             
@@ -1853,12 +1899,23 @@
                 const worksheet = workbook.Sheets[sheetNames[0]];
                 const range = XLSX.utils.decode_range(worksheet['!ref']);
                 
+                // 获取文件名（不含扩展名）
+                const fileName = mergeFiles[index].name;
+                const fileNameWithoutExt = fileName.replace(/\.(xlsx|xls|csv|txt)$/i, '');
+                
                 // 复制表头（只保留第一个文件的表头）
                 if (index === 0) {
+                    // 第一列：来源文件
+                    newWorksheet[XLSX.utils.encode_cell({ r: currentRow, c: 0 })] = {
+                        v: '来源文件',
+                        t: 's'
+                    };
+                    
+                    // 其余列：原表头（右移一列）
                     for (let c = range.s.c; c <= range.e.c; c++) {
                         const cellAddr = XLSX.utils.encode_cell({ r: range.s.r, c: c });
                         if (worksheet[cellAddr]) {
-                            const newCellAddr = XLSX.utils.encode_cell({ r: currentRow, c: c - range.s.c });
+                            const newCellAddr = XLSX.utils.encode_cell({ r: currentRow, c: c - range.s.c + 1 });
                             newWorksheet[newCellAddr] = JSON.parse(JSON.stringify(worksheet[cellAddr]));
                         }
                     }
@@ -1868,10 +1925,17 @@
                 
                 // 复制数据行（从第二行开始）
                 for (let r = range.s.r + 1; r <= range.e.r; r++) {
+                    // 第一列：来源文件名
+                    newWorksheet[XLSX.utils.encode_cell({ r: currentRow, c: 0 })] = {
+                        v: fileNameWithoutExt,
+                        t: 's'
+                    };
+                    
+                    // 其余列：原数据（右移一列）
                     for (let c = range.s.c; c <= range.e.c; c++) {
                         const cellAddr = XLSX.utils.encode_cell({ r: r, c: c });
                         if (worksheet[cellAddr]) {
-                            const newCellAddr = XLSX.utils.encode_cell({ r: currentRow, c: c - range.s.c });
+                            const newCellAddr = XLSX.utils.encode_cell({ r: currentRow, c: c - range.s.c + 1 });
                             newWorksheet[newCellAddr] = JSON.parse(JSON.stringify(worksheet[cellAddr]));
                         }
                     }
@@ -1894,6 +1958,12 @@
                     s: { r: 0, c: 0 },
                     e: { r: currentRow - 1, c: maxCol }
                 });
+                
+                // 设置列宽（第一列来源文件加宽）
+                newWorksheet['!cols'] = [{ wch: 25 }]; // 来源文件列宽
+                for (let i = 1; i <= maxCol; i++) {
+                    newWorksheet['!cols'].push({ wch: 15 });
+                }
                 
                 // 添加工作表到工作簿
                 XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, '合并数据');
