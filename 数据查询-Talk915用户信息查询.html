@@ -217,6 +217,23 @@
                 width: auto !important;
                 flex-shrink: 0;
             }
+            /* 课时清零查询Tab移动端 */
+            #courseClearQueryTab > div > div:first-child {
+                flex-direction: column;
+            }
+            #courseClearQueryTab table {
+                min-width: 500px;
+            }
+            #courseClearQueryTab table th,
+            #courseClearQueryTab table td {
+                padding: 4px 6px;
+                font-size: 12px;
+            }
+            #courseClearQueryTab #clearQueryExportBtn,
+            #courseClearQueryTab #clearQueryClearBtn {
+                width: auto !important;
+                flex-shrink: 0;
+            }
         }
     </style>
 </head>
@@ -238,6 +255,7 @@
                 <option value="tabFootfallRecord">学员进出记录查询</option>
                 <option value="tabUserRegPackage">用户注册时间和套餐查询</option>
                 <option value="tabUserCourseQuery">用户约课查询</option>
+                <option value="tabCourseClearQuery">课时清零查询</option>
             </select>
         </div>
         <div class="tab-buttons" style="display: flex; margin-bottom: 20px; border-bottom: 1px solid #ddd;">
@@ -254,6 +272,7 @@
             <button id="tabFootfallRecord" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">学员进出记录查询</button>
             <button id="tabUserRegPackage" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">用户注册时间和套餐查询</button>
             <button id="tabUserCourseQuery" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">用户约课查询</button>
+            <button id="tabCourseClearQuery" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">课时清零查询</button>
         </div>
 
         <!-- 登录 Tab -->
@@ -1330,11 +1349,11 @@
                 <h2 style="color: #333; margin-bottom: 15px; font-size: 16px;">用户约课查询</h2>
                 
                 <!-- 日期选择区域 -->
-                <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-start;">
+                <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: stretch;">
                     <!-- 单独查询区域 -->
-                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; flex-direction: column;">
                         <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">单独查询</h3>
-                        <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="form-group" style="margin-bottom: 8px; flex: 1;">
                             <label for="courseQuerySingleUserId" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">用户ID:</label>
                             <input type="text" id="courseQuerySingleUserId" placeholder="输入用户ID" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                         </div>
@@ -1348,13 +1367,13 @@
                                 <input type="date" id="courseQueryEndDate" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                             </div>
                         </div>
-                        <button id="courseQuerySingleBtn" style="width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">查询</button>
+                        <button id="courseQuerySingleBtn" style="width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">查询</button>
                     </div>
                     
                     <!-- 批量查询区域 -->
-                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; flex-direction: column;">
                         <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">批量查询</h3>
-                        <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="form-group" style="margin-bottom: 8px; flex: 1;">
                             <label for="courseQueryFileInput" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">导入用户ID文件:</label>
                             <input type="file" id="courseQueryFileInput" accept=".txt,.csv,.xlsx,.xls" style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                             <div class="info-text" style="margin-top: 2px; font-size: 11px;">支持 .txt、.csv 和 Excel 文件，每行一个用户ID</div>
@@ -1369,7 +1388,7 @@
                                 <input type="date" id="courseQueryBatchEndDate" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                             </div>
                         </div>
-                        <button id="courseQueryBatchBtn" style="width: 100%; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">批量查询</button>
+                        <button id="courseQueryBatchBtn" style="width: 100%; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">批量查询</button>
                     </div>
                 </div>
                 
@@ -1384,6 +1403,51 @@
                 
                 <!-- 状态信息 -->
                 <div id="courseQueryStatus" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- 课时清零查询 Tab -->
+        <div id="courseClearQueryTab" class="tab-content" style="display: none;">
+            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                <h2 style="color: #333; margin-bottom: 15px; font-size: 16px;">课时清零查询</h2>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: stretch;">
+                    <!-- 单独查询区域 -->
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; flex-direction: column;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">单独查询</h3>
+                        <div class="form-group" style="margin-bottom: 8px; flex: 1;">
+                            <label for="clearQuerySingleUserId" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">用户ID:</label>
+                            <input type="text" id="clearQuerySingleUserId" placeholder="输入用户ID" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                        </div>
+                        <button id="clearQuerySingleBtn" style="width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">查询</button>
+                    </div>
+                    
+                    <!-- 批量查询区域 -->
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; flex-direction: column;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">批量查询</h3>
+                        <div class="form-group" style="margin-bottom: 8px; flex: 1;">
+                            <label for="clearQueryFileInput" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">导入用户ID文件:</label>
+                            <input type="file" id="clearQueryFileInput" accept=".txt,.csv,.xlsx,.xls" style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                            <div class="info-text" style="margin-top: 2px; font-size: 11px;">支持 .txt、.csv 和 Excel 文件，每行一个用户ID</div>
+                        </div>
+                        <button id="clearQueryBatchBtn" style="width: 100%; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">批量查询</button>
+                    </div>
+                </div>
+                
+                <!-- 查询结果区域 -->
+                <div id="clearQueryResultSection" style="margin-top: 15px; display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h3 style="color: #333; margin: 0; font-size: 14px;">查询结果</h3>
+                        <div>
+                            <button id="clearQueryExportBtn" style="padding: 6px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 6px;">导出CSV</button>
+                            <button id="clearQueryClearBtn" style="padding: 6px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 6px;">清空</button>
+                        </div>
+                    </div>
+                    <div id="clearQueryResultContainer" style="max-height: 400px; overflow: auto; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;"></div>
+                </div>
+                
+                <!-- 状态信息 -->
+                <div id="clearQueryStatus" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
             </div>
         </div>
     </div>
@@ -1759,6 +1823,7 @@
         // Tab 切换功能
         document.getElementById('tabLogin').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'block';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -1811,6 +1876,7 @@
 
         document.getElementById('tabImport').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             // 隐藏所有Tab内容
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'block';
@@ -1841,6 +1907,7 @@
 
         document.getElementById('tabSource').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'block';
@@ -1893,6 +1960,7 @@
 
         document.getElementById('tabProduct').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -1945,6 +2013,7 @@
         
         document.getElementById('tabLoginLog').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -1998,6 +2067,7 @@
         // 注册用户查询Tab点击事件
         document.getElementById('tabRegisteredUser').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2051,6 +2121,7 @@
         // 自律卡系统扣点查询Tab点击事件
         document.getElementById('tabDisciplineCard').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2104,6 +2175,7 @@
         // 推荐人获客数据查询Tab点击事件
         document.getElementById('tabReferrerData').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2157,6 +2229,7 @@
         // 顾问已成交学员查询Tab点击事件
         document.getElementById('tabStaffDeal').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2210,6 +2283,7 @@
         // 跟进账号绑定查询Tab点击事件
         document.getElementById('tabAccountBinding').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2263,6 +2337,7 @@
         // 学员进出记录查询Tab切换
         document.getElementById('tabFootfallRecord').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2316,6 +2391,7 @@
         // 用户注册时间和套餐查询Tab切换
         document.getElementById('tabUserRegPackage').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2379,16 +2455,43 @@
             document.getElementById('accountBindingTab').style.display = 'none';
             document.getElementById('footfallRecordTab').style.display = 'none';
             document.getElementById('userRegPackageTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
             document.getElementById('userCourseQueryTab').style.display = 'block';
             document.getElementById('tabUserCourseQuery').classList.add('active');
             document.getElementById('tabUserCourseQuery').style.backgroundColor = '#007bff';
             document.getElementById('tabUserCourseQuery').style.color = 'white';
-            ['tabLogin','tabImport','tabSource','tabProduct','tabLoginLog','tabRegisteredUser','tabDisciplineCard','tabReferrerData','tabStaffDeal','tabAccountBinding','tabFootfallRecord','tabUserRegPackage'].forEach(id => {
+            ['tabLogin','tabImport','tabSource','tabProduct','tabLoginLog','tabRegisteredUser','tabDisciplineCard','tabReferrerData','tabStaffDeal','tabAccountBinding','tabFootfallRecord','tabUserRegPackage','tabCourseClearQuery'].forEach(id => {
                 document.getElementById(id).classList.remove('active');
                 document.getElementById(id).style.backgroundColor = '#f8f9fa';
                 document.getElementById(id).style.color = '#333';
             });
             initUserCourseQuery();
+        });
+        
+        // 课时清零查询Tab切换
+        document.getElementById('tabCourseClearQuery').addEventListener('click', function() {
+            document.getElementById('loginTab').style.display = 'none';
+            document.getElementById('importTab').style.display = 'none';
+            document.getElementById('sourceTab').style.display = 'none';
+            document.getElementById('productTab').style.display = 'none';
+            document.getElementById('loginLogTab').style.display = 'none';
+            document.getElementById('registeredUserTab').style.display = 'none';
+            document.getElementById('disciplineCardTab').style.display = 'none';
+            document.getElementById('referrerDataTab').style.display = 'none';
+            document.getElementById('staffDealTab').style.display = 'none';
+            document.getElementById('accountBindingTab').style.display = 'none';
+            document.getElementById('footfallRecordTab').style.display = 'none';
+            document.getElementById('userRegPackageTab').style.display = 'none';
+            document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'block';
+            document.getElementById('tabCourseClearQuery').classList.add('active');
+            document.getElementById('tabCourseClearQuery').style.backgroundColor = '#007bff';
+            document.getElementById('tabCourseClearQuery').style.color = 'white';
+            ['tabLogin','tabImport','tabSource','tabProduct','tabLoginLog','tabRegisteredUser','tabDisciplineCard','tabReferrerData','tabStaffDeal','tabAccountBinding','tabFootfallRecord','tabUserRegPackage','tabUserCourseQuery'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+                document.getElementById(id).style.backgroundColor = '#f8f9fa';
+                document.getElementById(id).style.color = '#333';
+            });
         });
         
         // 移动端下拉菜单事件绑定
@@ -11244,6 +11347,363 @@ function exportRegisteredUsers() {
         
         // 绑定导出按钮事件
         document.getElementById('courseQueryExportBtn').addEventListener('click', exportCourseQueryResults);
+        
+        // ========== 课时清零查询功能 ==========
+        
+        let courseClearQueryData = []; // [{userId, status, timeDiffCollect, message}]
+        
+        // 解析用户ID文件
+        function parseClearQueryFile(file) {
+            return new Promise((resolve, reject) => {
+                const fileName = file.name.toLowerCase();
+                
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                            
+                            const userIds = [];
+                            let startRow = 0;
+                            if (json.length > 0 && typeof json[0][0] === 'string' && isNaN(parseInt(json[0][0]))) {
+                                startRow = 1;
+                            }
+                            
+                            for (let i = startRow; i < json.length; i++) {
+                                const row = json[i];
+                                if (row && row[0]) {
+                                    const id = String(row[0]).trim();
+                                    if (id) userIds.push(id);
+                                }
+                            }
+                            resolve(userIds);
+                        } catch (err) {
+                            reject(new Error('Excel解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const text = e.target.result;
+                            const lines = text.split(/\r?\n/).filter(line => line.trim());
+                            const userIds = [];
+                            
+                            let startLine = 0;
+                            if (lines.length > 0 && isNaN(parseInt(lines[0].split(/[,\t]/)[0].trim()))) {
+                                startLine = 1;
+                            }
+                            
+                            for (let i = startLine; i < lines.length; i++) {
+                                const id = lines[i].trim();
+                                if (id) userIds.push(id);
+                            }
+                            resolve(userIds);
+                        } catch (err) {
+                            reject(new Error('文件解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file, 'UTF-8');
+                }
+            });
+        }
+        
+        // 渲染查询结果表格
+        function renderClearQueryResults() {
+            const container = document.getElementById('clearQueryResultContainer');
+            const section = document.getElementById('clearQueryResultSection');
+            
+            if (courseClearQueryData.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            
+            let html = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px;">
+                    <thead style="background-color: #f5f5f5; position: sticky; top: 0;">
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">序号</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">用户ID</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">查询状态</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">清零课时</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">返回信息</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            courseClearQueryData.forEach((item, index) => {
+                const statusColor = item.status === 'success' ? '#28a745' : 
+                                   item.status === 'failed' ? '#dc3545' : 
+                                   item.status === 'querying' ? '#ffc107' : '#666';
+                const statusText = item.status === 'success' ? '✓ 查询成功' : 
+                                  item.status === 'failed' ? '✗ 查询失败' : 
+                                  item.status === 'querying' ? '查询中...' : '待查询';
+                
+                const countColor = item.timeDiffCollect !== null && item.timeDiffCollect < 0 ? '#dc3545' : 
+                                   item.timeDiffCollect > 0 ? '#28a745' : '#666';
+                
+                html += `
+                    <tr>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd;">${index + 1}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; font-family: monospace;">${item.userId}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${statusText}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${countColor}; font-weight: bold;">${item.timeDiffCollect !== null ? item.timeDiffCollect : '-'}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${item.message || '-'}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        // 设置状态信息
+        function setClearQueryStatus(text, isError) {
+            const statusEl = document.getElementById('clearQueryStatus');
+            statusEl.textContent = text;
+            statusEl.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
+            statusEl.style.color = isError ? '#721c24' : '#155724';
+            statusEl.style.border = isError ? '1px solid #f5c6cb' : '1px solid #c3e6cb';
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 单次查询
+        async function singleClearQuery() {
+            const userId = document.getElementById('clearQuerySingleUserId').value.trim();
+            
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            courseClearQueryData = [{ userId, status: 'querying', timeDiffCollect: null, message: '' }];
+            renderClearQueryResults();
+            
+            try {
+                const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryConsumeDetailsDiffCollect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/operationRecord/expensesRecord',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify({
+                        userMsg: '',
+                        createStartTime: '',
+                        createEndTime: '',
+                        mealNo: '',
+                        userId: userId,
+                        consumptionType: 25,
+                        status: 0,
+                        currPage: 0,
+                        pageSize: 10
+                    }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.resultCode === 0) {
+                    courseClearQueryData[0].status = 'success';
+                    courseClearQueryData[0].timeDiffCollect = data.resultData?.timeDiffCollect ?? null;
+                    courseClearQueryData[0].message = data.resultMessage || '操作成功';
+                    setClearQueryStatus(`查询成功！用户 ${userId} 清零课时：${data.resultData?.timeDiffCollect ?? 0}`, false);
+                } else {
+                    courseClearQueryData[0].status = 'failed';
+                    courseClearQueryData[0].message = data.resultMessage || '查询失败';
+                    setClearQueryStatus(`查询失败：${data.resultMessage || '未知错误'}`, true);
+                }
+            } catch (error) {
+                courseClearQueryData[0].status = 'failed';
+                courseClearQueryData[0].message = error.message || '请求异常';
+                setClearQueryStatus(`查询失败：${error.message}`, true);
+            }
+            
+            renderClearQueryResults();
+        }
+        
+        // 批量查询
+        async function batchClearQuery() {
+            const fileInput = document.getElementById('clearQueryFileInput');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('请先选择用户ID文件');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            try {
+                const userIds = await parseClearQueryFile(fileInput.files[0]);
+                if (userIds.length === 0) {
+                    alert('文件为空或格式不正确');
+                    return;
+                }
+                
+                courseClearQueryData = userIds.map(id => ({
+                    userId: id,
+                    status: 'querying',
+                    timeDiffCollect: null,
+                    message: ''
+                }));
+                renderClearQueryResults();
+                
+                let successCount = 0;
+                let failCount = 0;
+                
+                for (let i = 0; i < courseClearQueryData.length; i++) {
+                    const item = courseClearQueryData[i];
+                    
+                    try {
+                        const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryConsumeDetailsDiffCollect', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json;charset=UTF-8',
+                                'Accept': 'application/json, text/plain, */*',
+                                'User-Agent': navigator.userAgent,
+                                'Referer': 'https://www.talk915.com/admin/operationRecord/expensesRecord',
+                                'Origin': 'https://www.talk915.com',
+                                'Sec-Fetch-Dest': 'empty',
+                                'Sec-Fetch-Mode': 'cors',
+                                'Sec-Fetch-Site': 'same-origin',
+                                'token': token
+                            },
+                            body: JSON.stringify({
+                                userMsg: '',
+                                createStartTime: '',
+                                createEndTime: '',
+                                mealNo: '',
+                                userId: item.userId,
+                                consumptionType: 25,
+                                status: 0,
+                                currPage: 0,
+                                pageSize: 10
+                            }),
+                            credentials: 'include'
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.resultCode === 0) {
+                            item.status = 'success';
+                            item.timeDiffCollect = data.resultData?.timeDiffCollect ?? null;
+                            item.message = data.resultMessage || '操作成功';
+                            successCount++;
+                        } else {
+                            item.status = 'failed';
+                            item.message = data.resultMessage || '查询失败';
+                            failCount++;
+                        }
+                    } catch (error) {
+                        item.status = 'failed';
+                        item.message = error.message || '请求异常';
+                        failCount++;
+                    }
+                    
+                    renderClearQueryResults();
+                }
+                
+                setClearQueryStatus(`批量查询完成！共 ${courseClearQueryData.length} 条，成功 ${successCount} 条，失败 ${failCount} 条`, failCount > 0);
+                fileInput.value = '';
+            } catch (error) {
+                alert('导入失败: ' + error.message);
+            }
+        }
+        
+        // 导出CSV
+        function exportClearQueryCSV() {
+            if (courseClearQueryData.length === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+            
+            const completedData = courseClearQueryData.filter(item => 
+                item.status === 'success' || item.status === 'failed'
+            );
+            
+            if (completedData.length === 0) {
+                alert('没有已完成的查询结果可导出');
+                return;
+            }
+            
+            const now = new Date();
+            const dateTimeStr = now.toISOString().replace(/[-:]/g, '').split('.')[0];
+            const fileName = `课时清零查询结果_${dateTimeStr}.csv`;
+            
+            // 构建CSV内容
+            const headers = ['序号', '用户ID', '查询状态', '清零课时', '返回信息'];
+            const csvRows = [headers.join(',')];
+            
+            completedData.forEach((item, index) => {
+                const statusText = item.status === 'success' ? '查询成功' : '查询失败';
+                const row = [
+                    index + 1,
+                    item.userId,
+                    statusText,
+                    item.timeDiffCollect !== null ? item.timeDiffCollect : '',
+                    (item.message || '').replace(/,/g, '，')
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            const csvContent = '\ufeff' + csvRows.join('\n'); // 添加BOM支持中文
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            setClearQueryStatus(`导出成功！共导出 ${completedData.length} 条数据`, false);
+        }
+        
+        // 清空结果
+        function clearClearQueryResults() {
+            if (courseClearQueryData.length === 0) return;
+            if (!confirm('确定要清空所有查询结果吗？')) return;
+            courseClearQueryData = [];
+            renderClearQueryResults();
+            document.getElementById('clearQueryStatus').style.display = 'none';
+        }
+        
+        // 绑定事件
+        document.getElementById('clearQuerySingleBtn').addEventListener('click', singleClearQuery);
+        document.getElementById('clearQueryBatchBtn').addEventListener('click', batchClearQuery);
+        document.getElementById('clearQueryExportBtn').addEventListener('click', exportClearQueryCSV);
+        document.getElementById('clearQueryClearBtn').addEventListener('click', clearClearQueryResults);
 
     </script>
     
