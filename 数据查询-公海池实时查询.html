@@ -1162,7 +1162,9 @@
                 min-width: 100px;
             }
             #batchAssign #batchImportBtn,
+            #batchAssign #batchManualQueryOnlyBtn,
             #batchAssign #batchManualAllocBtn,
+            #batchAssign #batchQueryOnlyBtn,
             #batchAssign #batchQueryBtn,
             #batchAssign #batchExportBtn,
             #batchAssign #batchClearBtn {
@@ -1183,6 +1185,11 @@
                 gap: 8px;
                 width: 100%;
                 margin-top: 10px;
+            }
+            #batchAssign .manual-input-area > div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
             }
             #batchAssign table#batchListTable {
                 font-size: 12px;
@@ -2346,14 +2353,15 @@
                     <div style="display: flex; gap: 10px; margin-top: 8px;">
                         <div style="flex: 1;">
                             <label style="font-size: 13px; color: #666;">用户ID</label>
-                            <textarea id="batchManualUserId" rows="3" placeholder="1445546&#10;1445547" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; box-sizing: border-box;" title="每行一个用户ID"></textarea>
+                            <textarea id="batchManualUserId" rows="3" placeholder="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; box-sizing: border-box;" title="每行一个用户ID"></textarea>
                         </div>
                         <div style="flex: 1;">
                             <label style="font-size: 13px; color: #666;">顾问ID</label>
-                            <textarea id="batchManualAdvisorId" rows="3" placeholder="emp001&#10;emp002" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; box-sizing: border-box;" title="每行一个顾问ID，与用户ID一一对应"></textarea>
+                            <textarea id="batchManualAdvisorId" rows="3" placeholder="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; box-sizing: border-box;" title="每行一个顾问ID，与用户ID一一对应"></textarea>
                         </div>
                     </div>
                     <div style="margin-top: 10px;">
+                        <button type="button" id="batchManualQueryOnlyBtn" style="width: auto; padding: 8px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">仅查询状态</button>
                         <button type="button" id="batchManualAllocBtn" style="width: auto; padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">查询并分配</button>
                     </div>
                 </div>
@@ -2365,8 +2373,9 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                 <h3>2. 待分配用户列表 <span id="batchListCount" style="font-size: 14px; color: #666;"></span></h3>
                 <div>
+                    <button type="button" id="batchQueryOnlyBtn" style="padding: 8px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">批量查询状态</button>
                     <button type="button" id="batchQueryBtn" style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">批量查询、分配</button>
-                    <button type="button" id="batchExportBtn" style="padding: 8px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">导出Excel</button>
+                    <button type="button" id="batchExportBtn" style="padding: 8px 20px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">导出Excel</button>
                     <button type="button" id="batchClearBtn" style="padding: 8px 20px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空列表</button>
                 </div>
             </div>
@@ -8774,6 +8783,9 @@
                 } else if (item.allocationStatus === 'allocating') {
                     allocStatusText = '分配中...';
                     allocStatusColor = '#ffc107';
+                } else if (item.allocationStatus === 'skipped') {
+                    allocStatusText = item.allocationMessage || '仅查询，未分配';
+                    allocStatusColor = '#17a2b8';
                 }
                 
                 row.innerHTML = `
@@ -9039,6 +9051,239 @@
                     <strong>批量查询与分配完成！</strong><br>
                     查询成功：${querySuccessCount} 条，查询失败：${queryFailCount} 条<br>
                     分配成功：${allocSuccessCount} 条，分配失败：${allocFailCount} 条
+                </div>
+            `;
+        });
+        
+        // 仅查询状态 - 手动输入
+        document.getElementById('batchManualQueryOnlyBtn').addEventListener('click', async function() {
+            const userIdTextarea = document.getElementById('batchManualUserId');
+            const userText = userIdTextarea.value.trim();
+            
+            if (!userText) {
+                alert('请输入用户ID');
+                return;
+            }
+            
+            const userLines = userText.split(/\r?\n/).filter(line => line.trim());
+            if (userLines.length === 0) {
+                alert('请输入至少一个用户ID');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            // 构建记录（仅查询，不需要顾问ID）
+            batchAssignData = [];
+            userLines.forEach(line => {
+                const userId = line.trim();
+                if (userId) {
+                    batchAssignData.push({
+                        userId: userId,
+                        advisorId: '',
+                        queryStatus: 'pending',
+                        userInfo: null,
+                        allocationStatus: 'skipped',
+                        allocationMessage: ''
+                    });
+                }
+            });
+            
+            if (batchAssignData.length === 0) {
+                alert('未解析到有效数据');
+                return;
+            }
+            
+            renderBatchList();
+            
+            const queryBtn = this;
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
+            
+            let querySuccessCount = 0;
+            let queryFailCount = 0;
+            
+            for (let i = 0; i < batchAssignData.length; i++) {
+                const item = batchAssignData[i];
+                item.queryStatus = 'querying';
+                renderBatchList();
+                
+                try {
+                    const queryResponse = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json;charset=UTF-8',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            feedbackType: '',
+                            createStartTime: null,
+                            createEndTime: null,
+                            finalActiveStartTime: '',
+                            finalActiveEndTime: '',
+                            recycleStartTime: '',
+                            recycleEndTime: '',
+                            userInfo: item.userId,
+                            isAudition: '',
+                            isDeal: '',
+                            currPage: 0,
+                            pageSize: 10
+                        }),
+                        credentials: 'include'
+                    });
+                    
+                    const queryData = await queryResponse.json();
+                    
+                    if (queryResponse.ok && queryData.resultCode === 0 && queryData.resultData && queryData.resultData.length > 0) {
+                        item.userInfo = queryData.resultData[0];
+                        item.queryStatus = 'success';
+                        item.allocationStatus = 'skipped';
+                        item.allocationMessage = '仅查询模式，未分配';
+                        querySuccessCount++;
+                    } else {
+                        item.queryStatus = 'failed';
+                        item.userInfo = null;
+                        item.allocationStatus = 'skipped';
+                        item.allocationMessage = '查询失败';
+                        queryFailCount++;
+                    }
+                } catch (error) {
+                    item.queryStatus = 'failed';
+                    item.userInfo = null;
+                    item.allocationStatus = 'skipped';
+                    item.allocationMessage = error.message || '查询请求异常';
+                    queryFailCount++;
+                }
+                
+                renderBatchList();
+            }
+            
+            queryBtn.disabled = false;
+            queryBtn.textContent = '仅查询状态';
+            
+            // 清空输入框
+            userIdTextarea.value = '';
+            
+            // 显示结果
+            const resultSection = document.getElementById('batchResultSection');
+            const resultMessage = document.getElementById('batchResultMessage');
+            resultSection.style.display = 'block';
+            
+            resultMessage.innerHTML = `
+                <div style="padding: 15px; background-color: #d1ecf1; border-radius: 4px; border: 1px solid #bee5eb;">
+                    <strong>查询完成（仅查询状态，未分配）！</strong><br>
+                    查询成功：${querySuccessCount} 条，查询失败：${queryFailCount} 条
+                </div>
+            `;
+        });
+        
+        // 仅查询状态 - 批量（列表中已有数据）
+        document.getElementById('batchQueryOnlyBtn').addEventListener('click', async function() {
+            if (batchAssignData.length === 0) {
+                alert('列表为空，请先导入或手动输入用户ID');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            const queryBtn = this;
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
+            
+            let querySuccessCount = 0;
+            let queryFailCount = 0;
+            
+            for (let i = 0; i < batchAssignData.length; i++) {
+                const item = batchAssignData[i];
+                item.queryStatus = 'querying';
+                item.allocationStatus = 'skipped';
+                item.allocationMessage = '';
+                renderBatchList();
+                
+                try {
+                    const queryResponse = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json;charset=UTF-8',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            feedbackType: '',
+                            createStartTime: null,
+                            createEndTime: null,
+                            finalActiveStartTime: '',
+                            finalActiveEndTime: '',
+                            recycleStartTime: '',
+                            recycleEndTime: '',
+                            userInfo: item.userId,
+                            isAudition: '',
+                            isDeal: '',
+                            currPage: 0,
+                            pageSize: 10
+                        }),
+                        credentials: 'include'
+                    });
+                    
+                    const queryData = await queryResponse.json();
+                    
+                    if (queryResponse.ok && queryData.resultCode === 0 && queryData.resultData && queryData.resultData.length > 0) {
+                        item.userInfo = queryData.resultData[0];
+                        item.queryStatus = 'success';
+                        item.allocationStatus = 'skipped';
+                        item.allocationMessage = '仅查询模式，未分配';
+                        querySuccessCount++;
+                    } else {
+                        item.queryStatus = 'failed';
+                        item.userInfo = null;
+                        item.allocationStatus = 'skipped';
+                        item.allocationMessage = '查询失败';
+                        queryFailCount++;
+                    }
+                } catch (error) {
+                    item.queryStatus = 'failed';
+                    item.userInfo = null;
+                    item.allocationStatus = 'skipped';
+                    item.allocationMessage = error.message || '查询请求异常';
+                    queryFailCount++;
+                }
+                
+                renderBatchList();
+            }
+            
+            queryBtn.disabled = false;
+            queryBtn.textContent = '批量查询状态';
+            
+            // 显示结果
+            const resultSection = document.getElementById('batchResultSection');
+            const resultMessage = document.getElementById('batchResultMessage');
+            resultSection.style.display = 'block';
+            
+            resultMessage.innerHTML = `
+                <div style="padding: 15px; background-color: #d1ecf1; border-radius: 4px; border: 1px solid #bee5eb;">
+                    <strong>批量查询完成（仅查询状态，未分配）！</strong><br>
+                    查询成功：${querySuccessCount} 条，查询失败：${queryFailCount} 条
                 </div>
             `;
         });
