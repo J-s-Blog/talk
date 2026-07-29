@@ -545,6 +545,61 @@
             box-sizing: border-box;
         }
         
+        /* 批量用户分配表格列宽 */
+        #batchListTable th:nth-child(1),
+        #batchListTable td:nth-child(1) {
+            min-width: 40px; /* 序号 */
+        }
+        #batchListTable th:nth-child(2),
+        #batchListTable td:nth-child(2) {
+            min-width: 80px; /* 用户ID */
+        }
+        #batchListTable th:nth-child(3),
+        #batchListTable td:nth-child(3) {
+            min-width: 80px; /* 顾问ID */
+        }
+        #batchListTable th:nth-child(4),
+        #batchListTable td:nth-child(4) {
+            min-width: 80px; /* 查询状态 */
+        }
+        #batchListTable th:nth-child(5),
+        #batchListTable td:nth-child(5) {
+            min-width: 80px; /* 分配状态 */
+        }
+        #batchListTable th:nth-child(6),
+        #batchListTable td:nth-child(6) {
+            min-width: 60px; /* 用户名 */
+        }
+        #batchListTable th:nth-child(7),
+        #batchListTable td:nth-child(7) {
+            min-width: 120px; /* 注册时间 */
+        }
+        #batchListTable th:nth-child(8),
+        #batchListTable td:nth-child(8) {
+            min-width: 120px; /* 最近登录时间 */
+        }
+        #batchListTable th:nth-child(9),
+        #batchListTable td:nth-child(9) {
+            min-width: 50px; /* 操作 */
+        }
+        
+        /* 批量分配区域样式 */
+        .batch-assign-section code {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        
+        /* 并排布局样式 */
+        .import-manual-row .import-area {
+            border-right: 1px solid #ddd;
+            padding-right: 20px;
+        }
+        .import-manual-row .manual-input-area textarea {
+            resize: vertical;
+        }
+        
         /* 员工编辑模态框样式 */
         #employeeEditModal label {
             display: block;
@@ -1075,6 +1130,61 @@
                 padding: 6px 14px !important;
                 font-size: 13px !important;
             }
+            
+            /* 批量用户分配Tab移动端 */
+            #batchAssign .batch-assign-section {
+                padding: 10px;
+            }
+            #batchAssign .batch-assign-section h3 {
+                font-size: 15px;
+                margin: 10px 0;
+            }
+            #batchAssign .import-manual-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            #batchAssign .import-area {
+                border-right: none !important;
+                padding-right: 0 !important;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 15px;
+            }
+            #batchAssign .manual-input-area textarea {
+                font-size: 13px;
+            }
+            #batchAssign .manual-input-area > div:first-child {
+                flex-direction: row;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            #batchAssign .manual-input-area > div:first-child > div {
+                flex: 1;
+                min-width: 100px;
+            }
+            #batchAssign #batchImportBtn,
+            #batchAssign #batchManualAllocBtn,
+            #batchAssign #batchQueryBtn,
+            #batchAssign #batchClearBtn {
+                padding: 8px 15px;
+                font-size: 13px;
+                width: auto;
+            }
+            #batchAssign .batch-list-section h3 {
+                font-size: 15px;
+            }
+            #batchAssign table#batchListTable {
+                font-size: 12px;
+                min-width: 700px;
+            }
+            #batchAssign table#batchListTable th,
+            #batchAssign table#batchListTable td {
+                padding: 4px 6px;
+                white-space: nowrap;
+            }
+            #batchAssign .batch-remove-btn {
+                padding: 3px 6px;
+                font-size: 11px;
+            }
         }
         
         /* ========== 下拉菜单样式（移动端） ========== */
@@ -1373,6 +1483,7 @@
                     <option value="accountBinding">跟进账号绑定</option>
                     <option value="rechargeOrder">充值订单明细</option>
                     <option value="employeeManagement">员工管理</option>
+                    <option value="batchAssign">批量用户分配</option>
                 </select>
             </div>
             <!-- 桌面端按钮 -->
@@ -1384,6 +1495,7 @@
                 <button class="tab-button" data-tab="accountBinding">跟进账号绑定</button>
                 <button class="tab-button" data-tab="rechargeOrder">充值订单明细</button>
                 <button class="tab-button" data-tab="employeeManagement">员工管理</button>
+                <button class="tab-button" data-tab="batchAssign">批量用户分配</button>
             </div>
             
             <!-- 登录Tab -->
@@ -2196,6 +2308,89 @@
         
         <div id="employeeStatusMsg" style="margin-top: 20px;"></div>
     </div>
+    
+    <!-- 批量用户分配Tab -->
+    <div id="batchAssign" class="tab-content">
+        <h2>批量用户分配</h2>
+        
+        <!-- 数据导入区域 -->
+        <div class="batch-assign-section" style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 8px;">
+            <h3>1. 数据导入与分配</h3>
+            <div class="import-manual-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <!-- 文件导入 -->
+                <div class="import-area" style="flex: 1; min-width: 280px; border-right: 1px solid #ddd; padding-right: 20px;">
+                    <label>从文件导入（支持 .txt, .csv, .xlsx 格式）：</label>
+                    <input type="file" id="batchImportFile" accept=".txt,.csv,.xlsx,.xls" style="margin: 10px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                    <p style="font-size: 13px; color: #666; margin: 5px 0;">
+                        格式：<code>用户ID,顾问ID</code> 每行一条<br>
+                        例如：<code>1445546,emp001</code>
+                    </p>
+                    <button type="button" id="batchImportBtn" style="width: auto; padding: 8px 20px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">导入文件</button>
+                </div>
+                
+                <!-- 手动输入 -->
+                <div class="manual-input-area" style="flex: 1; min-width: 280px;">
+                    <label>手动输入：</label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 13px; color: #666;">用户ID</label>
+                            <textarea id="batchManualUserId" rows="3" placeholder="1445546&#10;1445547" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; box-sizing: border-box;" title="每行一个用户ID"></textarea>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 13px; color: #666;">顾问ID</label>
+                            <textarea id="batchManualAdvisorId" rows="3" placeholder="emp001&#10;emp002" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; box-sizing: border-box;" title="每行一个顾问ID，与用户ID一一对应"></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button type="button" id="batchManualAllocBtn" style="width: auto; padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">查询并分配</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 待分配列表 -->
+        <div class="batch-list-section" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3>2. 待分配用户列表 <span id="batchListCount" style="font-size: 14px; color: #666;"></span></h3>
+                <div>
+                    <button type="button" id="batchQueryBtn" style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">批量查询、分配</button>
+                    <button type="button" id="batchClearBtn" style="padding: 8px 20px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空列表</button>
+                </div>
+            </div>
+            
+            <div id="batchListContainer" class="table-container" style="display: none;">
+                <table id="batchListTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>用户ID</th>
+                            <th>顾问ID</th>
+                            <th>查询状态</th>
+                            <th>分配状态</th>
+                            <th>用户名</th>
+                            <th>注册时间</th>
+                            <th>最近登录时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchListBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="batchListEmpty" style="text-align: center; padding: 30px; color: #999; border: 2px dashed #ddd; border-radius: 8px;">
+                暂无待分配数据，请先导入或手动输入
+            </div>
+        </div>
+        
+        <!-- 分配结果 -->
+        <div id="batchResultSection" style="display: none;">
+            <h3>分配结果</h3>
+            <div id="batchResultMessage"></div>
+        </div>
+    </div>
+    
+    <!-- SheetJS CDN for Excel support -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <!-- 员工编辑模态框 -->
     <div id="employeeEditModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
@@ -8418,6 +8613,557 @@
         document.getElementById('closeEmployeeEditModal').addEventListener('click', closeEmployeeEditModal);
         document.getElementById('cancelEmployeeEdit').addEventListener('click', closeEmployeeEditModal);
         document.getElementById('submitEmployeeEdit').addEventListener('click', submitEmployeeEdit);
+        
+        // ========== 批量用户分配功能 ==========
+        
+        // 批量分配数据存储
+        let batchAssignData = []; // [{userId, advisorId, queryStatus, userInfo: {}, allocationStatus, allocationMessage}]
+        
+        // 解析导入文件
+        function parseBatchFile(file) {
+            return new Promise((resolve, reject) => {
+                const fileName = file.name.toLowerCase();
+                
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    // Excel文件
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                            
+                            const records = [];
+                            // 跳过可能的表头行
+                            let startRow = 0;
+                            if (json.length > 0 && typeof json[0][0] === 'string' && isNaN(parseInt(json[0][0]))) {
+                                startRow = 1;
+                            }
+                            
+                            for (let i = startRow; i < json.length; i++) {
+                                const row = json[i];
+                                if (row && row.length >= 2 && row[0] && row[1]) {
+                                    records.push({
+                                        userId: String(row[0]).trim(),
+                                        advisorId: String(row[1]).trim()
+                                    });
+                                }
+                            }
+                            resolve(records);
+                        } catch (err) {
+                            reject(new Error('Excel解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    // 文本/CSV文件
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const text = e.target.result;
+                            const lines = text.split(/\r?\n/).filter(line => line.trim());
+                            const records = [];
+                            
+                            // 跳过可能的表头行
+                            let startLine = 0;
+                            if (lines.length > 0 && isNaN(parseInt(lines[0].split(/[,\t]/)[0].trim()))) {
+                                startLine = 1;
+                            }
+                            
+                            for (let i = startLine; i < lines.length; i++) {
+                                const parts = lines[i].split(/[,\t]/);
+                                if (parts.length >= 2) {
+                                    const userId = parts[0].trim();
+                                    const advisorId = parts[1].trim();
+                                    if (userId && advisorId) {
+                                        records.push({ userId, advisorId });
+                                    }
+                                }
+                            }
+                            resolve(records);
+                        } catch (err) {
+                            reject(new Error('文件解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file, 'UTF-8');
+                }
+            });
+        }
+        
+        // 渲染分配列表
+        function renderBatchList() {
+            const tbody = document.getElementById('batchListBody');
+            const emptyDiv = document.getElementById('batchListEmpty');
+            const container = document.getElementById('batchListContainer');
+            const countSpan = document.getElementById('batchListCount');
+            
+            tbody.innerHTML = '';
+            
+            if (batchAssignData.length === 0) {
+                emptyDiv.style.display = 'block';
+                container.style.display = 'none';
+                countSpan.textContent = '';
+                return;
+            }
+            
+            emptyDiv.style.display = 'none';
+            container.style.display = 'block';
+            countSpan.textContent = `（共 ${batchAssignData.length} 条）`;
+            
+            batchAssignData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                
+                const statusText = item.queryStatus === 'success' ? '✓ 已查询' : 
+                                  item.queryStatus === 'failed' ? '✗ 查询失败' : 
+                                  item.queryStatus === 'querying' ? '查询中...' : '待查询';
+                const statusColor = item.queryStatus === 'success' ? '#28a745' : 
+                                   item.queryStatus === 'failed' ? '#dc3545' : 
+                                   item.queryStatus === 'querying' ? '#ffc107' : '#666';
+                
+                let allocStatusText = '-';
+                let allocStatusColor = '#999';
+                if (item.allocationStatus === 'success') {
+                    allocStatusText = item.allocationMessage || '分配成功';
+                    allocStatusColor = '#28a745';
+                } else if (item.allocationStatus === 'failed') {
+                    allocStatusText = item.allocationMessage || '分配失败';
+                    allocStatusColor = '#dc3545';
+                } else if (item.allocationStatus === 'allocating') {
+                    allocStatusText = '分配中...';
+                    allocStatusColor = '#ffc107';
+                }
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.userId}</td>
+                    <td>${item.advisorId}</td>
+                    <td style="color: ${statusColor};">${statusText}</td>
+                    <td style="color: ${allocStatusColor};">${allocStatusText}</td>
+                    <td>${item.userInfo?.userName || '-'}</td>
+                    <td>${item.userInfo?.createTime || '-'}</td>
+                    <td>${item.userInfo?.finalActiveTime || '-'}</td>
+                    <td><button class="batch-remove-btn" data-index="${index}" style="padding: 3px 8px; background-color: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">删除</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 绑定删除按钮
+            tbody.querySelectorAll('.batch-remove-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    batchAssignData.splice(index, 1);
+                    renderBatchList();
+                });
+            });
+        }
+        
+        // 从文件导入按钮
+        document.getElementById('batchImportBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('batchImportFile');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('请先选择文件');
+                return;
+            }
+            
+            try {
+                const records = await parseBatchFile(fileInput.files[0]);
+                if (records.length === 0) {
+                    alert('文件为空或格式不正确');
+                    return;
+                }
+                
+                // 清空原有列表，重新加载
+                batchAssignData = [];
+                let addedCount = 0;
+                records.forEach(record => {
+                    batchAssignData.push({
+                        userId: record.userId,
+                        advisorId: record.advisorId,
+                        queryStatus: 'pending',
+                        userInfo: null,
+                        allocationStatus: 'pending',
+                        allocationMessage: ''
+                    });
+                    addedCount++;
+                });
+                
+                // 隐藏结果区域
+                document.getElementById('batchResultSection').style.display = 'none';
+                
+                renderBatchList();
+                alert(`成功导入 ${addedCount} 条数据（已清空原有列表）`);
+                fileInput.value = '';
+            } catch (error) {
+                alert('导入失败: ' + error.message);
+            }
+        });
+        
+        // 手动查询并分配按钮
+        document.getElementById('batchManualAllocBtn').addEventListener('click', async function() {
+            const userIdTextarea = document.getElementById('batchManualUserId');
+            const advisorIdTextarea = document.getElementById('batchManualAdvisorId');
+            
+            const userText = userIdTextarea.value.trim();
+            const advisorText = advisorIdTextarea.value.trim();
+            
+            if (!userText || !advisorText) {
+                alert('请同时输入用户ID和顾问ID');
+                return;
+            }
+            
+            const userLines = userText.split(/\r?\n/).filter(line => line.trim());
+            const advisorLines = advisorText.split(/\r?\n/).filter(line => line.trim());
+            
+            if (userLines.length !== advisorLines.length) {
+                alert(`用户ID数量（${userLines.length}）与顾问ID数量（${advisorLines.length}）不一致`);
+                return;
+            }
+            
+            if (userLines.length === 0) {
+                alert('请输入至少一条数据');
+                return;
+            }
+            
+            // 构建记录
+            const records = [];
+            for (let i = 0; i < userLines.length; i++) {
+                const userId = userLines[i].trim();
+                const advisorId = advisorLines[i].trim();
+                if (userId && advisorId) {
+                    records.push({ userId, advisorId });
+                }
+            }
+            
+            if (records.length === 0) {
+                alert('未解析到有效数据');
+                return;
+            }
+            
+            // 清空原有列表，添加新数据
+            batchAssignData = [];
+            records.forEach(record => {
+                batchAssignData.push({
+                    userId: record.userId,
+                    advisorId: record.advisorId,
+                    queryStatus: 'pending',
+                    userInfo: null,
+                    allocationStatus: 'pending',
+                    allocationMessage: ''
+                });
+            });
+            
+            renderBatchList();
+            
+            // 自动执行查询+分配
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            const allocBtn = this;
+            allocBtn.disabled = true;
+            allocBtn.textContent = '处理中...';
+            
+            let querySuccessCount = 0;
+            let queryFailCount = 0;
+            let allocSuccessCount = 0;
+            let allocFailCount = 0;
+            
+            for (let i = 0; i < batchAssignData.length; i++) {
+                const item = batchAssignData[i];
+                item.queryStatus = 'querying';
+                item.allocationStatus = 'pending';
+                item.allocationMessage = '';
+                renderBatchList();
+                
+                try {
+                    // 第1步：查询用户信息
+                    const queryResponse = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json;charset=UTF-8',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            feedbackType: '',
+                            createStartTime: null,
+                            createEndTime: null,
+                            finalActiveStartTime: '',
+                            finalActiveEndTime: '',
+                            recycleStartTime: '',
+                            recycleEndTime: '',
+                            userInfo: item.userId,
+                            isAudition: '',
+                            isDeal: '',
+                            currPage: 0,
+                            pageSize: 10
+                        }),
+                        credentials: 'include'
+                    });
+                    
+                    const queryData = await queryResponse.json();
+                    
+                    if (queryResponse.ok && queryData.resultCode === 0 && queryData.resultData && queryData.resultData.length > 0) {
+                        // 查询成功
+                        item.userInfo = queryData.resultData[0];
+                        item.queryStatus = 'success';
+                        querySuccessCount++;
+                        
+                        // 第2步：自动执行分配
+                        item.allocationStatus = 'allocating';
+                        renderBatchList();
+                        
+                        try {
+                            const allocResponse = await fetch('https://www.talk915.com/users/adminSeaPool/allocationSeaPool', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json;charset=UTF-8',
+                                    'Accept': 'application/json, text/plain, */*',
+                                    'User-Agent': navigator.userAgent,
+                                    'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                                    'Origin': 'https://www.talk915.com',
+                                    'Sec-Fetch-Dest': 'empty',
+                                    'Sec-Fetch-Mode': 'cors',
+                                    'Sec-Fetch-Site': 'same-origin',
+                                    'token': token
+                                },
+                                body: JSON.stringify({
+                                    userId: item.userId,
+                                    staffTalkId: item.advisorId
+                                }),
+                                credentials: 'include'
+                            });
+                            
+                            const allocData = await allocResponse.json();
+                            
+                            if (allocResponse.ok && allocData.resultCode === 0) {
+                                item.allocationStatus = 'success';
+                                item.allocationMessage = allocData.resultData || '分配成功';
+                                allocSuccessCount++;
+                            } else {
+                                item.allocationStatus = 'failed';
+                                item.allocationMessage = allocData.resultMessage || '分配失败';
+                                allocFailCount++;
+                            }
+                        } catch (allocError) {
+                            console.error('分配失败:', item.userId, allocError);
+                            item.allocationStatus = 'failed';
+                            item.allocationMessage = allocError.message || '分配请求异常';
+                            allocFailCount++;
+                        }
+                    } else {
+                        // 查询失败
+                        item.queryStatus = 'failed';
+                        item.userInfo = null;
+                        item.allocationStatus = 'failed';
+                        item.allocationMessage = '查询失败，无法分配';
+                        queryFailCount++;
+                    }
+                } catch (error) {
+                    console.error('查询用户失败:', item.userId, error);
+                    item.queryStatus = 'failed';
+                    item.userInfo = null;
+                    item.allocationStatus = 'failed';
+                    item.allocationMessage = error.message || '查询请求异常';
+                    queryFailCount++;
+                }
+                
+                renderBatchList();
+            }
+            
+            allocBtn.disabled = false;
+            allocBtn.textContent = '查询并分配';
+            
+            // 清空输入框
+            userIdTextarea.value = '';
+            advisorIdTextarea.value = '';
+            
+            // 显示完成结果统计
+            const resultSection = document.getElementById('batchResultSection');
+            const resultMessage = document.getElementById('batchResultMessage');
+            resultSection.style.display = 'block';
+            
+            resultMessage.innerHTML = `
+                <div style="padding: 15px; background-color: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
+                    <strong>批量查询与分配完成！</strong><br>
+                    查询成功：${querySuccessCount} 条，查询失败：${queryFailCount} 条<br>
+                    分配成功：${allocSuccessCount} 条，分配失败：${allocFailCount} 条
+                </div>
+            `;
+        });
+        
+        // 清空列表按钮
+        document.getElementById('batchClearBtn').addEventListener('click', function() {
+            if (batchAssignData.length === 0) return;
+            if (!confirm('确定要清空所有数据吗？')) return;
+            batchAssignData = [];
+            renderBatchList();
+            document.getElementById('batchResultSection').style.display = 'none';
+        });
+        
+        // 批量查询、分配按钮
+        document.getElementById('batchQueryBtn').addEventListener('click', async function() {
+            if (batchAssignData.length === 0) {
+                alert('请先导入数据');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            if (!confirm(`确定要对 ${batchAssignData.length} 条记录执行批量查询和分配吗？`)) {
+                return;
+            }
+            
+            const queryBtn = this;
+            queryBtn.disabled = true;
+            queryBtn.textContent = '处理中...';
+            
+            let querySuccessCount = 0;
+            let queryFailCount = 0;
+            let allocSuccessCount = 0;
+            let allocFailCount = 0;
+            
+            for (let i = 0; i < batchAssignData.length; i++) {
+                const item = batchAssignData[i];
+                item.queryStatus = 'querying';
+                item.allocationStatus = 'pending';
+                item.allocationMessage = '';
+                renderBatchList();
+                
+                try {
+                    // 第1步：查询用户信息
+                    const queryResponse = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json;charset=UTF-8',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            feedbackType: '',
+                            createStartTime: null,
+                            createEndTime: null,
+                            finalActiveStartTime: '',
+                            finalActiveEndTime: '',
+                            recycleStartTime: '',
+                            recycleEndTime: '',
+                            userInfo: item.userId,
+                            isAudition: '',
+                            isDeal: '',
+                            currPage: 0,
+                            pageSize: 10
+                        }),
+                        credentials: 'include'
+                    });
+                    
+                    const queryData = await queryResponse.json();
+                    
+                    if (queryResponse.ok && queryData.resultCode === 0 && queryData.resultData && queryData.resultData.length > 0) {
+                        // 查询成功
+                        item.userInfo = queryData.resultData[0];
+                        item.queryStatus = 'success';
+                        querySuccessCount++;
+                        
+                        // 第2步：自动执行分配
+                        item.allocationStatus = 'allocating';
+                        renderBatchList();
+                        
+                        try {
+                            const allocResponse = await fetch('https://www.talk915.com/users/adminSeaPool/allocationSeaPool', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json;charset=UTF-8',
+                                    'Accept': 'application/json, text/plain, */*',
+                                    'User-Agent': navigator.userAgent,
+                                    'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                                    'Origin': 'https://www.talk915.com',
+                                    'Sec-Fetch-Dest': 'empty',
+                                    'Sec-Fetch-Mode': 'cors',
+                                    'Sec-Fetch-Site': 'same-origin',
+                                    'token': token
+                                },
+                                body: JSON.stringify({
+                                    userId: item.userId,
+                                    staffTalkId: item.advisorId
+                                }),
+                                credentials: 'include'
+                            });
+                            
+                            const allocData = await allocResponse.json();
+                            
+                            if (allocResponse.ok && allocData.resultCode === 0) {
+                                item.allocationStatus = 'success';
+                                item.allocationMessage = allocData.resultData || '分配成功';
+                                allocSuccessCount++;
+                            } else {
+                                item.allocationStatus = 'failed';
+                                item.allocationMessage = allocData.resultMessage || '分配失败';
+                                allocFailCount++;
+                            }
+                        } catch (allocError) {
+                            console.error('分配失败:', item.userId, allocError);
+                            item.allocationStatus = 'failed';
+                            item.allocationMessage = allocError.message || '分配请求异常';
+                            allocFailCount++;
+                        }
+                    } else {
+                        // 查询失败
+                        item.queryStatus = 'failed';
+                        item.userInfo = null;
+                        item.allocationStatus = 'failed';
+                        item.allocationMessage = '查询失败，无法分配';
+                        queryFailCount++;
+                    }
+                } catch (error) {
+                    console.error('查询用户失败:', item.userId, error);
+                    item.queryStatus = 'failed';
+                    item.userInfo = null;
+                    item.allocationStatus = 'failed';
+                    item.allocationMessage = error.message || '查询请求异常';
+                    queryFailCount++;
+                }
+                
+                renderBatchList();
+            }
+            
+            queryBtn.disabled = false;
+            queryBtn.textContent = '批量查询、分配';
+            
+            // 显示完成结果统计
+            const resultSection = document.getElementById('batchResultSection');
+            const resultMessage = document.getElementById('batchResultMessage');
+            resultSection.style.display = 'block';
+            
+            resultMessage.innerHTML = `
+                <div style="padding: 15px; background-color: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
+                    <strong>批量查询与分配完成！</strong><br>
+                    查询成功：${querySuccessCount} 条，查询失败：${queryFailCount} 条<br>
+                    分配成功：${allocSuccessCount} 条，分配失败：${allocFailCount} 条
+                </div>
+            `;
+        });
         
     </script>
 </body>
