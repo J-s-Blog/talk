@@ -407,19 +407,33 @@
             display: block;
         }
         
-        /* 日期和刷新频率容器 */
-        .date-refresh-container {
+        /* 数据看板头部 */
+        .dashboard-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
+            align-items: center;
+            margin-bottom: 15px;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 10px;
+        }
+        
+        .dashboard-header h2 {
+            margin: 0;
+        }
+        
+        /* 日期容器 */
+        .date-refresh-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .date-controls {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             flex-wrap: wrap;
         }
         
@@ -435,11 +449,18 @@
         .refresh-control {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px;
+            gap: 8px;
+            padding: 8px 12px;
             background-color: #f8f9fa;
             border-radius: 4px;
             border: 1px solid #ddd;
+        }
+        
+        /* 刷新控件在header中时，去掉背景边框 */
+        .dashboard-header .refresh-control {
+            padding: 4px 8px;
+            background-color: transparent;
+            border: none;
         }
         
         .refresh-control input[type="checkbox"] {
@@ -447,7 +468,7 @@
         }
         
         .refresh-control input[type="number"] {
-            padding: 5px;
+            padding: 4px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
@@ -713,29 +734,74 @@
                 padding: 15px 10px;
             }
             
-            /* 日期和刷新控件 */
+            /* 数据看板头部 - 紧凑布局 */
+            .dashboard-header {
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+            
+            .dashboard-header h2 {
+                font-size: 15px;
+                white-space: nowrap;
+            }
+            
+            /* 刷新频率在标题旁 - 紧凑 */
+            .dashboard-header .refresh-control {
+                gap: 5px;
+                padding: 0;
+                flex-wrap: nowrap;
+                font-size: 12px;
+            }
+            
+            .dashboard-header .refresh-control input[type="number"] {
+                width: 45px !important;
+                padding: 3px 2px;
+                font-size: 12px;
+            }
+            
+            .dashboard-header .refresh-control label,
+            .dashboard-header .refresh-control span {
+                font-size: 12px;
+            }
+            
+            /* 日期控件 - 紧凑并排，缩短长度 */
             .date-refresh-container {
-                flex-direction: column;
-                gap: 15px;
+                gap: 8px;
+                margin-bottom: 10px;
             }
             
             .date-controls {
-                flex-direction: column;
-                gap: 10px;
-                width: 100%;
+                flex-direction: row;
+                gap: 6px;
+                width: auto;
             }
             
             .form-group.inline {
-                width: 100%;
+                flex: 0 0 auto;
+                min-width: 0;
+                width: 44%;
+            }
+            
+            .form-group.inline label {
+                font-size: 11px;
+                margin-bottom: 2px;
             }
             
             .form-group.inline input {
                 width: 100%;
+                padding: 3px;
+                font-size: 11px;
+                max-width: 130px;
             }
             
-            .refresh-control {
-                width: 100%;
-                flex-wrap: wrap;
+            .form-group.inline .info-text {
+                display: none;
+            }
+            
+            .refresh-control input[type="number"] {
+                width: 50px !important;
+                padding: 4px;
+                font-size: 13px;
             }
             
             /* 表格容器 - 允许横向滚动 */
@@ -1589,9 +1655,17 @@
             
             <!-- 公海池数据看板Tab -->
             <div id="seaPool" class="tab-content">
-                <h2>公海池数据看板</h2>
+                <div class="dashboard-header">
+                    <h2>公海池数据看板</h2>
+                    <div class="refresh-control">
+                        <input type="checkbox" id="autoRefresh" name="autoRefresh">
+                        <label for="autoRefresh">刷新频率:</label>
+                        <input type="number" id="refreshInterval" name="refreshInterval" value="30" min="30" max="3600" style="width: 60px;">
+                        <span>秒</span>
+                    </div>
+                </div>
                 
-                <!-- 日期控件和刷新频率 -->
+                <!-- 日期控件 -->
                 <div class="date-refresh-container">
                     <div class="date-controls">
                         <div class="form-group inline">
@@ -1604,12 +1678,6 @@
                             <input type="date" id="createEndTime" name="createEndTime">
                             <div class="info-text">留空表示不限制结束时间</div>
                         </div>
-                    </div>
-                    <div class="refresh-control">
-                        <input type="checkbox" id="autoRefresh" name="autoRefresh">
-                        <label for="autoRefresh">刷新频率:</label>
-                        <input type="number" id="refreshInterval" name="refreshInterval" value="30" min="30" max="3600" style="width: 60px;">
-                        <span>秒</span>
                     </div>
                 </div>
                 
