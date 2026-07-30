@@ -303,6 +303,61 @@
             overflow-y: auto;
             margin-bottom: 15px;
         }
+        
+        /* 移动端响应式适配 */
+        @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 10px;
+                border-radius: 6px;
+            }
+            h1 {
+                font-size: 18px;
+                margin-bottom: 20px;
+            }
+            h2 {
+                font-size: 15px;
+            }
+            .top-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .upload-section,
+            .config-section {
+                width: 100%;
+            }
+            .config-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .config-options {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .config-item {
+                flex-wrap: wrap;
+            }
+            button {
+                padding: 8px 14px;
+                font-size: 14px;
+            }
+            .button-group {
+                flex-wrap: wrap;
+            }
+            table {
+                min-width: 800px;
+                font-size: 12px;
+            }
+            .preview-table {
+                overflow-x: auto;
+            }
+            /* 底部安全空间 */
+            .container {
+                padding-bottom: 80px;
+            }
+        }
     </style>
 </head>
 <body>

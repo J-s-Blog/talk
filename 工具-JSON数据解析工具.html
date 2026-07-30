@@ -99,6 +99,59 @@
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+        
+        /* 移动端响应式适配 */
+        @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
+            body {
+                margin: 10px;
+            }
+            .container {
+                padding: 10px;
+                border-radius: 6px;
+            }
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .header-left,
+            .header-center,
+            .header-right {
+                flex: none;
+                width: 100%;
+                text-align: center;
+            }
+            .header-left h2 {
+                font-size: 14px;
+            }
+            .header-center h1 {
+                font-size: 18px;
+            }
+            .header-right {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            button {
+                padding: 8px 14px;
+                font-size: 14px;
+                margin: 5px;
+            }
+            .table-container {
+                overflow-x: auto;
+            }
+            table {
+                min-width: 600px;
+                font-size: 12px;
+            }
+            th, td {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+            /* 底部安全空间 */
+            .container {
+                padding-bottom: 80px;
+            }
+        }
     </style>
 </head>
 <body>

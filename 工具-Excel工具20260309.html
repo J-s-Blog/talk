@@ -699,6 +699,53 @@
             margin: 0;
             flex: 1;
         }
+        
+        /* 移动端响应式适配 */
+        @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 10px;
+                border-radius: 6px;
+            }
+            h1 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+            h2 {
+                font-size: 15px;
+            }
+            .file-section,
+            .sheet-section,
+            .split-section,
+            .merge-section {
+                padding: 12px;
+                flex-direction: column;
+            }
+            .middle-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .file-input {
+                min-width: 100%;
+            }
+            .mapping-row {
+                min-width: auto;
+                flex-wrap: wrap;
+            }
+            .header-buttons {
+                width: 100%;
+                margin-top: 10px;
+            }
+            button {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            .tab-content {
+                padding-bottom: 80px;
+            }
+        }
     </style>
 </head>
 <body>

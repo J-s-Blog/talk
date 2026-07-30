@@ -378,6 +378,10 @@
             div[style*="overflow-x"] {
                 -webkit-overflow-scrolling: touch;
             }
+            /* 底部安全空间 - 防止被浏览器地址栏遮挡 */
+            .tab-content {
+                padding-bottom: 80px;
+            }
         }
         table th { white-space: normal !important; padding: 3px 6px !important; }
         table td { padding: 3px 6px !important; white-space: nowrap !important; }
