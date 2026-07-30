@@ -234,6 +234,10 @@
                 width: auto !important;
                 flex-shrink: 0;
             }
+            /* 注销用户查询Tab移动端 */
+            #cancelUserQueryTab > div > div:first-child {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
@@ -256,6 +260,7 @@
                 <option value="tabUserRegPackage">用户注册时间和套餐查询</option>
                 <option value="tabUserCourseQuery">用户约课查询</option>
                 <option value="tabCourseClearQuery">课时清零查询</option>
+                <option value="tabCancelUserQuery">注销用户查询</option>
             </select>
         </div>
         <div class="tab-buttons" style="display: flex; margin-bottom: 20px; border-bottom: 1px solid #ddd;">
@@ -273,6 +278,7 @@
             <button id="tabUserRegPackage" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">用户注册时间和套餐查询</button>
             <button id="tabUserCourseQuery" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">用户约课查询</button>
             <button id="tabCourseClearQuery" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">课时清零查询</button>
+            <button id="tabCancelUserQuery" class="tab-btn" style="padding: 10px 20px; border: none; background-color: #f8f9fa; color: #333; cursor: pointer; font-size: 16px; border-radius: 4px 4px 0 0;">注销用户查询</button>
         </div>
 
         <!-- 登录 Tab -->
@@ -1450,6 +1456,36 @@
                 <div id="clearQueryStatus" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
             </div>
         </div>
+        
+        <!-- 注销用户查询 Tab -->
+        <div id="cancelUserQueryTab" class="tab-content" style="display: none;">
+            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                <h2 style="color: #333; margin-bottom: 15px; font-size: 16px;">注销用户查询</h2>
+                
+                <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; max-width: 600px; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="cancelQueryPhone" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">手机号码：</label>
+                            <input type="text" id="cancelQueryPhone" placeholder="输入手机号码" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="cancelQueryUserId" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">用户编号：</label>
+                            <input type="text" id="cancelQueryUserId" placeholder="输入用户编号" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+                        </div>
+                    </div>
+                    <button id="cancelQueryBtn" style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">查询</button>
+                </div>
+                
+                <!-- 查询结果区域 -->
+                <div id="cancelQueryResultSection" style="display: none;">
+                    <h3 style="color: #333; margin: 0 0 8px 0; font-size: 14px;">查询结果</h3>
+                    <div id="cancelQueryResultContainer" style="border: 1px solid #ddd; border-radius: 4px; padding: 15px; background: white;"></div>
+                </div>
+                
+                <!-- 状态信息 -->
+                <div id="cancelQueryStatus" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1824,6 +1860,7 @@
         document.getElementById('tabLogin').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'block';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -1883,6 +1920,7 @@
         document.getElementById('tabImport').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             // 隐藏所有Tab内容
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'block';
@@ -1903,7 +1941,7 @@
             document.getElementById('tabImport').style.color = 'white';
             
             // 重置其他Tab按钮样式
-            const otherTabs = ['tabLogin', 'tabSource', 'tabProduct', 'tabLoginLog', 'tabRegisteredUser', 'tabDisciplineCard', 'tabReferrerData', 'tabStaffDeal', 'tabAccountBinding', 'tabFootfallRecord', 'tabUserRegPackage', 'tabUserCourseQuery', 'tabCourseClearQuery'];
+            const otherTabs = ['tabLogin', 'tabSource', 'tabProduct', 'tabLoginLog', 'tabRegisteredUser', 'tabDisciplineCard', 'tabReferrerData', 'tabStaffDeal', 'tabAccountBinding', 'tabFootfallRecord', 'tabUserRegPackage', 'tabUserCourseQuery', 'tabCourseClearQuery', 'tabCancelUserQuery'];
             otherTabs.forEach(tabId => {
                 document.getElementById(tabId).classList.remove('active');
                 document.getElementById(tabId).style.backgroundColor = '#f8f9fa';
@@ -1914,6 +1952,7 @@
         document.getElementById('tabSource').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'block';
@@ -1973,6 +2012,7 @@
         document.getElementById('tabProduct').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2026,6 +2066,7 @@
         document.getElementById('tabLoginLog').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2086,6 +2127,7 @@
         document.getElementById('tabRegisteredUser').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2146,6 +2188,7 @@
         document.getElementById('tabDisciplineCard').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2206,6 +2249,7 @@
         document.getElementById('tabReferrerData').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2266,6 +2310,7 @@
         document.getElementById('tabStaffDeal').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2326,6 +2371,7 @@
         document.getElementById('tabAccountBinding').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2386,6 +2432,7 @@
         document.getElementById('tabFootfallRecord').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2446,6 +2493,7 @@
         document.getElementById('tabUserRegPackage').addEventListener('click', function() {
             document.getElementById('userCourseQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('loginTab').style.display = 'none';
             document.getElementById('importTab').style.display = 'none';
             document.getElementById('sourceTab').style.display = 'none';
@@ -2516,6 +2564,7 @@
             document.getElementById('footfallRecordTab').style.display = 'none';
             document.getElementById('userRegPackageTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('userCourseQueryTab').style.display = 'block';
             document.getElementById('tabUserCourseQuery').classList.add('active');
             document.getElementById('tabUserCourseQuery').style.backgroundColor = '#007bff';
@@ -2543,6 +2592,7 @@
             document.getElementById('footfallRecordTab').style.display = 'none';
             document.getElementById('userRegPackageTab').style.display = 'none';
             document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'none';
             document.getElementById('courseClearQueryTab').style.display = 'block';
             document.getElementById('tabCourseClearQuery').classList.add('active');
             document.getElementById('tabCourseClearQuery').style.backgroundColor = '#007bff';
@@ -2554,7 +2604,32 @@
             });
         });
         
-        // 移动端下拉菜单事件绑定
+        // 注销用户查询Tab切换
+        document.getElementById('tabCancelUserQuery').addEventListener('click', function() {
+            document.getElementById('loginTab').style.display = 'none';
+            document.getElementById('importTab').style.display = 'none';
+            document.getElementById('sourceTab').style.display = 'none';
+            document.getElementById('productTab').style.display = 'none';
+            document.getElementById('loginLogTab').style.display = 'none';
+            document.getElementById('registeredUserTab').style.display = 'none';
+            document.getElementById('disciplineCardTab').style.display = 'none';
+            document.getElementById('referrerDataTab').style.display = 'none';
+            document.getElementById('staffDealTab').style.display = 'none';
+            document.getElementById('accountBindingTab').style.display = 'none';
+            document.getElementById('footfallRecordTab').style.display = 'none';
+            document.getElementById('userRegPackageTab').style.display = 'none';
+            document.getElementById('userCourseQueryTab').style.display = 'none';
+            document.getElementById('courseClearQueryTab').style.display = 'none';
+            document.getElementById('cancelUserQueryTab').style.display = 'block';
+            document.getElementById('tabCancelUserQuery').classList.add('active');
+            document.getElementById('tabCancelUserQuery').style.backgroundColor = '#007bff';
+            document.getElementById('tabCancelUserQuery').style.color = 'white';
+            ['tabLogin','tabImport','tabSource','tabProduct','tabLoginLog','tabRegisteredUser','tabDisciplineCard','tabReferrerData','tabStaffDeal','tabAccountBinding','tabFootfallRecord','tabUserRegPackage','tabUserCourseQuery','tabCourseClearQuery'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+                document.getElementById(id).style.backgroundColor = '#f8f9fa';
+                document.getElementById(id).style.color = '#333';
+            });
+        });
         document.getElementById('mainTabDropdown').addEventListener('change', function() {
             const selectedTab = this.value;
             const tabButton = document.getElementById(selectedTab);
@@ -11764,6 +11839,133 @@ function exportRegisteredUsers() {
         document.getElementById('clearQueryBatchBtn').addEventListener('click', batchClearQuery);
         document.getElementById('clearQueryExportBtn').addEventListener('click', exportClearQueryCSV);
         document.getElementById('clearQueryClearBtn').addEventListener('click', clearClearQueryResults);
+        
+        // ========== 注销用户查询功能 ==========
+        
+        async function cancelUserQuery() {
+            const phone = document.getElementById('cancelQueryPhone').value.trim();
+            const userId = document.getElementById('cancelQueryUserId').value.trim();
+            
+            if (!phone && !userId) {
+                alert('请至少输入手机号码或用户编号中的一个');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            const payload = {
+                phone: phone,
+                userId: userId,
+                currPage: 0,
+                pageSize: 10
+            };
+            
+            const btn = document.getElementById('cancelQueryBtn');
+            btn.disabled = true;
+            btn.textContent = '查询中...';
+            
+            const statusEl = document.getElementById('cancelQueryStatus');
+            const resultSection = document.getElementById('cancelQueryResultSection');
+            const resultContainer = document.getElementById('cancelQueryResultContainer');
+            resultSection.style.display = 'none';
+            
+            try {
+                const response = await fetch('https://www.talk915.com/users/studentManage/queryLoginOutList', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/userManagement/student/cancellationRecords',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.resultMessage === '操作成功') {
+                    if (data.totalCount === 0 || !data.resultData || data.resultData.length === 0) {
+                        // 无匹配注销用户
+                        statusEl.textContent = `查询成功，但未找到匹配的注销用户记录（totalCount: 0）`;
+                        statusEl.style.backgroundColor = '#fff3cd';
+                        statusEl.style.color = '#856404';
+                        statusEl.style.border = '1px solid #ffeaa7';
+                        statusEl.style.display = 'block';
+                        resultSection.style.display = 'none';
+                    } else {
+                        // 有注销用户数据
+                        const userData = data.resultData[0];
+                        resultContainer.innerHTML = `
+                            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f5f5f5; width: 120px;">用户编号</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">${userData.userId || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f5f5f5;">手机号码</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">${userData.phone || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f5f5f5;">注销时间</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; font-weight: bold;">${userData.createTime || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f5f5f5;">来源类型</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">${userData.fromType === '1' ? '安卓' : userData.fromType === '2' ? 'iOS' : userData.fromType || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f5f5f5;">备注</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">${userData.remark || '-'}</td>
+                                </tr>
+                            </table>
+                        `;
+                        resultSection.style.display = 'block';
+                        
+                        statusEl.textContent = `查询成功！找到 ${data.totalCount} 条注销用户记录`;
+                        statusEl.style.backgroundColor = '#d4edda';
+                        statusEl.style.color = '#155724';
+                        statusEl.style.border = '1px solid #c3e6cb';
+                        statusEl.style.display = 'block';
+                    }
+                } else {
+                    statusEl.textContent = `查询失败：${data.resultMessage || '未知错误'}`;
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.color = '#721c24';
+                    statusEl.style.border = '1px solid #f5c6cb';
+                    statusEl.style.display = 'block';
+                    resultSection.style.display = 'none';
+                }
+            } catch (error) {
+                statusEl.textContent = `查询异常：${error.message}`;
+                statusEl.style.backgroundColor = '#f8d7da';
+                statusEl.style.color = '#721c24';
+                statusEl.style.border = '1px solid #f5c6cb';
+                statusEl.style.display = 'block';
+                resultSection.style.display = 'none';
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '查询';
+        }
+        
+        document.getElementById('cancelQueryBtn').addEventListener('click', cancelUserQuery);
+        ['cancelQueryPhone', 'cancelQueryUserId'].forEach(id => {
+            document.getElementById(id).addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    cancelUserQuery();
+                }
+            });
+        });
 
     </script>
     
