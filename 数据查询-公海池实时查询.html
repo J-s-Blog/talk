@@ -3115,6 +3115,39 @@
                                 }
                             }
                         });
+                        
+                        // 将领取记录中的顾问补充到汇总表中（即使他们当前没有在公海池的用户）
+                        const canceledUserList = window.canceledUserData || [];
+                        Object.keys(footfallStats).forEach(staffName => {
+                            if (!staffSummary[staffName]) {
+                                const stats = footfallStats[staffName];
+                                const staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                                // 从保有量配置中查找当日领取上限
+                                let todayUserGetLimit = '-';
+                                if (specialHoldData && specialHoldData.length > 0) {
+                                    const holdConfig = specialHoldData.find(h => 
+                                        h.staffTalkId === staffTalkId || h.staffName === staffName
+                                    );
+                                    if (holdConfig && holdConfig.todayUserGetLimit !== undefined && holdConfig.todayUserGetLimit !== null) {
+                                        todayUserGetLimit = holdConfig.todayUserGetLimit;
+                                    }
+                                }
+                                staffSummary[staffName] = {
+                                    staffName: staffName,
+                                    staffTalkId: staffTalkId,
+                                    todayUserGetLimit: todayUserGetLimit,
+                                    todayFootfallCount: stats.todayFootfallCount || 0,
+                                    canceledUserCount: stats.canceledUserCount || 0,
+                                    count: 0,
+                                    receiveTimeDiffSum: 0,
+                                    receiveTimeDiffCount: 0,
+                                    followTimeDiffSum: 0,
+                                    followTimeDiffCount: 0,
+                                    noFollowCount: 0,
+                                    noFollowDetails: []
+                                };
+                            }
+                        });
                     }
                     
                     const staffSummaryTable = document.getElementById('staffSummaryTable').querySelector('tbody');
