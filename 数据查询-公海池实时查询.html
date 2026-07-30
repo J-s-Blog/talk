@@ -772,7 +772,7 @@
             
             .date-controls {
                 flex-direction: row;
-                gap: 6px;
+                gap: 12px;
                 width: auto;
             }
             
@@ -1093,10 +1093,18 @@
                 font-size: 13px;
             }
             
-            /* 导出按钮 */
+            /* 查询和导出按钮 - 移动端固定高度 */
+            .action-buttons-row {
+                gap: 8px;
+            }
+            
+            #querySeaPoolBtn,
             #exportExcelBtn {
-                width: 100%;
-                margin-top: 10px;
+                width: auto;
+                margin-top: 0;
+                min-height: 40px;
+                padding: 8px 12px;
+                font-size: 14px;
             }
             
             /* 员工管理表格移动端 */
@@ -1703,9 +1711,9 @@
                     </div>
                 </div>
                 
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button type="button" id="querySeaPoolBtn" style="flex: 1;">查询公海池数据</button>
-                    <button type="button" id="exportExcelBtn" style="flex: 1; display: none;">导出</button>
+                <div class="action-buttons-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: stretch;">
+                    <button type="button" id="querySeaPoolBtn" style="flex: 1; min-height: 44px; line-height: 1.4; display: flex; align-items: center; justify-content: center;">查询公海池数据</button>
+                    <button type="button" id="exportExcelBtn" style="flex: 1; display: none; min-height: 44px; line-height: 1.4; align-items: center; justify-content: center;">导出</button>
                 </div>
                 
                 <div id="seaPoolResult" style="margin-top: 30px; display: none;">
@@ -5997,7 +6005,7 @@
                     });
                     
                     // 显示导出按钮
-                    document.getElementById('exportExcelBtn').style.display = 'inline-block';
+                    document.getElementById('exportExcelBtn').style.display = 'flex';
                     
                     // 存储数据以便导出
                     window.seaPoolData = data.resultData;
