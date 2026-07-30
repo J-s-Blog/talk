@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网页工具集合</title>
+    <title>Talk915网页工具</title>
     <style>
         * {
             margin: 0;
@@ -16,175 +16,539 @@
             background-color: #f5f5f5;
             color: #333;
             line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
         }
         
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #4a4a4a;
-            font-size: 28px;
-        }
-        
-        .category-title {
-            font-size: 20px;
-            margin: 30px 0 15px 0;
-            color: #333;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 8px;
-        }
-        
-        .tool-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
-        .tool-card {
-            background-color: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .app-container {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            height: 100vh;
         }
         
-        .tool-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-        }
-        
-        .tool-card h2 {
-            font-size: 16px;
-            margin: 0;
+        /* 顶部导航栏 - 灰白色系 */
+        .navbar {
+            background-color: #f8f9fa;
             color: #333;
-            flex: 1;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+            flex-shrink: 0;
         }
         
-        .tool-link {
-            display: inline-block;
-            background-color: #4CAF50;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            text-decoration: none;
+        .navbar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        
+        .navbar-title {
+            font-size: 18px;
             font-weight: bold;
-            transition: background-color 0.3s ease;
-            margin-left: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .navbar-title .logo-icon {
+            font-size: 22px;
+        }
+        
+        /* Tab导航 - PC端 */
+        .tab-nav {
+            display: flex;
+            gap: 3px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+        }
+        
+        .tab-nav::-webkit-scrollbar {
+            height: 3px;
+        }
+        
+        .tab-nav::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 2px;
+        }
+        
+        .tab-item {
+            padding: 7px 14px;
+            background-color: transparent;
+            color: #555;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 13px;
             white-space: nowrap;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        
+        .tab-item:hover {
+            background-color: #e9ecef;
+            color: #333;
+        }
+        
+        .tab-item.active {
+            background-color: white;
+            color: #007bff;
+            font-weight: bold;
+            border-color: #e0e0e0;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+        }
+        
+        /* 下拉导航 - 移动端/平板 */
+        .dropdown-nav {
+            display: none;
+            padding: 8px 0;
+        }
+        
+        .dropdown-nav select {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            background-color: white;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .dropdown-nav select option {
+            background-color: white;
+            color: #333;
+        }
+        
+        /* iframe区域 */
+        .content-area {
+            flex: 1;
+            position: relative;
+            background-color: white;
+            overflow: hidden;
+        }
+        
+        /* iframe容器 - 支持多iframe并存 */
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            background-color: white;
+        }
+        
+        .iframe-container iframe.active {
+            display: block;
+        }
+        
+        /* 加载提示 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255,255,255,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 100;
+            transition: opacity 0.3s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid #e9ecef;
+            border-top: 3px solid #6c757d;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #666;
             font-size: 14px;
         }
         
-        .tool-link:hover {
-            background-color: #45a049;
+        /* 欢迎页面 */
+        .welcome-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            z-index: 50;
         }
         
-        /* 手机适配 */
-        @media screen and (max-width: 600px) {
-            .container {
-                padding: 15px 12px;
+        .welcome-page.hidden {
+            display: none;
+        }
+        
+        .welcome-page h1 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .welcome-page p {
+            font-size: 16px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        
+        .welcome-page .hint {
+            font-size: 14px;
+            opacity: 0.6;
+            margin-top: 20px;
+            color: #666;
+        }
+        
+        /* 移动端适配 */
+        @media screen and (max-width: 768px) {
+            .navbar {
+                padding: 0 12px;
             }
             
-            h1 {
-                font-size: 22px;
-                margin-bottom: 20px;
+            .tab-nav {
+                display: none;
             }
             
-            .category-title {
-                font-size: 18px;
-                margin: 25px 0 12px 0;
-                padding-bottom: 6px;
+            .dropdown-nav {
+                display: block;
             }
             
-            .tool-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
+            .navbar-title {
+                font-size: 16px;
             }
             
-            .tool-card {
-                padding: 12px 15px;
+            .welcome-page h1 {
+                font-size: 24px;
             }
             
-            .tool-card h2 {
-                font-size: 15px;
-            }
-            
-            .tool-link {
-                padding: 7px 14px;
-                font-size: 13px;
-                margin-left: 10px;
+            .welcome-page p {
+                font-size: 14px;
             }
         }
         
         /* 平板适配 */
-        @media screen and (min-width: 601px) and (max-width: 1024px) {
-            .container {
-                padding: 20px 15px;
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            .navbar {
+                padding: 0 15px;
             }
             
-            .tool-grid {
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-                gap: 15px;
+            .tab-nav {
+                display: none;
+            }
+            
+            .dropdown-nav {
+                display: block;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>网页工具集合</h1>
+    <div class="app-container">
+        <!-- 顶部导航 -->
+        <nav class="navbar">
+            <div class="navbar-header">
+                <div class="navbar-title">
+                </div>
+            </div>
+            
+            <!-- PC端Tab导航 -->
+            <div class="tab-nav" id="tabNav"></div>
+            
+            <!-- 移动端/平板下拉导航 -->
+            <div class="dropdown-nav" id="dropdownNav">
+                <select id="toolSelect">
+                    <option value="">-- 请选择工具 --</option>
+                </select>
+            </div>
+        </nav>
         
-        <h2 class="category-title">数据查询</h2>
-        <div class="tool-grid">
-            <div class="tool-card">
-                <h2>Talk915批量查询工具</h2>
-                <a href="数据查询-Talk915批量查询工具.html" class="tool-link">使用工具</a>
+        <!-- 内容区域 -->
+        <div class="content-area">
+            <!-- 欢迎页面 -->
+            <div class="welcome-page" id="welcomePage">
+                <h1>欢迎使用网页工具集合</h1>
+                <p>请从顶部导航栏选择需要使用的工具</p>
+                <p class="hint">提示：工具会在当前页面内打开，切换Tab不会丢失状态</p>
             </div>
             
-            <div class="tool-card">
-                <h2>Talk915教务信息查询工具</h2>
-                <a href="数据查询-Talk915教务信息查询工具.html" class="tool-link">使用工具</a>
-            </div>
+            <!-- iframe容器 -->
+            <div class="iframe-container" id="iframeContainer"></div>
             
-            <div class="tool-card">
-                <h2>Talk915用户信息查询</h2>
-                <a href="数据查询-Talk915用户信息查询.html" class="tool-link">使用工具</a>
-            </div>
-            
-            <div class="tool-card">
-                <h2>公海池实时查询</h2>
-                <a href="数据查询-公海池实时查询.html" class="tool-link">使用工具</a>
-            </div>
-            
-            <div class="tool-card">
-                <h2>老师信息查询</h2>
-                <a href="数据查询-老师信息查询.html" class="tool-link">使用工具</a>
-            </div>
-        </div>
-        
-        <h2 class="category-title">工具</h2>
-        <div class="tool-grid">
-            <div class="tool-card">
-                <h2>Excel工具</h2>
-                <a href="工具-Excel工具20260309.html" class="tool-link">使用工具</a>
-            </div>
-            
-            <div class="tool-card">
-                <h2>IP地址分组工具</h2>
-                <a href="工具-IP地址分组工具.html" class="tool-link">使用工具</a>
-            </div>
-            
-            <div class="tool-card">
-                <h2>JSON数据解析工具</h2>
-                <a href="工具-JSON数据解析工具.html" class="tool-link">使用工具</a>
+            <!-- 加载提示 -->
+            <div class="loading-overlay hidden" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">正在加载工具...</div>
             </div>
         </div>
     </div>
+    
+    <script>
+        // 工具配置列表
+        const tools = [
+            { 
+                group: '数据查询', 
+                name: 'Talk915批量查询工具', 
+                file: '数据查询-Talk915批量查询工具.html'
+            },
+            { 
+                group: '数据查询', 
+                name: 'Talk915教务信息查询工具', 
+                file: '数据查询-Talk915教务信息查询工具.html'
+            },
+            { 
+                group: '数据查询', 
+                name: 'Talk915用户信息查询', 
+                file: '数据查询-Talk915用户信息查询.html'
+            },
+            { 
+                group: '数据查询', 
+                name: '公海池实时查询', 
+                file: '数据查询-公海池实时查询.html'
+            },
+            { 
+                group: '数据查询', 
+                name: '老师信息查询', 
+                file: '数据查询-老师信息查询.html'
+            },
+            { 
+                group: '工具', 
+                name: 'Excel工具', 
+                file: '工具-Excel工具20260309.html'
+            },
+            { 
+                group: '工具', 
+                name: 'IP地址分组工具', 
+                file: '工具-IP地址分组工具.html'
+            },
+            { 
+                group: '工具', 
+                name: 'JSON数据解析工具', 
+                file: '工具-JSON数据解析工具.html'
+            }
+        ];
+        
+        let currentTool = null;
+        const loadedIframes = {}; // 缓存已加载的iframe
+        
+        // 初始化导航
+        function initNavigation() {
+            const tabNav = document.getElementById('tabNav');
+            const dropdownSelect = document.getElementById('toolSelect');
+            
+            // 按分组归类
+            const groups = {};
+            tools.forEach((tool, index) => {
+                if (!groups[tool.group]) {
+                    groups[tool.group] = [];
+                }
+                groups[tool.group].push({ ...tool, index });
+            });
+            
+            // 生成Tab导航
+            let firstGroup = true;
+            Object.entries(groups).forEach(([groupName, groupTools]) => {
+                // 分组间隔
+                if (!firstGroup) {
+                    const separator = document.createElement('span');
+                    separator.style.cssText = 'padding: 8px 6px; color: #aaa; font-size: 12px; align-self: center;';
+                    separator.textContent = '·';
+                    tabNav.appendChild(separator);
+                }
+                firstGroup = false;
+                
+                groupTools.forEach(tool => {
+                    const tabItem = document.createElement('button');
+                    tabItem.className = 'tab-item';
+                    tabItem.textContent = tool.name;
+                    tabItem.dataset.file = tool.file;
+                    tabItem.addEventListener('click', () => loadTool(tool.file, tool.name));
+                    tabNav.appendChild(tabItem);
+                });
+            });
+            
+            // 生成下拉选项
+            Object.entries(groups).forEach(([groupName, groupTools]) => {
+                const groupOption = document.createElement('optgroup');
+                groupOption.label = groupName;
+                
+                groupTools.forEach(tool => {
+                    const option = document.createElement('option');
+                    option.value = tool.file;
+                    option.textContent = tool.name;
+                    groupOption.appendChild(option);
+                });
+                
+                dropdownSelect.appendChild(groupOption);
+            });
+            
+            // 下拉选择事件
+            dropdownSelect.addEventListener('change', function() {
+                if (this.value) {
+                    const tool = tools.find(t => t.file === this.value);
+                    if (tool) {
+                        loadTool(tool.file, tool.name);
+                    }
+                }
+            });
+            
+            // 从URL hash恢复上次选择
+            const savedTool = getToolFromHash();
+            if (savedTool) {
+                const tool = tools.find(t => t.file === savedTool);
+                if (tool) {
+                    loadTool(tool.file, tool.name);
+                }
+            }
+        }
+        
+        // 从hash获取工具
+        function getToolFromHash() {
+            const hash = window.location.hash.substring(1);
+            return hash || null;
+        }
+        
+        // 加载工具（带状态保存）
+        function loadTool(filePath, toolName) {
+            if (!filePath) return;
+            
+            const iframeContainer = document.getElementById('iframeContainer');
+            const welcomePage = document.getElementById('welcomePage');
+            
+            // 隐藏欢迎页
+            welcomePage.classList.add('hidden');
+            
+            // 如果iframe已存在，直接显示
+            if (loadedIframes[filePath]) {
+                showIframe(filePath);
+                updateUI(filePath);
+                updateHash(filePath);
+                return;
+            }
+            
+            // 显示加载提示
+            showLoading(`正在加载 ${toolName}...`);
+            
+            // 创建新的iframe
+            const iframe = document.createElement('iframe');
+            iframe.id = 'iframe_' + encodeURIComponent(filePath);
+            iframe.src = filePath;
+            iframe.setAttribute('data-file', filePath);
+            
+            iframe.addEventListener('load', function() {
+                // 加载完成后隐藏加载提示
+                hideLoading();
+            });
+            
+            // 添加到容器
+            iframeContainer.appendChild(iframe);
+            loadedIframes[filePath] = iframe;
+            
+            // 先隐藏所有iframe，再显示当前的
+            showIframe(filePath);
+            updateUI(filePath);
+            updateHash(filePath);
+        }
+        
+        // 显示指定iframe，隐藏其他
+        function showIframe(filePath) {
+            Object.entries(loadedIframes).forEach(([key, iframe]) => {
+                if (key === filePath) {
+                    iframe.classList.add('active');
+                } else {
+                    iframe.classList.remove('active');
+                }
+            });
+        }
+        
+        // 更新UI状态
+        function updateUI(filePath) {
+            currentTool = filePath;
+            
+            // 更新Tab选中状态
+            document.querySelectorAll('.tab-item').forEach(item => {
+                if (item.dataset.file === filePath) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // 更新下拉选中状态
+            const dropdown = document.getElementById('toolSelect');
+            if (dropdown.value !== filePath) {
+                dropdown.value = filePath;
+            }
+        }
+        
+        // 更新URL hash
+        function updateHash(filePath) {
+            if (window.location.hash !== '#' + filePath) {
+                history.replaceState(null, '', '#' + filePath);
+            }
+        }
+        
+        // 显示加载提示
+        function showLoading(text) {
+            const overlay = document.getElementById('loadingOverlay');
+            document.getElementById('loadingText').textContent = text || '正在加载...';
+            overlay.classList.remove('hidden');
+        }
+        
+        // 隐藏加载提示
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+        
+        // 初始化
+        initNavigation();
+        
+        // 暴露API供子页面调用
+        window.appAPI = {
+            getCurrentTool: () => currentTool,
+            navigateTo: (filePath) => {
+                const tool = tools.find(t => t.file === filePath);
+                if (tool) {
+                    loadTool(filePath, tool.name);
+                }
+            }
+        };
+    </script>
 </body>
 </html>

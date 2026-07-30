@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel文件自动更新工具</title>
+    <script>
+(function(){var ua=navigator.userAgent;var isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(ua);if(isMobile){document.documentElement.classList.add('mobile-device');}})();
+</script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
@@ -164,7 +167,7 @@
         }
         
         /* 响应式布局 */
-        @media (max-width: 900px) {
+        @media (max-width: 900px), (max-width: 1194px) and (pointer: coarse) {
             #sheetMappings {
                 grid-template-columns: 1fr;
             }
@@ -700,7 +703,6 @@
 </head>
 <body>
     <div class="container">
-        <h1>Excel工具集</h1>
         
         <!-- 标签页导航 -->
         <div class="tab-nav">

@@ -2,6 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <script>
+    (function(){var ua=navigator.userAgent;var isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(ua);if(isMobile){document.documentElement.classList.add('mobile-device');}})();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>公海池数据看板</title>
     <style>
@@ -614,7 +617,7 @@
         }
         
         /* ========== 响应式样式 - 手机适配 ========== */
-        @media screen and (max-width: 768px) {
+        @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
             body {
                 padding: 10px;
                 font-size: 14px;
@@ -1488,7 +1491,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Talk915工具</h1>
+
         
         <!-- 主Tab -->
         <div class="tab-container">
