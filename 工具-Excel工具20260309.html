@@ -774,8 +774,8 @@
                     <div>
                         <h2>1. 选择文件</h2>
                         <div class="file-input">
-                            <label for="splitFile">选择要分拆的Excel文件</label>
-                            <input type="file" id="splitFile" accept=".xlsx, .xls">
+                            <label for="splitFile">选择要分拆的文件（支持Excel、CSV、TXT）</label>
+                            <input type="file" id="splitFile" accept=".xlsx, .xls, .csv, .txt">
                         </div>
                     </div>
                     
@@ -968,34 +968,264 @@
             mergeBtn.addEventListener('click', mergeExcel);
         }
         
+        // 检测并解码文本文件（支持UTF-8、GBK、GB2312）
+        function decodeTextFile(buffer) {
+            const uint8 = new Uint8Array(buffer);
+            
+            // 尝试UTF-8解码
+            const utf8Decoder = new TextDecoder('utf-8', { fatal: false });
+            const utf8Text = utf8Decoder.decode(uint8);
+            
+            // 检查是否包含替换字符（表示UTF-8解码失败）
+            if (utf8Text.includes('\uFFFD')) {
+                // UTF-8失败，尝试GBK/GB2312
+                try {
+                    const gbkDecoder = new TextDecoder('gbk');
+                    return gbkDecoder.decode(uint8);
+                } catch (e) {
+                    // GBK也失败，尝试gb18030
+                    try {
+                        const gb18030Decoder = new TextDecoder('gb18030');
+                        return gb18030Decoder.decode(uint8);
+                    } catch (e2) {
+                        // 都失败了，返回UTF-8结果
+                        return utf8Text;
+                    }
+                }
+            }
+            
+            return utf8Text;
+        }
+        
+        // 根据单元格值推断类型
+        function inferCellType(value) {
+            if (value === null || value === undefined || value === '') {
+                return { t: 's', v: '' };
+            }
+            
+            const strVal = String(value).trim();
+            
+            // 尝试判断是否为日期
+            // 常见日期格式：2024-01-15, 2024/01/15, 2024年1月15日, 01-15-2024等
+            const datePatterns = [
+                /^\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?$/,           // 2024-01-15, 2024年1月15日
+                /^\d{1,2}[-/月]\d{1,2}[-/月]\d{4}日?$/,           // 01-15-2024
+                /^\d{4}年\d{1,2}月\d{1,2}日/,                       // 2024年1月15日
+                /^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}(:\d{2})?$/, // 带时间
+                /^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}:\d{2}$/,
+                // Excel序列号日期 (1900日期系统)
+            ];
+            
+            for (const pattern of datePatterns) {
+                if (pattern.test(strVal)) {
+                    const parsedDate = new Date(strVal.replace(/[年月]/g, '-').replace(/日/g, ''));
+                    if (!isNaN(parsedDate.getTime())) {
+                        return { t: 'd', v: parsedDate, z: 'yyyy-mm-dd hh:mm:ss' };
+                    }
+                }
+            }
+            
+            // 尝试判断是否为纯时间
+            const timePattern = /^\d{1,2}:\d{2}(:\d{2})?$/;
+            if (timePattern.test(strVal)) {
+                return { t: 'd', v: strVal, z: 'h:mm:ss' };
+            }
+            
+            // 尝试判断是否为数字
+            // 排除以0开头的非小数字符串（如01234，通常是编号/ID）
+            if (/^-?\d+(\.\d+)?$/.test(strVal)) {
+                // 如果以0开头且没有小数点，保持为字符串（可能是ID、编号、邮编等）
+                if (strVal.startsWith('0') && !strVal.includes('.') && strVal.length > 1) {
+                    return { t: 's', v: strVal };
+                }
+                const numVal = Number(strVal);
+                if (!isNaN(numVal) && isFinite(numVal)) {
+                    // 检查是否为整数
+                    if (Number.isInteger(numVal)) {
+                        return { t: 'n', v: numVal, z: '0' };
+                    } else {
+                        return { t: 'n', v: numVal, z: '0.00' };
+                    }
+                }
+            }
+            
+            // 尝试判断是否为百分比
+            if (/^-?\d+(\.\d+)?%$/.test(strVal)) {
+                const numVal = Number(strVal.replace('%', '')) / 100;
+                return { t: 'n', v: numVal, z: '0.00%' };
+            }
+            
+            // 尝试判断是否为货币
+            if (/^[¥$€£]\s*-?\d+(\.\d+)?$/.test(strVal)) {
+                const numVal = Number(strVal.replace(/[¥$€£]\s*/, ''));
+                return { t: 'n', v: numVal, z: '¥#,##0.00' };
+            }
+            
+            // 默认作为字符串
+            return { t: 's', v: strVal };
+        }
+        
+        // 解析TXT/CSV文件为SheetJS工作簿
+        function parseTextToWorkbook(text, fileName) {
+            // 检测分隔符
+            let delimiter = ',';
+            const firstLine = text.split(/\r?\n/)[0] || '';
+            
+            // 统计各种分隔符的数量
+            const tabCount = (firstLine.match(/\t/g) || []).length;
+            const commaCount = (firstLine.match(/,/g) || []).length;
+            const semicolonCount = (firstLine.match(/;/g) || []).length;
+            const pipeCount = (firstLine.match(/\|/g) || []).length;
+            
+            // 选择出现次数最多的分隔符
+            const maxCount = Math.max(tabCount, commaCount, semicolonCount, pipeCount);
+            if (maxCount > 0) {
+                if (tabCount === maxCount) delimiter = '\t';
+                else if (commaCount === maxCount) delimiter = ',';
+                else if (semicolonCount === maxCount) delimiter = ';';
+                else if (pipeCount === maxCount) delimiter = '|';
+            }
+            
+            // 按行分割
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            
+            if (lines.length === 0) {
+                return XLSX.utils.book_new();
+            }
+            
+            // 解析每行数据
+            const rows = lines.map(line => {
+                if (delimiter === ',') {
+                    // CSV解析，处理引号内的逗号
+                    return parseCSVLine(line);
+                } else {
+                    return line.split(delimiter).map(cell => cell.trim());
+                }
+            });
+            
+            // 构建工作表
+            const worksheet = {};
+            const maxCols = Math.max(...rows.map(r => r.length));
+            const dataRows = rows;
+            
+            for (let r = 0; r < dataRows.length; r++) {
+                for (let c = 0; c < maxCols; c++) {
+                    const cellAddr = XLSX.utils.encode_cell({ r, c });
+                    const cellValue = dataRows[r][c] !== undefined ? dataRows[r][c] : '';
+                    
+                    // 推断单元格类型
+                    const cellObj = inferCellType(cellValue);
+                    worksheet[cellAddr] = cellObj;
+                }
+            }
+            
+            // 设置范围
+            worksheet['!ref'] = XLSX.utils.encode_range({
+                s: { r: 0, c: 0 },
+                e: { r: dataRows.length - 1, c: maxCols - 1 }
+            });
+            
+            const workbook = XLSX.utils.book_new();
+            const sheetName = fileName.replace(/\.(csv|txt)$/i, '').substring(0, 31);
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName || 'Sheet1');
+            
+            return workbook;
+        }
+        
+        // CSV行解析（处理引号）
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (inQuotes) {
+                    if (char === '"') {
+                        if (line[i + 1] === '"') {
+                            // 双引号转义
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = false;
+                        }
+                    } else {
+                        current += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuotes = true;
+                    } else if (char === ',') {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+        
         // 处理分拆文件选择
         function handleSplitFileChange(e) {
             splitFile = e.target.files[0];
             if (!splitFile) return;
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                splitWorkbook = XLSX.read(data, { type: 'array' });
-                
-                // 填充Sheet选择
-                splitSheetSelect.innerHTML = '';
-                splitWorkbook.SheetNames.forEach(sheetName => {
-                    const option = document.createElement('option');
-                    option.value = sheetName;
-                    option.textContent = sheetName;
-                    splitSheetSelect.appendChild(option);
-                });
-                
-                // 触发Sheet选择事件
-                if (splitWorkbook.SheetNames.length > 0) {
-                    splitSheetSelect.value = splitWorkbook.SheetNames[0];
-                    handleSplitSheetChange({ target: splitSheetSelect });
-                }
-                
-                showSplitMessage('文件加载成功', 'success');
-            };
-            reader.readAsArrayBuffer(splitFile);
+            const fileName = splitFile.name.toLowerCase();
+            const isTextFile = fileName.endsWith('.csv') || fileName.endsWith('.txt');
+            
+            if (isTextFile) {
+                // 文本文件：用ArrayBuffer读取后检测编码
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const buffer = e.target.result;
+                    const text = decodeTextFile(buffer);
+                    splitWorkbook = parseTextToWorkbook(text, splitFile.name);
+                    
+                    // 填充Sheet选择
+                    splitSheetSelect.innerHTML = '';
+                    splitWorkbook.SheetNames.forEach(sheetName => {
+                        const option = document.createElement('option');
+                        option.value = sheetName;
+                        option.textContent = sheetName;
+                        splitSheetSelect.appendChild(option);
+                    });
+                    
+                    if (splitWorkbook.SheetNames.length > 0) {
+                        splitSheetSelect.value = splitWorkbook.SheetNames[0];
+                        handleSplitSheetChange({ target: splitSheetSelect });
+                    }
+                    
+                    showSplitMessage('文件加载成功（文本文件已解析）', 'success');
+                };
+                reader.readAsArrayBuffer(splitFile);
+            } else {
+                // Excel文件：直接读取
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    splitWorkbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: true });
+                    
+                    // 填充Sheet选择
+                    splitSheetSelect.innerHTML = '';
+                    splitWorkbook.SheetNames.forEach(sheetName => {
+                        const option = document.createElement('option');
+                        option.value = sheetName;
+                        option.textContent = sheetName;
+                        splitSheetSelect.appendChild(option);
+                    });
+                    
+                    if (splitWorkbook.SheetNames.length > 0) {
+                        splitSheetSelect.value = splitWorkbook.SheetNames[0];
+                        handleSplitSheetChange({ target: splitSheetSelect });
+                    }
+                    
+                    showSplitMessage('文件加载成功', 'success');
+                };
+                reader.readAsArrayBuffer(splitFile);
+            }
         }
         
         // 渲染表格内容预览
@@ -1185,13 +1415,20 @@
                     }
                 }
                 
-                // 复制数据行
+                // 复制列宽信息
+                if (worksheet['!cols']) {
+                    newWorksheet['!cols'] = JSON.parse(JSON.stringify(worksheet['!cols']));
+                }
+                
+                // 复制数据行，保留单元格类型信息
                 rows.forEach((rowData, rowIndex) => {
                     const newRowIndex = range.s.r + 1 + rowIndex;
                     rowData.forEach((cell, colIndex) => {
                         if (cell) {
                             const newCellAddr = XLSX.utils.encode_cell({ r: newRowIndex, c: range.s.c + colIndex });
-                            newWorksheet[newCellAddr] = cell;
+                            // 深拷贝单元格，保留类型(t)、值(v)、数字格式(z)等属性
+                            const cellCopy = JSON.parse(JSON.stringify(cell));
+                            newWorksheet[newCellAddr] = cellCopy;
                         }
                     });
                 });
@@ -1206,12 +1443,16 @@
                 XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, splitSheet);
                 
                 // 生成文件名
-                const originalName = splitFile.name.replace(/\.xlsx?$/, '');
+                const originalName = splitFile.name.replace(/\.(xlsx|xls|csv|txt)$/i, '');
                 const safeKey = key.replace(/[\\/:*?"<>|]/g, '_'); // 替换文件名中的非法字符
                 const fileName = `${originalName}_${safeKey}.xlsx`;
                 
-                // 下载文件
-                XLSX.writeFile(newWorkbook, fileName);
+                // 下载文件，保留单元格类型和格式
+                XLSX.writeFile(newWorkbook, fileName, {
+                    cellStyles: true,
+                    bookSST: true,
+                    compression: true
+                });
                 
                 // 添加到汇总信息
                 summary.push({ key, count: rows.length, fileName });
