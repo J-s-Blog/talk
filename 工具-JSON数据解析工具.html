@@ -102,12 +102,21 @@
         
         /* 移动端响应式适配 */
         @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
+            html {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
             body {
                 margin: 10px;
+                padding-bottom: 150px;
+                overflow-y: auto;
+                min-height: 100%;
+                -webkit-overflow-scrolling: touch;
             }
             .container {
-                padding: 10px;
+                padding: 10px 10px 150px 10px;
                 border-radius: 6px;
+                min-height: 100%;
             }
             .header {
                 flex-direction: column;
@@ -149,7 +158,7 @@
             }
             /* 底部安全空间 */
             .container {
-                padding-bottom: 80px;
+                padding-bottom: 150px !important;
             }
         }
     </style>

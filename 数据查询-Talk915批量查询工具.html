@@ -1190,12 +1190,20 @@
 
         /* 移动端响应式适配 */
         @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
+            html {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
             body {
-                padding: 3px;
+                padding: 3px 3px 150px 3px;
+                overflow-y: auto;
+                min-height: 100%;
+                -webkit-overflow-scrolling: touch;
             }
             .container {
-                padding: 8px;
+                padding: 8px 8px 150px 8px;
                 border-radius: 4px;
+                min-height: 100%;
             }
             h1 {
                 font-size: 16px;
@@ -1334,7 +1342,7 @@
             /* 底部安全空间 - 防止被浏览器地址栏遮挡 */
             .tab-content,
             .tabcontent {
-                padding-bottom: 80px;
+                padding-bottom: 150px !important;
             }
         }
     </style>
