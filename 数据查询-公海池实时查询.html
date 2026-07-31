@@ -5871,10 +5871,8 @@
                 }
                 
                 try {
-                    // 调用查询公海池数据的函数
+                    // 调用查询公海池数据的函数（已包含待分配数据和新增数量计算）
                     await querySeaPoolData();
-                    // 更新公海池待分配数据
-                    await updateSeaPoolOverview();
                 } finally {
                     // 重置倒计时，确保至少30秒
                     let refreshInterval = parseInt(document.getElementById('refreshInterval').value);
@@ -6023,13 +6021,19 @@
                 }
                 
                 if (response.ok && data.resultCode === 0) {
+                    // ========== 调整顺序：先获取待分配数量，避免数据不一致 ==========
+                    console.log('步骤1: 先查询公海池待分配数量...');
+                    const unallocatedCount = await fetchUnallocatedData();
+                    document.getElementById('unallocatedCount').textContent = unallocatedCount;
+                    console.log('待分配数量:', unallocatedCount);
+                    
                     // 查询保有量配置数据
-                    console.log('开始查询保有量配置数据...');
+                    console.log('步骤2: 查询保有量配置数据...');
                     const specialHoldData = await fetchSpecialHoldData();
                     console.log('保有量配置数据查询完成，共', specialHoldData.length, '条记录');
                     
                     // 查询领取记录数据
-                    console.log('开始查询领取记录数据...');
+                    console.log('步骤3: 查询领取记录数据...');
                     const footfallStats = await fetchFootfallRecordData(createStartTime, createEndTime, data.resultData);
                     console.log('领取记录数据查询完成');
                     
@@ -6061,13 +6065,18 @@
                     // 存储数据以便导出
                     window.seaPoolData = data.resultData;
                     
-                    // 更新已分配数据
-                    document.getElementById('allocatedCount').textContent = data.totalCount || 0;
+                    // ========== 最后更新已分配数据并计算新增 ==========
+                    console.log('步骤4: 更新已分配数据并计算新增...');
+                    const allocatedCount = data.totalCount || 0;
+                    document.getElementById('allocatedCount').textContent = allocatedCount;
                     
-                    // 先更新公海池数据概览
-                    await updateSeaPoolOverview();
+                    // 计算今日公海池新增 = 公海池已分配 + 公海池待分配（使用之前已获取的待分配数量）
+                    const todayNewCount = allocatedCount + unallocatedCount;
+                    document.getElementById('todayNewCount').textContent = todayNewCount;
+                    console.log(`已分配: ${allocatedCount}, 待分配: ${unallocatedCount}, 新增: ${todayNewCount}`);
                     
-                    // 查询待分配用户数据
+                    // 查询待分配用户数据（用于详情展示）
+                    console.log('步骤5: 查询待分配用户详情...');
                     await queryUnallocatedUsers();
                 } else {
                     statusMessage.innerHTML = ``;
@@ -6103,8 +6112,7 @@
         // 重新绑定查询按钮事件
         document.getElementById('querySeaPoolBtn').addEventListener('click', async function() {
             await querySeaPoolData();
-            // 手动点击查询时也要刷新公海池待分配数据
-            await updateSeaPoolOverview();
+            // 注：待分配数据和新增数量已在 querySeaPoolData 中处理完成
         });
         
         // 导出到Excel按钮点击事件
