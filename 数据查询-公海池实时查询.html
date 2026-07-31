@@ -415,10 +415,12 @@
             margin-bottom: 15px;
             flex-wrap: wrap;
             gap: 10px;
+            min-height: 40px;
         }
         
         .dashboard-header h2 {
             margin: 0;
+            flex-shrink: 0;
         }
         
         /* 日期容器 */
@@ -427,23 +429,42 @@
             justify-content: flex-start;
             align-items: flex-start;
             margin-bottom: 15px;
+            margin-top: 10px;
             flex-wrap: wrap;
             gap: 15px;
+            min-height: 60px;
         }
         
         .date-controls {
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
+            width: 100%;
         }
         
         .form-group.inline {
             margin-bottom: 0;
+            min-height: 55px;
+            display: flex;
+            flex-direction: column;
         }
         
         .form-group.inline label {
             display: block;
             margin-bottom: 5px;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        
+        .form-group.inline input[type="date"] {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 34px;
+            min-height: 34px;
+            font-size: 13px;
+            width: 150px;
+            max-width: 100%;
         }
         
         .refresh-control {
@@ -746,11 +767,15 @@
             .dashboard-header {
                 gap: 8px;
                 margin-bottom: 10px;
+                min-height: auto;
+                flex-wrap: nowrap;
             }
             
             .dashboard-header h2 {
                 font-size: 15px;
                 white-space: nowrap;
+                flex-shrink: 1;
+                min-width: 0;
             }
             
             /* 刷新频率在标题旁 - 紧凑 */
@@ -759,47 +784,61 @@
                 padding: 0;
                 flex-wrap: nowrap;
                 font-size: 12px;
+                flex-shrink: 0;
             }
             
             .dashboard-header .refresh-control input[type="number"] {
                 width: 45px !important;
                 padding: 3px 2px;
                 font-size: 12px;
+                height: auto;
+                min-height: 28px;
             }
             
             .dashboard-header .refresh-control label,
             .dashboard-header .refresh-control span {
                 font-size: 12px;
+                white-space: nowrap;
             }
             
             /* 日期控件 - 紧凑并排，缩短长度 */
             .date-refresh-container {
                 gap: 8px;
                 margin-bottom: 10px;
+                margin-top: 8px;
+                min-height: auto;
             }
             
             .date-controls {
                 flex-direction: row;
                 gap: 12px;
-                width: auto;
+                width: 100%;
+                flex-wrap: nowrap;
             }
             
             .form-group.inline {
-                flex: 0 0 auto;
+                flex: 1;
                 min-width: 0;
-                width: 44%;
+                width: auto;
+                min-height: 48px;
             }
             
             .form-group.inline label {
                 font-size: 11px;
-                margin-bottom: 2px;
+                margin-bottom: 3px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             
-            .form-group.inline input {
+            .form-group.inline input[type="date"] {
                 width: 100%;
-                padding: 3px;
+                padding: 4px 6px;
                 font-size: 11px;
-                max-width: 130px;
+                max-width: none;
+                height: 30px;
+                min-height: 30px;
+                box-sizing: border-box;
             }
             
             .form-group.inline .info-text {

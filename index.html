@@ -106,6 +106,28 @@
             margin-bottom: -1px;
         }
         
+        /* 首页按钮 */
+        .tab-item.home-btn {
+            margin-right: 8px;
+            border: 1px solid #e0e0e0;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            background-color: #fff3cd;
+            color: #856404;
+            font-weight: bold;
+        }
+        
+        .tab-item.home-btn:hover {
+            background-color: #ffeeba;
+            color: #856404;
+        }
+        
+        .tab-item.home-btn.active {
+            background-color: #ffc107;
+            color: #fff;
+            border-color: #ffc107;
+        }
+        
         /* 下拉导航 - 移动端/平板 */
         .dropdown-nav {
             display: none;
@@ -248,6 +270,106 @@
             color: #666;
         }
         
+        /* 工具分类区域 */
+        .tools-container {
+            width: 100%;
+            max-width: 900px;
+            margin-top: 25px;
+            padding: 0 10px;
+        }
+        
+        .tools-category {
+            margin-bottom: 25px;
+        }
+        
+        .tools-category:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tools-category-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #ddd;
+            text-align: left;
+        }
+        
+        .tools-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .tool-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tool-item:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+        
+        .tool-item-name {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .tool-item-btn {
+            padding: 5px 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .tool-item-btn:hover {
+            background-color: #218838;
+        }
+        
+        /* 移动端工具按钮适配 */
+        @media screen and (max-width: 768px) {
+            .tools-container {
+                padding: 0 5px;
+            }
+            
+            .tools-list {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .tools-category-title {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            
+            .tool-item {
+                padding: 10px 12px;
+            }
+            
+            .tool-item-name {
+                font-size: 13px;
+            }
+            
+            .tool-item-btn {
+                padding: 4px 10px;
+                font-size: 11px;
+            }
+        }
+        
         /* 移动端适配 */
         @media screen and (max-width: 768px) {
             .navbar {
@@ -301,11 +423,14 @@
             </div>
             
             <!-- PC端Tab导航 -->
-            <div class="tab-nav" id="tabNav"></div>
+            <div class="tab-nav" id="tabNav">
+                <button class="tab-item home-btn active" id="homeBtn">🏠 首页</button>
+            </div>
             
             <!-- 移动端/平板下拉导航 -->
             <div class="dropdown-nav" id="dropdownNav">
                 <select id="toolSelect">
+                    <option value="__home__">🏠 首页</option>
                     <option value="">-- 请选择工具 --</option>
                 </select>
             </div>
@@ -316,7 +441,11 @@
             <!-- 欢迎页面 -->
             <div class="welcome-page" id="welcomePage">
                 <h1>欢迎使用网页工具集合</h1>
-                <p>请从顶部导航栏选择需要使用的工具</p>
+                <p>点击下方卡片或顶部导航栏选择需要使用的工具</p>
+                
+                <!-- 工具分类容器 -->
+                <div class="tools-container" id="toolsContainer"></div>
+                
                 <p class="hint">提示：工具会在当前页面内打开，切换Tab不会丢失状态</p>
             </div>
             
@@ -430,15 +559,49 @@
                 dropdownSelect.appendChild(groupOption);
             });
             
+            // 生成欢迎页面的工具按钮（按分类）
+            const toolsContainer = document.getElementById('toolsContainer');
+            Object.entries(groups).forEach(([groupName, groupTools]) => {
+                const category = document.createElement('div');
+                category.className = 'tools-category';
+                
+                const title = document.createElement('div');
+                title.className = 'tools-category-title';
+                title.textContent = groupName;
+                category.appendChild(title);
+                
+                const list = document.createElement('div');
+                list.className = 'tools-list';
+                
+                groupTools.forEach(tool => {
+                    const item = document.createElement('div');
+                    item.className = 'tool-item';
+                    item.innerHTML = `
+                        <span class="tool-item-name">${tool.name}</span>
+                        <button class="tool-item-btn">使用工具</button>
+                    `;
+                    item.addEventListener('click', () => loadTool(tool.file, tool.name));
+                    list.appendChild(item);
+                });
+                
+                category.appendChild(list);
+                toolsContainer.appendChild(category);
+            });
+            
             // 下拉选择事件
             dropdownSelect.addEventListener('change', function() {
-                if (this.value) {
+                if (this.value === '__home__') {
+                    returnToHome();
+                } else if (this.value) {
                     const tool = tools.find(t => t.file === this.value);
                     if (tool) {
                         loadTool(tool.file, tool.name);
                     }
                 }
             });
+            
+            // 首页按钮点击事件
+            document.getElementById('homeBtn').addEventListener('click', returnToHome);
             
             // 从URL hash恢复上次选择
             const savedTool = getToolFromHash();
@@ -454,6 +617,40 @@
         function getToolFromHash() {
             const hash = window.location.hash.substring(1);
             return hash || null;
+        }
+        
+        // 返回首页
+        function returnToHome() {
+            const welcomePage = document.getElementById('welcomePage');
+            const iframeContainer = document.getElementById('iframeContainer');
+            const homeBtn = document.getElementById('homeBtn');
+            
+            // 显示欢迎页
+            welcomePage.classList.remove('hidden');
+            
+            // 隐藏所有iframe
+            Object.values(loadedIframes).forEach(iframe => {
+                iframe.classList.remove('active');
+            });
+            iframeContainer.classList.remove('active');
+            
+            // 更新首页按钮状态
+            homeBtn.classList.add('active');
+            
+            // 移除所有tab-item的active状态
+            document.querySelectorAll('.tab-item').forEach(item => {
+                if (item !== homeBtn) {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // 更新下拉选择器
+            const dropdown = document.getElementById('toolSelect');
+            dropdown.value = '__home__';
+            
+            // 更新hash
+            window.location.hash = '';
+            currentTool = null;
         }
         
         // 加载工具（带状态保存）
@@ -512,10 +709,14 @@
         // 更新UI状态
         function updateUI(filePath) {
             currentTool = filePath;
+            const homeBtn = document.getElementById('homeBtn');
             
             // 更新Tab选中状态
             document.querySelectorAll('.tab-item').forEach(item => {
-                if (item.dataset.file === filePath) {
+                if (item.classList.contains('home-btn')) {
+                    // 首页按钮不添加active
+                    item.classList.remove('active');
+                } else if (item.dataset.file === filePath) {
                     item.classList.add('active');
                 } else {
                     item.classList.remove('active');
