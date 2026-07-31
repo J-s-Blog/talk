@@ -10893,7 +10893,7 @@ function exportRegisteredUsers() {
             });
             
             // 重新构建表格，填充查询结果
-            const headers = [...userRegPackageImportedData[0], '注册日期', '剩余课时', '套餐数量', '购买套餐', '用户来源', '跟进业务员', '跟进经销商', '最初推荐人'];
+            const headers = [...userRegPackageImportedData[0], '注册日期', '套餐课时', '剩余课时', '套餐数量', '购买套餐', '用户来源', '跟进业务员', '跟进经销商', '最初推荐人'];
             const rows = userRegPackageImportedData.slice(1);
             const idColumnIndex = parseInt(document.getElementById('userRegPackageColumnSelect').value);
             
