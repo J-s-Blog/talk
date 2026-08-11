@@ -5,9 +5,52 @@
     <script>
     (function(){var ua=navigator.userAgent;var isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(ua);if(isMobile){document.documentElement.classList.add('mobile-device');}})();
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>公海池数据看板</title>
     <style>
+        /* 移动设备样式 - 彻底减少空白 */
+        .mobile-device body {
+            padding: 0 5px 150px 5px !important;
+            margin: 0 !important;
+        }
+        .mobile-device .container {
+            padding: 5px 8px 150px 8px !important;
+        }
+        .mobile-device .tab-container {
+            margin-top: 3px !important;
+        }
+        .mobile-device .tab-dropdown-wrapper {
+            margin-bottom: 0 !important;
+            padding: 0 !important;
+        }
+        .mobile-device .tab-dropdown-select {
+            padding: 4px 8px !important;
+            min-height: 24px !important;
+        }
+        .mobile-device .tab-content.active {
+            padding: 0 8px 15px 8px !important;
+        }
+        .mobile-device .tab-content > h2 {
+            margin-top: 0 !important;
+            margin-bottom: 5px !important;
+        }
+        /* 通用优化 - 减少所有tab页的间距 */
+        .mobile-device .tab-content > div:first-child[style*="margin-bottom"] {
+            margin-bottom: 5px !important;
+        }
+        .mobile-device .tab-content .form-group {
+            margin-bottom: 8px !important;
+        }
+        .mobile-device .tab-content .date-conditions {
+            gap: 8px !important;
+        }
+        .mobile-device .tab-content .sub-tab-dropdown-wrapper {
+            margin-bottom: 5px !important;
+            margin-top: 0 !important;
+        }
+        .mobile-device .tab-content [style*="margin-bottom"] {
+            /* 通用减少内联样式的margin-bottom */
+        }
         body {
             font-family: Arial, sans-serif;
             width: 100%;
@@ -660,12 +703,19 @@
         
         /* ========== 响应式样式 - 手机适配 ========== */
         @media screen and (max-width: 768px), (max-width: 1194px) and (pointer: coarse) {
+            /* 彻底重置默认样式 */
+            html, body {
+                margin: 0;
+                padding: 0;
+            }
+            
             html {
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
             body {
-                padding: 10px 10px 150px 10px;
+                padding: 0 5px 150px 5px !important;
+                margin: 0 !important;
                 font-size: 14px;
                 overflow-y: auto;
                 min-height: 100%;
@@ -673,18 +723,24 @@
             }
             
             .container {
-                padding: 15px 10px 150px 10px;
+                padding: 5px 8px 150px 8px;
                 border-radius: 6px;
                 min-height: 100%;
             }
             
+            /* 减少tab-container的顶部间距 */
+            .tab-container {
+                margin-top: 5px;
+            }
+            
             h1 {
                 font-size: 20px;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
             }
             
             h2 {
                 font-size: 18px;
+                margin-bottom: 10px;
             }
             
             h3 {
@@ -715,6 +771,7 @@
             
             .sub-tab-dropdown-wrapper {
                 display: block;
+                margin-bottom: 8px;
             }
             
             .sub-tab-button {
@@ -1125,7 +1182,56 @@
             
             /* 查询按钮区域优化 */
             .tab-content.active {
-                padding: 15px 10px;
+                padding: 0 8px 15px 8px;
+            }
+            
+            /* Tab下拉菜单移除底部间距 */
+            .tab-dropdown-wrapper {
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+            
+            /* Tab内容内h2标题减少顶部间距 */
+            .tab-content > h2 {
+                margin-top: 0 !important;
+                margin-bottom: 10px !important;
+            }
+            
+            /* 减少所有子Tab下拉菜单的间距 */
+            .sub-tab-dropdown-wrapper {
+                margin-bottom: 5px !important;
+                padding-bottom: 0 !important;
+            }
+            
+            /* 充值订单明细tab页特殊处理 - 减少顶部空白 */
+            #rechargeOrder {
+                padding-top: 0 !important;
+            }
+            
+            #rechargeOrder > h2 {
+                margin-top: 0 !important;
+                margin-bottom: 5px !important;
+                font-size: 16px !important;
+            }
+            
+            /* 充值订单明细查询条件区域减少底部间距 */
+            #rechargeOrder > div:first-child {
+                margin-bottom: 5px !important;
+            }
+            
+            /* 充值订单明细子Tab菜单减少间距 */
+            #rechargeTabs {
+                margin-bottom: 5px !important;
+                margin-top: 5px !important;
+            }
+            
+            #rechargeTabs .sub-tab-dropdown-wrapper {
+                margin-bottom: 5px !important;
+            }
+            
+            /* 表单标签减少底部间距 */
+            .form-group.inline label {
+                margin-bottom: 3px !important;
             }
             
             /* 表格容器增加触摸滑动区域 */
@@ -1332,25 +1438,183 @@
             .tab-content {
                 padding-bottom: 150px !important;
             }
+            
+            /* ========== 充值订单明细Tab移动端样式 ========== */
+            /* 减少h2标题的顶部间距 */
+            #rechargeOrder > h2 {
+                margin-top: 0 !important;
+                margin-bottom: 8px !important;
+                font-size: 16px !important;
+            }
+            
+            /* 充值订单明细子Tab菜单减少间距 */
+            #rechargeTabs {
+                margin-bottom: 5px !important;
+            }
+            
+            #rechargeTabs .sub-tab-dropdown-wrapper {
+                margin-bottom: 5px !important;
+            }
+            
+            /* 日期条件区域 - 移动端改为竖向堆叠 */
+            #rechargeOrder .date-conditions {
+                flex-direction: column !important;
+                gap: 10px !important;
+                padding: 12px 10px !important;
+            }
+            
+            /* 日期条件行 - 每行一个日期范围，内部横向并排 */
+            #rechargeOrder .date-conditions > .form-group.inline {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                width: 100% !important;
+                margin-right: 0 !important;
+                margin-bottom: 0 !important;
+                padding: 8px 10px !important;
+                background-color: white !important;
+                border: 1px solid #e0e0e0 !important;
+                border-radius: 6px !important;
+                gap: 6px !important;
+            }
+            
+            #rechargeOrder .date-conditions > .form-group.inline > label {
+                font-size: 12px !important;
+                margin-bottom: 0 !important;
+                white-space: nowrap !important;
+                font-weight: 500 !important;
+                color: #555 !important;
+                flex-shrink: 0 !important;
+                width: 60px !important;
+                min-width: 60px !important;
+            }
+            
+            /* 日期输入框 - 移动端自适应宽度 */
+            #rechargeOrder .date-conditions input[type="date"] {
+                flex: 1 !important;
+                min-width: 0 !important;
+                height: 36px !important;
+                padding: 4px 6px !important;
+                font-size: 13px !important;
+                border: 1px solid #ddd !important;
+                border-radius: 4px !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* "至" 文字 */
+            #rechargeOrder .date-conditions > .form-group.inline > span {
+                display: inline !important;
+                margin: 0 2px !important;
+                font-size: 12px !important;
+                flex-shrink: 0 !important;
+            }
+            
+            /* 查询按钮区域 - 移动端全宽 */
+            #rechargeOrder .date-conditions > div:last-of-type {
+                display: flex !important;
+                flex-direction: row !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+            
+            #rechargeOrder #queryRechargeOrderBtn,
+            #rechargeOrder #exportRechargeOrderBtn {
+                flex: 1 !important;
+                min-height: 40px !important;
+                padding: 8px 12px !important;
+                font-size: 14px !important;
+            }
+            
+            /* 更多筛选条件按钮 - 移动端全宽 */
+            #rechargeOrder .toggle-advanced-btn {
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            
+            /* 高级筛选条件 - 移动端网格布局 */
+            #rechargeOrder .collapse-content > div:first-child {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px !important;
+            }
+            
+            #rechargeOrder .collapse-content .form-group.inline {
+                margin-right: 0 !important;
+            }
+            
+            #rechargeOrder .collapse-content .form-group.inline > label {
+                font-size: 12px !important;
+                margin-bottom: 4px !important;
+                white-space: nowrap !important;
+            }
+            
+            #rechargeOrder .collapse-content .form-group.inline input[type="text"],
+            #rechargeOrder .collapse-content .form-group.inline select {
+                width: 100% !important;
+                height: 36px !important;
+                padding: 6px 8px !important;
+                font-size: 13px !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* 账号属性复选框 - 移动端调整 */
+            #rechargeOrder .collapse-content .form-group.inline:first-child > div {
+                gap: 10px !important;
+            }
+            
+            #rechargeOrder .collapse-content .form-group.inline:first-child label {
+                font-size: 13px !important;
+            }
+            
+            /* 备注信息 - 移动端全宽 */
+            #rechargeOrder .collapse-content > div:last-child {
+                font-size: 12px !important;
+                padding: 10px !important;
+            }
+            
+            /* 汇总信息 - 移动端竖向堆叠 */
+            #rechargeSummary > div {
+                flex-direction: column !important;
+                gap: 8px !important;
+                font-size: 13px !important;
+            }
+            
+            /* 充值订单明细表格 - 移动端优化 */
+            #rechargeOrderTable {
+                min-width: 600px !important;
+            }
+            
+            #rechargeOrderTable th,
+            #rechargeOrderTable td {
+                padding: 5px 6px !important;
+                font-size: 12px !important;
+            }
+            /* 在手机布局下，隐藏“更多筛选条件”面板及其占用的空间 */
+            #roAdvancedPanel {
+                display: none !important;
+            }
         }
         
         /* ========== 下拉菜单样式（移动端） ========== */
         .tab-dropdown-select {
             width: 100%;
-            padding: 10px 12px;
+            padding: 4px 8px;
             border: 1px solid #007bff;
-            border-radius: 6px;
+            border-radius: 4px;
             background-color: white;
             color: #007bff;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23007bff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23007bff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 12px center;
-            padding-right: 35px;
+            background-position: right 10px center;
+            padding-right: 28px;
+            min-height: 24px;
+            line-height: 1.2;
         }
         
         .tab-dropdown-select:focus {
@@ -1462,18 +1726,22 @@
         /* 超小屏幕适配 (max-width: 380px) */
         @media screen and (max-width: 380px) {
             body {
-                padding: 8px;
+                padding: 5px;
                 font-size: 13px;
             }
             
             .container {
-                padding: 10px 8px;
+                padding: 3px 5px 150px 5px;
                 border-radius: 5px;
+            }
+            
+            .tab-container {
+                margin-top: 3px;
             }
             
             h1 {
                 font-size: 17px;
-                margin-bottom: 15px;
+                margin-bottom: 10px;
             }
             
             h2 {
@@ -1576,6 +1844,27 @@
             /* 顾问汇总表进一步压缩 */
             #staffSummaryTable {
                 min-width: 400px;
+            }
+            
+            /* 充值订单明细 - 超小屏幕优化 */
+            #rechargeOrder .date-conditions > .form-group.inline {
+                padding: 6px 8px !important;
+                gap: 4px !important;
+            }
+            
+            #rechargeOrder .date-conditions > .form-group.inline > label {
+                font-size: 11px !important;
+                width: 55px !important;
+                min-width: 55px !important;
+            }
+            
+            #rechargeOrder .date-conditions input[type="date"] {
+                height: 34px !important;
+                font-size: 12px !important;
+            }
+            
+            #rechargeOrder .collapse-content > div:first-child {
+                grid-template-columns: 1fr !important;
             }
         }
         
@@ -2165,25 +2454,25 @@
                 <!-- 下单日期 -->
                 <div class="form-group inline">
                     <label style="margin-bottom: 5px; display: block;">下单日期:</label>
-                    <input type="date" id="roBeginDate" style="width: 120px;">
+                    <input type="date" id="roBeginDate" style="width: 80px;">
                     <span style="margin: 0 5px;">至</span>
-                    <input type="date" id="roEndDate" style="width: 120px;">
+                    <input type="date" id="roEndDate" style="width: 80px;">
                 </div>
                 
                 <!-- 支付日期 -->
                 <div class="form-group inline">
                     <label style="margin-bottom: 5px; display: block;">支付日期:</label>
-                    <input type="date" id="roPayBeginDate" style="width: 120px;" value="">
+                    <input type="date" id="roPayBeginDate" style="width: 80px;" value="">
                     <span style="margin: 0 5px;">至</span>
-                    <input type="date" id="roPayEndDate" style="width: 120px;" value="">
+                    <input type="date" id="roPayEndDate" style="width: 80px;" value="">
                 </div>
                 
                 <!-- 退款时间 -->
                 <div class="form-group inline">
                     <label style="margin-bottom: 5px; display: block;">退款时间:</label>
-                    <input type="date" id="roRefundStartTime" style="width: 120px;">
+                    <input type="date" id="roRefundStartTime" style="width: 80px;">
                     <span style="margin: 0 5px;">至</span>
-                    <input type="date" id="roRefundEndTime" style="width: 120px;">
+                    <input type="date" id="roRefundEndTime" style="width: 80px;">
                 </div>
                 
                 <!-- 查询按钮 -->
@@ -2208,7 +2497,7 @@
                         <div class="form-group inline" style="margin-right: 10px;">
                             <label style="margin-bottom: 5px; display: block;">账号属性:</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <label><input type="checkbox" id="attrExternal" value="0"> 外部</label>
+                                <label><input type="checkbox" id="attrExternal" value="0" checked> 外部</label>
                                 <label><input type="checkbox" id="attrDirect" value="1" checked> 直销</label>
                                 <label><input type="checkbox" id="attrDaren" value="2" checked> 达人</label>
                                 <label><input type="checkbox" id="attr托管" value="3" checked> 托管</label>
@@ -2293,6 +2582,7 @@
             <div style="display: flex; gap: 30px; flex-wrap: wrap;">
                 <div><strong>共有记录:</strong> <span id="roTotal">0</span> 条</div>
                 <div><strong>已支付金额:</strong> <span id="roPayTotalMoney">0.00</span> 元</div>
+                <div><strong>经销商订单:</strong> <span id="roDealerOrderCount">0</span> 条 / <span id="roDealerOrderMoney">0.00</span> 元</div>
                 <div><strong>待支付金额:</strong> <span id="roUnPayTotalMoney">0.00</span> 元</div>
                 <div><strong>退款金额:</strong> <span id="roRefundTotalMoney">0.00</span> 元</div>
                 <div><strong>收益:</strong> <span id="roTotalEarn">0.00</span> 元</div>
@@ -7979,7 +8269,23 @@
                 resultData = {};
             }
             document.getElementById('roTotal').textContent = parseInt(resultData.total || 0);
-            document.getElementById('roPayTotalMoney').textContent = (parseFloat(resultData.payTotalMoney) || 0).toFixed(2);
+
+            // 统计经销商订单（staffUserName为空的数据），单独归类，不纳入已支付金额
+            let dealerOrderCount = 0;
+            let dealerOrderMoney = 0;
+            (resultData.resultList || []).forEach(item => {
+                if (!item.staffUserName) {
+                    dealerOrderCount++;
+                    dealerOrderMoney += parseFloat(item.payMoney) || 0;
+                }
+            });
+
+            // 已支付金额剔除经销商订单（staffUserName为空）部分
+            const adjustedPayTotalMoney = (parseFloat(resultData.payTotalMoney) || 0) - dealerOrderMoney;
+            document.getElementById('roPayTotalMoney').textContent = adjustedPayTotalMoney.toFixed(2);
+            document.getElementById('roDealerOrderCount').textContent = dealerOrderCount;
+            document.getElementById('roDealerOrderMoney').textContent = dealerOrderMoney.toFixed(2);
+
             document.getElementById('roUnPayTotalMoney').textContent = (parseFloat(resultData.unPayTotalMoney) || 0).toFixed(2);
             document.getElementById('roRefundTotalMoney').textContent = (parseFloat(resultData.refundTotalMoney) || 0).toFixed(2);
             document.getElementById('roTotalEarn').textContent = (parseFloat(resultData.totalEarn) || 0).toFixed(2);
@@ -8267,9 +8573,22 @@
                 });
                 
                 // 创建汇总表
+                // 统计经销商订单（staffUserName为空），单独归类，不纳入已支付金额
+                let dealerOrderCount = 0;
+                let dealerOrderMoney = 0;
+                (data.resultList || []).forEach(item => {
+                    if (!item.staffUserName) {
+                        dealerOrderCount++;
+                        dealerOrderMoney += parseFloat(item.payMoney) || 0;
+                    }
+                });
+                const adjustedPayTotalMoney = (parseFloat(data.payTotalMoney) || 0) - dealerOrderMoney;
+
                 const summaryWorksheet = workbook.addWorksheet('汇总统计');
                 summaryWorksheet.addRow(['统计项', '金额(元)']);
-                summaryWorksheet.addRow(['已支付金额', parseFloat((data.payTotalMoney || 0).toFixed(2))]);
+                summaryWorksheet.addRow(['已支付金额', parseFloat(adjustedPayTotalMoney.toFixed(2))]);
+                summaryWorksheet.addRow(['经销商订单数', dealerOrderCount]);
+                summaryWorksheet.addRow(['经销商订单金额', parseFloat(dealerOrderMoney.toFixed(2))]);
                 summaryWorksheet.addRow(['待支付金额', parseFloat((data.unPayTotalMoney || 0).toFixed(2))]);
                 summaryWorksheet.addRow(['退款金额', parseFloat((data.refundTotalMoney || 0).toFixed(2))]);
                 summaryWorksheet.addRow(['收益', parseFloat((data.totalEarn || 0).toFixed(2))]);
@@ -8383,6 +8702,68 @@
         // 页面加载时设置默认日期
         document.addEventListener('DOMContentLoaded', function() {
             setDefaultPayDate();
+            // 移动端优化：动态移除充值订单明细tab页的内联样式
+            if (document.documentElement.classList.contains('mobile-device') || window.innerWidth <= 768) {
+                // 延迟执行，确保DOM完全加载
+                setTimeout(optimizeMobileLayout, 200);
+                setTimeout(optimizeMobileLayout, 500); // 二次执行，确保所有元素都被处理
+            }
+        });
+        
+        // 移动端布局优化函数
+        function optimizeMobileLayout() {
+            const isMobile = document.documentElement.classList.contains('mobile-device') || 
+                             window.innerWidth <= 768;
+            if (!isMobile) return;
+            
+            // 获取所有tab页
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tabContent => {
+                // 移除内联样式的margin-bottom和gap
+                const elementsWithInlineStyle = tabContent.querySelectorAll('[style*="margin-bottom"], [style*="gap"], [style*="margin-top"]');
+                elementsWithInlineStyle.forEach(el => {
+                    const style = el.style;
+                    // 减少或移除大间距
+                    if (style.marginBottom && parseInt(style.marginBottom) > 10) {
+                        style.setProperty('margin-bottom', '5px', 'important');
+                    }
+                    if (style.gap && parseInt(style.gap) > 10) {
+                        style.setProperty('gap', '8px', 'important');
+                    }
+                    if (style.marginTop && parseInt(style.marginTop) > 10) {
+                        style.setProperty('margin-top', '5px', 'important');
+                    }
+                });
+                
+                // 移除form-group的基础margin-bottom
+                tabContent.querySelectorAll('.form-group').forEach(el => {
+                    el.style.setProperty('margin-bottom', '8px', 'important');
+                });
+                
+                // 优化date-conditions的gap
+                const dateConditions = tabContent.querySelector('.date-conditions');
+                if (dateConditions) {
+                    dateConditions.style.setProperty('gap', '8px', 'important');
+                }
+                
+                // 优化sub-tab-dropdown-wrapper的间距
+                tabContent.querySelectorAll('.sub-tab-dropdown-wrapper').forEach(el => {
+                    el.style.setProperty('margin-bottom', '5px', 'important');
+                    el.style.setProperty('margin-top', '0', 'important');
+                });
+            });
+        }
+        
+        // 绑定tab切换事件（只绑定一次）
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainTabDropdown = document.getElementById('mainTabDropdown');
+            if (mainTabDropdown) {
+                mainTabDropdown.addEventListener('change', function() {
+                    if (document.documentElement.classList.contains('mobile-device') || window.innerWidth <= 768) {
+                        setTimeout(optimizeMobileLayout, 100);
+                    }
+                });
+            }
         });
         
         // 绑定充值订单查询按钮事件
