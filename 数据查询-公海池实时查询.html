@@ -2569,10 +2569,6 @@
                         </div>
                     </div>
                     
-                    <!-- 备注信息 -->
-                    <div style="margin-top: 15px; padding: 8px 12px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; font-size: 12px; color: #856404;">
-                        <strong>备注:</strong> 经销商代码为qd75572的订单，顾问姓名将自动设置为熊杰文(1458166)
-                    </div>
                 </div>
             </div>
         </div>
@@ -8213,15 +8209,6 @@
                 }
                 
                 if (data.resultCode === 0) {
-                    // 应用经销商代码规则：如果talkId是qd75572（不区分大小写），则设置顾问姓名为熊杰文，顾问ID为1458166
-                    data.resultData.resultList.forEach(item => {
-                        const talkIdValue = (item.talkId || '').toLowerCase();
-                        if (talkIdValue === 'qd75572') {
-                            item.staffUserName = '熊杰文';
-                            item.staffId = '1458166';
-                        }
-                    });
-                    
                     // 保存数据到全局变量
                     window.rechargeOrderData = data.resultData;
                     
@@ -8326,7 +8313,7 @@
             const userMap = {};
             
             data.forEach(item => {
-                const consultant = item.staffUserName || '未知';
+                const consultant = item.staffUserName || '经销商订单';
                 const userId = item.userId;
                 
                 if (!consultantStats[consultant]) {
@@ -8363,7 +8350,7 @@
             const productStats = {};
             
             data.forEach(item => {
-                const consultant = item.staffUserName || '未知';
+                const consultant = item.staffUserName || '经销商订单';
                 const product = item.productName || '未知';
                 
                 if (!productStats[consultant]) {
@@ -8492,14 +8479,8 @@
             tableBody.innerHTML = '';
             
             data.forEach((item, index) => {
-                // 应用经销商代码规则：如果talkId是qd75572（不区分大小写），则设置顾问姓名为熊杰文，顾问ID为1458166
-                let staffUserName = item.staffUserName;
-                let staffId = item.staffId;
-                const talkIdValue = (item.talkId || '').toLowerCase();
-                if (talkIdValue === 'qd75572') {
-                    staffUserName = '熊杰文';
-                    staffId = '1458166';
-                }
+                const staffUserName = item.staffUserName;
+                const staffId = item.staffId;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -8547,14 +8528,8 @@
                 worksheet.addRow(['序号', '用户编号', '套餐名', '订单号', '支付金额', '支付时间', '支付状态', '经销商', '业务员', '顾问姓名', '顾问ID', '推荐码']);
                 
                 data.resultList.forEach((item, index) => {
-                    // 应用经销商代码规则：如果talkId是qd75572（不区分大小写），则设置顾问姓名为熊杰文，顾问ID为1458166
-                    let staffUserName = item.staffUserName;
-                    let staffId = item.staffId;
-                    const talkIdValue = (item.talkId || '').toLowerCase();
-                    if (talkIdValue === 'qd75572') {
-                        staffUserName = '熊杰文';
-                        staffId = '1458166';
-                    }
+                    const staffUserName = item.staffUserName;
+                    const staffId = item.staffId;
                     
                     worksheet.addRow([
                         index + 1,
