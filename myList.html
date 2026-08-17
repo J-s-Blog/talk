@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureTask - 端到端加密任务管理器</title>
+    <!-- 引入 Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root {
@@ -18,286 +19,79 @@
             --success: #22c55e;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            width: 100%;
-            flex: 1;
-        }
-
-        header {
-            background-color: var(--card-bg);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .header-content {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            color: var(--primary);
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-danger {
-            background-color: var(--danger);
-            color: white;
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-
-        .btn-outline:hover {
-            background-color: var(--bg);
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
-            color: var(--text);
-        }
-
-        input[type="text"],
-        input[type="email"],
-        input[type="password"],
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-
-        input:focus,
-        textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .error-msg {
-            color: var(--danger);
-            font-size: 0.9rem;
-            margin-top: 8px;
-        }
-
-        .success-msg {
-            color: var(--success);
-            font-size: 0.9rem;
-            margin-top: 8px;
-        }
-
-        .task-item {
-            border-bottom: 1px solid var(--border);
-            padding: 12px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .task-item:last-child {
-            border-bottom: none;
-        }
-
-        .task-content {
-            flex: 1;
-        }
-
-        .task-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .task-meta {
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        .task-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            color: var(--text-light);
-            border-radius: 4px;
-        }
-
-        .icon-btn:hover {
-            background-color: var(--bg);
-            color: var(--text);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-
-        .modal {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 24px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--text-light);
-        }
-
-        .category-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            background-color: #e0f2fe;
-            color: #0369a1;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            margin-right: 8px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-light);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-light);
-        }
-
-        .nav-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
-        }
-
-        .nav-tab {
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* 全局错误提示条 */
+        #global-error-banner {
+            background-color: #fee2e2;
+            color: #991b1b;
             padding: 10px 20px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            font-weight: 500;
-        }
-
-        .nav-tab.active {
-            border-bottom-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .tab-content {
+            text-align: center;
             display: none;
+            border-bottom: 1px solid #fecaca;
         }
 
-        .tab-content.active {
-            display: block;
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; width: 100%; flex: 1; }
+        header { background-color: var(--card-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem 0; position: sticky; top: 0; z-index: 10; }
+        .header-content { max-width: 800px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { font-size: 1.5rem; color: var(--primary); }
+        
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; transition: all 0.2s; font-size: 0.9rem; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-dark); }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background-color: var(--bg); }
+        
+        .card { background-color: var(--card-bg); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--text); }
+        input[type="text"], input[type="email"], input[type="password"], textarea, select {
+            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; transition: border-color 0.2s;
         }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        
+        .hidden { display: none !important; }
+        .error-msg { color: var(--danger); font-size: 0.9rem; margin-top: 8px; }
+        .success-msg { color: var(--success); font-size: 0.9rem; margin-top: 8px; }
+        
+        .task-item { border-bottom: 1px solid var(--border); padding: 12px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+        .task-item:last-child { border-bottom: none; }
+        .task-content { flex: 1; }
+        .task-title { font-weight: 600; margin-bottom: 4px; }
+        .task-meta { font-size: 0.85rem; color: var(--text-light); }
+        .task-actions { display: flex; gap: 8px; }
+        .icon-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--text-light); border-radius: 4px; font-size: 1.1rem; }
+        .icon-btn:hover { background-color: var(--bg); color: var(--text); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .modal { background-color: var(--card-bg); border-radius: 8px; padding: 24px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 1.25rem; font-weight: 600; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-light); }
+        
+        .category-tag { display: inline-block; padding: 2px 8px; background-color: #e0f2fe; color: #0369a1; border-radius: 12px; font-size: 0.75rem; margin-right: 8px; }
+        .loading { text-align: center; padding: 20px; color: var(--text-light); }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+        
+        .nav-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .nav-tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+        .nav-tab.active { border-bottom-color: var(--primary); color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
+
+<div id="global-error-banner"></div>
 
 <header>
     <div class="header-content">
         <h1>🔒 SecureTask</h1>
         <div id="auth-buttons">
-            <button class="btn btn-outline" onclick="showLogin()">登录</button>
-            <button class="btn btn-primary" onclick="showRegister()">注册</button>
+            <button class="btn btn-outline" id="btn-show-login">登录</button>
+            <button class="btn btn-primary" id="btn-show-register">注册</button>
         </div>
         <div id="user-menu" class="hidden">
             <span id="username-display" style="margin-right: 12px; font-weight: 500;"></span>
@@ -320,9 +114,9 @@
                 <input type="password" id="login-password" placeholder="••••••••">
             </div>
             <div id="login-error" class="error-msg"></div>
-            <button class="btn btn-primary" style="width: 100%;" onclick="handleLogin()">登录</button>
+            <button class="btn btn-primary" style="width: 100%;" id="btn-login-submit">登录</button>
             <p style="margin-top: 16px; text-align: center; font-size: 0.9rem;">
-                还没有账号？ <a href="#" onclick="showRegister()" style="color: var(--primary);">立即注册</a>
+                还没有账号？ <a href="#" id="link-to-register" style="color: var(--primary);">立即注册</a>
             </p>
         </div>
 
@@ -346,9 +140,9 @@
             </div>
             <div id="register-error" class="error-msg"></div>
             <div id="register-success" class="success-msg"></div>
-            <button class="btn btn-primary" style="width: 100%;" onclick="handleRegister()">注册</button>
+            <button class="btn btn-primary" style="width: 100%;" id="btn-register-submit">注册</button>
             <p style="margin-top: 16px; text-align: center; font-size: 0.9rem;">
-                已有账号？ <a href="#" onclick="showLogin()" style="color: var(--primary);">立即登录</a>
+                已有账号？ <a href="#" id="link-to-login" style="color: var(--primary);">立即登录</a>
             </p>
         </div>
     </div>
@@ -401,7 +195,7 @@
         </div>
         <div class="form-group">
             <label>分类</label>
-            <select id="task-category" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+            <select id="task-category">
                 <option value="">无分类</option>
             </select>
         </div>
@@ -433,118 +227,143 @@
 </div>
 
 <script>
-    // ⚠️ 请替换为你的 Supabase 项目 URL 和 Anon Key
-    const SUPABASE_URL = 'https://your-project-id.supabase.co';
+    // ================= 配置区域 =================
+    // ⚠️ 请替换为你的真实 Supabase 凭证
+    // 如果留空或无效，系统将自动尝试进入 MOCK 模式（仅用于测试 UI）
+    const SUPABASE_URL = 'https://your-project-id.supabase.co'; 
     const SUPABASE_KEY = 'your-anon-key';
+    
+    // 设置为 true 强制使用本地模拟数据（不连接数据库）
+    // 设置为 false 尝试连接 Supabase
+    let USE_MOCK_MODE = false; 
+    // ===========================================
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+    let supabaseClient = null;
     let currentUser = null;
     let encryptionKey = null;
     let categories = [];
     let currentEditingTaskId = null;
 
-    // --- Crypto Functions ---
+    // --- 初始化 ---
+    window.onload = async () => {
+        try {
+            initSupabase();
+            setupEventListeners();
+            
+            if (!USE_MOCK_MODE && supabaseClient) {
+                await checkSession();
+            } else {
+                console.log("Running in Mock Mode or No Client");
+                showLogin();
+            }
+        } catch (e) {
+            showGlobalError("初始化失败: " + e.message);
+            console.error(e);
+        }
+    };
+
+    function initSupabase() {
+        if (typeof window.supabase === 'undefined') {
+            showGlobalError("无法加载 Supabase 库，请检查网络连接。");
+            return;
+        }
+        
+        // 简单的检查是否是默认占位符
+        if (SUPABASE_URL.includes('your-project') || SUPABASE_KEY.includes('your-anon')) {
+            showGlobalError("检测到未配置的 Supabase 凭证。已切换到【模拟模式】。请在代码中填入真实凭证以使用数据库。");
+            USE_MOCK_MODE = true;
+            return;
+        }
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            showGlobalError("Supabase 客户端初始化失败: " + e.message);
+            USE_MOCK_MODE = true;
+        }
+    }
+
+    function setupEventListeners() {
+        document.getElementById('btn-show-login').onclick = showLogin;
+        document.getElementById('btn-show-register').onclick = showRegister;
+        document.getElementById('link-to-register').onclick = (e) => { e.preventDefault(); showRegister(); };
+        document.getElementById('link-to-login').onclick = (e) => { e.preventDefault(); showLogin(); };
+        document.getElementById('btn-login-submit').onclick = handleLogin;
+        document.getElementById('btn-register-submit').onclick = handleRegister;
+    }
+
+    function showGlobalError(msg) {
+        const banner = document.getElementById('global-error-banner');
+        banner.textContent = msg;
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 5000);
+    }
+
+    // --- UI 切换 ---
+    function showLogin() {
+        try {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('auth-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+            clearErrors();
+        } catch (e) { console.error("UI Error:", e); }
+    }
+
+    function showRegister() {
+        try {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+            document.getElementById('auth-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+            clearErrors();
+        } catch (e) { console.error("UI Error:", e); }
+    }
+
+    function clearErrors() {
+        const ids = ['login-error', 'register-error', 'register-success', 'task-error', 'category-error'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.textContent = '';
+        });
+    }
+
+    // --- 加密工具 ---
     async function generateKey() {
-        return await window.crypto.subtle.generateKey(
-            {
-                name: "AES-GCM",
-                length: 256
-            },
-            true,
-            ["encrypt", "decrypt"]
-        );
+        return await window.crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
     }
 
     async function exportKey(key) {
-        const exported = await window.crypto.subtle.exportKey("jwk", key);
-        return JSON.stringify(exported);
+        return JSON.stringify(await window.crypto.subtle.exportKey("jwk", key));
     }
 
     async function importKey(jwkString) {
-        const jwk = JSON.parse(jwkString);
-        return await window.crypto.subtle.importKey(
-            "jwk",
-            jwk,
-            {
-                name: "AES-GCM",
-                length: 256
-            },
-            true,
-            ["encrypt", "decrypt"]
-        );
+        return await window.crypto.subtle.importKey("jwk", JSON.parse(jwkString), { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
     }
 
     async function encryptData(data, key) {
         const encoder = new TextEncoder();
-        const encodedData = encoder.encode(data);
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        
-        const encryptedContent = await window.crypto.subtle.encrypt(
-            {
-                name: "AES-GCM",
-                iv: iv
-            },
-            key,
-            encodedData
-        );
-
-        // Combine IV and encrypted data for storage
+        const encryptedContent = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, encoder.encode(data));
         const combined = new Uint8Array(iv.length + encryptedContent.byteLength);
         combined.set(iv);
         combined.set(new Uint8Array(encryptedContent), iv.length);
-        
-        // Convert to base64 for storage
         return btoa(String.fromCharCode(...combined));
     }
 
     async function decryptData(base64Data, key) {
-        const combined = new Uint8Array(atob(base64Data).split('').map(char => char.charCodeAt(0)));
-        const iv = combined.slice(0, 12);
-        const encryptedContent = combined.slice(12);
-
         try {
-            const decryptedContent = await window.crypto.subtle.decrypt(
-                {
-                    name: "AES-GCM",
-                    iv: iv
-                },
-                key,
-                encryptedContent
-            );
-
-            const decoder = new TextDecoder();
-            return decoder.decode(decryptedContent);
+            const combined = new Uint8Array(atob(base64Data).split('').map(char => char.charCodeAt(0)));
+            const iv = combined.slice(0, 12);
+            const encryptedContent = combined.slice(12);
+            const decryptedContent = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, encryptedContent);
+            return new TextDecoder().decode(decryptedContent);
         } catch (e) {
-            console.error("Decryption failed", e);
             return "[解密失败]";
         }
     }
 
-    // --- Auth Functions ---
-    function showLogin() {
-        document.getElementById('login-form').classList.remove('hidden');
-        document.getElementById('register-form').classList.add('hidden');
-        document.getElementById('auth-container').classList.remove('hidden');
-        document.getElementById('app-container').classList.add('hidden');
-        clearErrors();
-    }
-
-    function showRegister() {
-        document.getElementById('login-form').classList.add('hidden');
-        document.getElementById('register-form').classList.remove('hidden');
-        document.getElementById('auth-container').classList.remove('hidden');
-        document.getElementById('app-container').classList.add('hidden');
-        clearErrors();
-    }
-
-    function clearErrors() {
-        document.getElementById('login-error').textContent = '';
-        document.getElementById('register-error').textContent = '';
-        document.getElementById('register-success').textContent = '';
-        document.getElementById('task-error').textContent = '';
-        document.getElementById('category-error').textContent = '';
-    }
+    // --- 业务逻辑 ---
 
     async function handleRegister() {
         clearErrors();
@@ -557,68 +376,55 @@
             document.getElementById('register-error').textContent = '请填写所有字段';
             return;
         }
-
         if (password !== confirmPassword) {
             document.getElementById('register-error').textContent = '两次输入的密码不一致';
             return;
         }
 
         try {
-            // 1. Sign up with Supabase Auth
-            const { data, error } = await supabase.auth.signUp({
+            if (USE_MOCK_MODE) {
+                // 模拟注册
+                await new Promise(r => setTimeout(r, 800));
+                const mockUser = { id: 'mock-user-' + Date.now(), email: email };
+                currentUser = mockUser;
+                const key = await generateKey();
+                localStorage.setItem(`encryption_key_${mockUser.id}`, await exportKey(key));
+                encryptionKey = key;
+                enterApp();
+                return;
+            }
+
+            // 真实 Supabase 注册
+            const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
-                options: {
-                    data: {
-                        username: username
-                    }
-                }
+                options: { data: { username: username } }
             });
 
             if (error) throw error;
+            if (!data.user) throw new Error("注册未返回用户信息");
 
-            if (data.user) {
-                // 2. Generate encryption key for this user
-                const key = await generateKey();
-                const exportedKey = await exportKey(key);
-                
-                // 3. Hash password for local storage verification (optional, but good practice)
-                // For simplicity in this demo, we'll store the key in localStorage associated with the user ID
-                // In a real app, you might want to derive the key from the password using PBKDF2
-                
-                // 4. Insert into public.users table
-                // We need to hash the password for our custom users table if we want to use it for login
-                // But since we are using Supabase Auth, we just need to store the username and encryption key reference
-                // However, our schema requires password_hash and salt. Let's generate dummy ones or skip if not needed for auth flow.
-                // To keep it simple and consistent with the schema, we will generate a random hash/salt as we rely on Supabase Auth for actual login.
-                
-                const randomSalt = btoa(window.crypto.getRandomValues(new Uint8Array(16)).join(''));
-                const randomHash = btoa(window.crypto.getRandomValues(new Uint8Array(32)).join(''));
+            // 生成密钥
+            const key = await generateKey();
+            const exportedKey = await exportKey(key);
+            localStorage.setItem(`encryption_key_${data.user.id}`, exportedKey);
+            encryptionKey = key;
 
-                const { error: insertError } = await supabase
-                    .from('users')
-                    .insert([
-                        { 
-                            id: data.user.id, 
-                            username: username, 
-                            password_hash: randomHash, 
-                            salt: randomSalt 
-                        }
-                    ]);
-
-                if (insertError) {
-                    console.error('Insert error:', insertError);
-                    throw new Error('注册成功但创建用户资料失败: ' + insertError.message);
-                }
-
-                // Store encryption key securely (in real app, use more secure storage)
-                localStorage.setItem(`encryption_key_${data.user.id}`, exportedKey);
-
-                document.getElementById('register-success').textContent = '注册成功！正在跳转...';
-                setTimeout(() => {
-                    checkSession();
-                }, 1500);
+            // 插入 public.users (注意：这里需要之前的 SQL 已经正确运行)
+            const randomSalt = btoa(crypto.getRandomValues(new Uint8Array(16)).join(''));
+            const randomHash = btoa(crypto.getRandomValues(new Uint8Array(32)).join(''));
+            
+            const { error: insertError } = await supabaseClient
+                .from('users')
+                .insert([{ id: data.user.id, username: username, password_hash: randomHash, salt: randomSalt }]);
+            
+            if (insertError) {
+                console.warn("创建用户资料失败，但Auth成功:", insertError);
+                // 即使插入失败，Auth 成功了，我们仍然让用户进入，但可能后续功能受限
             }
+
+            enterApp();
+
         } catch (err) {
             document.getElementById('register-error').textContent = err.message;
         }
@@ -635,79 +441,95 @@
         }
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            if (USE_MOCK_MODE) {
+                await new Promise(r => setTimeout(r, 500));
+                // 简单模拟：只要格式对就登录
+                const mockId = 'mock-user-123'; 
+                currentUser = { id: mockId, email: email };
+                const storedKey = localStorage.getItem(`encryption_key_${mockId}`);
+                if (storedKey) encryptionKey = await importKey(storedKey);
+                else {
+                    const key = await generateKey();
+                    localStorage.setItem(`encryption_key_${mockId}`, await exportKey(key));
+                    encryptionKey = key;
+                }
+                enterApp();
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password
             });
 
             if (error) throw error;
+            if (!data.user) throw new Error("登录失败");
 
-            if (data.user) {
-                // Retrieve encryption key
-                const storedKey = localStorage.getItem(`encryption_key_${data.user.id}`);
-                if (storedKey) {
-                    encryptionKey = await importKey(storedKey);
-                } else {
-                    // If key is missing, this is an error state for existing users
-                    // For new users, it should have been created during registration
-                    console.warn('No encryption key found for user');
-                }
-                checkSession();
-            }
+            currentUser = data.user;
+            const storedKey = localStorage.getItem(`encryption_key_${currentUser.id}`);
+            if (storedKey) encryptionKey = await importKey(storedKey);
+            
+            enterApp();
+
         } catch (err) {
             document.getElementById('login-error').textContent = err.message;
         }
     }
 
+    function enterApp() {
+        document.getElementById('auth-container').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        document.getElementById('auth-buttons').classList.add('hidden');
+        document.getElementById('user-menu').classList.remove('hidden');
+        document.getElementById('username-display').textContent = currentUser.email;
+        
+        loadCategories();
+        loadTasks();
+    }
+
     async function logout() {
-        await supabase.auth.signOut();
+        if (!USE_MOCK_MODE && supabaseClient) {
+            await supabaseClient.auth.signOut();
+        }
         currentUser = null;
         encryptionKey = null;
+        document.getElementById('user-menu').classList.add('hidden');
+        document.getElementById('auth-buttons').classList.remove('hidden');
         showLogin();
     }
 
     async function checkSession() {
-        const { data: { session } } = await supabase.auth.getSession();
+        if (!supabaseClient) return;
+        const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
             currentUser = session.user;
-            // Load encryption key
             const storedKey = localStorage.getItem(`encryption_key_${currentUser.id}`);
-            if (storedKey) {
-                encryptionKey = await importKey(storedKey);
-            } else {
-                // If no key exists, maybe it's an old user or error. 
-                // For demo purposes, we might need to handle this gracefully.
-                alert('未找到加密密钥，部分功能可能不可用。');
-            }
-            
-            document.getElementById('auth-container').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-            document.getElementById('auth-buttons').classList.add('hidden');
-            document.getElementById('user-menu').classList.remove('hidden');
-            document.getElementById('username-display').textContent = currentUser.email;
-            
-            loadCategories();
-            loadTasks();
+            if (storedKey) encryptionKey = await importKey(storedKey);
+            enterApp();
         } else {
             showLogin();
         }
     }
 
-    // --- Data Functions ---
+    // --- 数据操作 ---
     async function loadCategories() {
-        if (!currentUser) return;
-        
-        const { data, error } = await supabase
+        if (USE_MOCK_MODE) {
+            categories = [
+                { id: 1, encrypted_name: await encryptData("工作", encryptionKey) },
+                { id: 2, encrypted_name: await encryptData("生活", encryptionKey) }
+            ];
+            renderCategories();
+            updateCategorySelect();
+            return;
+        }
+
+        const { data, error } = await supabaseClient
             .from('categories')
             .select('*')
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('Error loading categories:', error);
-            return;
-        }
-
+        if (error) { console.error(error); return; }
         categories = data || [];
         renderCategories();
         updateCategorySelect();
@@ -716,18 +538,17 @@
     function renderCategories() {
         const list = document.getElementById('categories-list');
         if (categories.length === 0) {
-            list.innerHTML = '<div class="empty-state">暂无分类，点击右上角添加</div>';
+            list.innerHTML = '<div class="empty-state">暂无分类</div>';
             return;
         }
-
         list.innerHTML = categories.map(cat => `
             <div class="task-item">
                 <div class="task-content">
-                    <div class="task-title">${cat.encrypted_name ? '[加密]' : '未命名'}</div>
+                    <div class="task-title">[加密分类]</div>
                     <div class="task-meta">ID: ${cat.id}</div>
                 </div>
                 <div class="task-actions">
-                    <button class="icon-btn" onclick="deleteCategory(${cat.id})" title="删除">🗑️</button>
+                    <button class="icon-btn" onclick="deleteCategory(${cat.id})">🗑️</button>
                 </div>
             </div>
         `).join('');
@@ -736,253 +557,168 @@
     function updateCategorySelect() {
         const select = document.getElementById('task-category');
         select.innerHTML = '<option value="">无分类</option>' + 
-            categories.map(cat => `<option value="${cat.id}">${cat.encrypted_name ? '[加密分类]' : '未命名'}</option>`).join('');
+            categories.map(cat => `<option value="${cat.id}">[加密分类] ${cat.id}</option>`).join('');
     }
 
     async function loadTasks() {
-        if (!currentUser) return;
-        
         const list = document.getElementById('tasks-list');
         list.innerHTML = '<div class="loading">加载中...</div>';
 
-        const { data, error } = await supabase
+        if (USE_MOCK_MODE) {
+            // 模拟数据
+            const mockTasks = [
+                { id: 101, encrypted_data: await encryptData(JSON.stringify({title: "买牛奶", content: "去楼下超市", categoryId: 2}), encryptionKey), created_at: new Date().toISOString() },
+                { id: 102, encrypted_data: await encryptData(JSON.stringify({title: "完成报告", content: "周五前提交", categoryId: 1}), encryptionKey), created_at: new Date().toISOString() }
+            ];
+            processAndRenderTasks(mockTasks);
+            return;
+        }
+
+        const { data, error } = await supabaseClient
             .from('tasks')
             .select('*')
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error loading tasks:', error);
-            list.innerHTML = '<div class="error-msg">加载任务失败</div>';
+            list.innerHTML = '<div class="error-msg">加载失败</div>';
             return;
         }
+        processAndRenderTasks(data || []);
+    }
 
+    async function processAndRenderTasks(tasks) {
+        const list = document.getElementById('tasks-list');
         if (!encryptionKey) {
-            list.innerHTML = '<div class="error-msg">加密密钥未加载，无法显示任务内容</div>';
+            list.innerHTML = '<div class="error-msg">密钥缺失</div>';
+            return;
+        }
+        if (tasks.length === 0) {
+            list.innerHTML = '<div class="empty-state">暂无任务</div>';
             return;
         }
 
-        // Decrypt tasks
-        const decryptedTasks = await Promise.all(data.map(async task => {
+        const decryptedTasks = await Promise.all(tasks.map(async task => {
             try {
-                const decryptedData = await decryptData(task.encrypted_data, encryptionKey);
-                const parsed = JSON.parse(decryptedData);
-                return {
-                    ...task,
-                    title: parsed.title,
-                    content: parsed.content,
-                    categoryId: parsed.categoryId
-                };
+                const jsonStr = await decryptData(task.encrypted_data, encryptionKey);
+                const parsed = JSON.parse(jsonStr);
+                return { ...task, ...parsed };
             } catch (e) {
-                return {
-                    ...task,
-                    title: '[解密失败]',
-                    content: '',
-                    categoryId: null
-                };
+                return { ...task, title: '[损坏]', content: '' };
             }
         }));
 
-        renderTasks(decryptedTasks);
-    }
-
-    function renderTasks(tasks) {
-        const list = document.getElementById('tasks-list');
-        if (tasks.length === 0) {
-            list.innerHTML = '<div class="empty-state">暂无任务，点击右上角添加</div>';
-            return;
-        }
-
-        list.innerHTML = tasks.map(task => {
-            const category = categories.find(c => c.id == task.categoryId);
-            const categoryName = category ? category.encrypted_name : '无分类';
-            
+        list.innerHTML = decryptedTasks.map(task => {
+            const catName = categories.find(c => c.id == task.categoryId) ? '[加密分类]' : '无分类';
             return `
             <div class="task-item">
                 <div class="task-content">
                     <div class="task-title">${task.title}</div>
-                    <div class="task-meta">
-                        <span class="category-tag">${categoryName ? '[加密]' : '无分类'}</span>
-                        ${new Date(task.created_at).toLocaleDateString()}
-                    </div>
-                    <div style="margin-top: 8px; font-size: 0.9rem; color: var(--text-light);">
-                        ${task.content ? task.content.substring(0, 100) + (task.content.length > 100 ? '...' : '') : ''}
-                    </div>
+                    <div class="task-meta"><span class="category-tag">${catName}</span> ${new Date(task.created_at).toLocaleDateString()}</div>
+                    <div style="margin-top:4px; font-size:0.9rem; color:#666;">${task.content ? task.content.substring(0,50)+'...' : ''}</div>
                 </div>
                 <div class="task-actions">
-                    <button class="icon-btn" onclick="editTask('${task.id}', '${encodeURIComponent(JSON.stringify({title: task.title, content: task.content, categoryId: task.categoryId}))}')" title="编辑">✏️</button>
-                    <button class="icon-btn" onclick="deleteTask('${task.id}')" title="删除">🗑️</button>
+                    <button class="icon-btn" onclick='editTask("${task.id}", "${encodeURIComponent(JSON.stringify({title:task.title, content:task.content, categoryId:task.categoryId}))}")'>✏️</button>
+                    <button class="icon-btn" onclick="deleteTask('${task.id}')">🗑️</button>
                 </div>
-            </div>
-            `;
+            </div>`;
         }).join('');
     }
 
-    // --- Modal Functions ---
-    function openTaskModal(taskId = null, taskData = null) {
-        currentEditingTaskId = taskId;
-        document.getElementById('task-modal-title').textContent = taskId ? '编辑任务' : '新建任务';
-        
-        if (taskData) {
-            const parsed = JSON.parse(decodeURIComponent(taskData));
-            document.getElementById('task-title').value = parsed.title;
-            document.getElementById('task-content').value = parsed.content;
-            document.getElementById('task-category').value = parsed.categoryId || '';
+    // --- 模态框与保存 ---
+    function openTaskModal(id = null, dataStr = null) {
+        currentEditingTaskId = id;
+        document.getElementById('task-modal-title').textContent = id ? '编辑任务' : '新建任务';
+        if (dataStr) {
+            const d = JSON.parse(decodeURIComponent(dataStr));
+            document.getElementById('task-title').value = d.title;
+            document.getElementById('task-content').value = d.content;
+            document.getElementById('task-category').value = d.categoryId || '';
         } else {
             document.getElementById('task-title').value = '';
             document.getElementById('task-content').value = '';
             document.getElementById('task-category').value = '';
         }
-        
         document.getElementById('task-modal').classList.remove('hidden');
-        clearErrors();
     }
-
-    function closeTaskModal() {
-        document.getElementById('task-modal').classList.add('hidden');
-        currentEditingTaskId = null;
-    }
-
+    function closeTaskModal() { document.getElementById('task-modal').classList.add('hidden'); }
+    
     function openCategoryModal() {
         document.getElementById('category-name').value = '';
         document.getElementById('category-modal').classList.remove('hidden');
-        clearErrors();
     }
+    function closeCategoryModal() { document.getElementById('category-modal').classList.add('hidden'); }
 
-    function closeCategoryModal() {
-        document.getElementById('category-modal').classList.add('hidden');
-    }
-
-    // --- Save Functions ---
     async function saveCategory() {
         const name = document.getElementById('category-name').value.trim();
-        if (!name) {
-            document.getElementById('category-error').textContent = '请输入分类名称';
-            return;
-        }
-
-        if (!encryptionKey) {
-            document.getElementById('category-error').textContent = '加密密钥未加载';
-            return;
-        }
-
-        try {
-            const encryptedName = await encryptData(name, encryptionKey);
-            
-            const { error } = await supabase
-                .from('categories')
-                .insert([{ user_id: currentUser.id, encrypted_name: encryptedName }]);
-
-            if (error) throw error;
-
+        if (!name) return;
+        
+        const encryptedName = await encryptData(name, encryptionKey);
+        
+        if (USE_MOCK_MODE) {
+            categories.push({ id: Date.now(), encrypted_name: encryptedName });
             closeCategoryModal();
-            loadCategories();
-        } catch (err) {
-            document.getElementById('category-error').textContent = err.message;
+            renderCategories();
+            updateCategorySelect();
+            return;
         }
+
+        const { error } = await supabaseClient.from('categories').insert([{ user_id: currentUser.id, encrypted_name: encryptedName }]);
+        if (error) { alert(error.message); return; }
+        
+        closeCategoryModal();
+        loadCategories();
     }
 
     async function saveTask() {
         const title = document.getElementById('task-title').value.trim();
         const content = document.getElementById('task-content').value.trim();
         const categoryId = document.getElementById('task-category').value;
+        
+        if (!title) { document.getElementById('task-error').textContent = '请输入标题'; return; }
 
-        if (!title) {
-            document.getElementById('task-error').textContent = '请输入任务标题';
-            return;
-        }
+        const payload = JSON.stringify({ title, content, categoryId: categoryId || null });
+        const encryptedData = await encryptData(payload, encryptionKey);
 
-        if (!encryptionKey) {
-            document.getElementById('task-error').textContent = '加密密钥未加载';
-            return;
-        }
-
-        try {
-            const dataToEncrypt = JSON.stringify({
-                title: title,
-                content: content,
-                categoryId: categoryId || null
-            });
-            
-            const encryptedData = await encryptData(dataToEncrypt, encryptionKey);
-            
-            if (currentEditingTaskId) {
-                // Update existing task
-                const { error } = await supabase
-                    .from('tasks')
-                    .update({ 
-                        encrypted_data: encryptedData,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', currentEditingTaskId)
-                    .eq('user_id', currentUser.id); // Ensure ownership
-
-                if (error) throw error;
-            } else {
-                // Create new task
-                const { error } = await supabase
-                    .from('tasks')
-                    .insert([{ 
-                        user_id: currentUser.id, 
-                        encrypted_data: encryptedData 
-                    }]);
-
-                if (error) throw error;
-            }
-
+        if (USE_MOCK_MODE) {
             closeTaskModal();
-            loadTasks();
-        } catch (err) {
-            document.getElementById('task-error').textContent = err.message;
+            loadTasks(); // Reload mock data
+            return;
         }
+
+        if (currentEditingTaskId) {
+            const { error } = await supabaseClient.from('tasks').update({ encrypted_data: encryptedData }).eq('id', currentEditingTaskId).eq('user_id', currentUser.id);
+            if (error) { alert(error.message); return; }
+        } else {
+            const { error } = await supabaseClient.from('tasks').insert([{ user_id: currentUser.id, encrypted_data: encryptedData }]);
+            if (error) { alert(error.message); return; }
+        }
+
+        closeTaskModal();
+        loadTasks();
     }
 
-    function editTask(id, data) {
-        openTaskModal(id, data);
-    }
-
+    function editTask(id, data) { openTaskModal(id, data); }
+    
     async function deleteTask(id) {
-        if (!confirm('确定要删除这个任务吗？')) return;
-
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .delete()
-                .eq('id', id)
-                .eq('user_id', currentUser.id); // Ensure ownership
-
-            if (error) throw error;
-            
-            loadTasks();
-        } catch (err) {
-            alert('删除失败: ' + err.message);
-        }
+        if (!confirm('确定删除？')) return;
+        if (USE_MOCK_MODE) { loadTasks(); return; }
+        await supabaseClient.from('tasks').delete().eq('id', id).eq('user_id', currentUser.id);
+        loadTasks();
     }
 
     async function deleteCategory(id) {
-        if (!confirm('确定要删除这个分类吗？相关任务将变为无分类。')) return;
-
-        try {
-            const { error } = await supabase
-                .from('categories')
-                .delete()
-                .eq('id', id)
-                .eq('user_id', currentUser.id); // Ensure ownership
-
-            if (error) throw error;
-            
-            loadCategories();
-            loadTasks(); // Refresh tasks to update category names
-        } catch (err) {
-            alert('删除失败: ' + err.message);
-        }
+        if (!confirm('确定删除？')) return;
+        if (USE_MOCK_MODE) { loadCategories(); return; }
+        await supabaseClient.from('categories').delete().eq('id', id).eq('user_id', currentUser.id);
+        loadCategories();
     }
 
-    function switchTab(tabName) {
-        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    function switchTab(tab) {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         
-        if (tabName === 'tasks') {
+        if (tab === 'tasks') {
             document.querySelector('.nav-tab:nth-child(1)').classList.add('active');
             document.getElementById('tasks-tab').classList.add('active');
         } else {
@@ -990,12 +726,10 @@
             document.getElementById('categories-tab').classList.add('active');
         }
     }
-
-    // Initialize
-    window.onload = () => {
-        checkSession();
-    };
 </script>
 
 </body>
 </html>
+
+
+
