@@ -335,7 +335,7 @@
     <p class="auth-hint">
       数据使用您的密码进行 AES-GCM 加密后保存到云端<br>
       服务器无法解密您的内容，请妥善保管密码<br>
-      <a id="showSetupBtn">查看数据库初始化说明</a>
+      <a id="showSetupBtn" href="javascript:void(0)" role="button" tabindex="0">查看数据库初始化说明</a>
     </p>
   </div>
 </div>
@@ -580,9 +580,14 @@ create policy "mylist cats all" on public.mylist_categories
 const SUPABASE_URL = 'https://rrgizwisrepncaeyflmi.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false }
-});
+let supabase = null;
+try{
+  if(window.supabase && window.supabase.createClient){
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+  }
+}catch(e){ console.error('Supabase init failed:', e); }
 
 // 默认分类
 const DEFAULT_CATEGORIES = ['工作', '生活', '学习', '其他'];
@@ -717,6 +722,7 @@ async function register(username, password){
   if(username.length < 3 || username.length > 20) throw new Error('用户名长度需为 3-20 位');
   if(!/^[A-Za-z0-9_\-\u4e00-\u9fa5]+$/.test(username)) throw new Error('用户名只能包含字母、数字、下划线、横线或中文');
   if(password.length < 6) throw new Error('密码至少 6 位');
+  if(!supabase) throw new Error('数据库连接失败，请检查网络或点击"查看数据库初始化说明"');
 
   const salt = genSalt();
   const pwdHash = await hashPassword(password, salt);
@@ -740,6 +746,7 @@ async function register(username, password){
 
 async function doLogin(username, password){
   username = username.trim();
+  if(!supabase) throw new Error('数据库连接失败，请检查网络或点击"查看数据库初始化说明"');
   const { data: user, error } = await supabase
     .from('mylist_users')
     .select('*')
@@ -1276,7 +1283,12 @@ function bindEvents(){
   });
 
   // 显示数据库初始化说明
-  $('showSetupBtn').onclick = ()=> $('setupModalMask').classList.add('show');
+  const setupBtn = $('showSetupBtn');
+  const openSetup = ()=> $('setupModalMask').classList.add('show');
+  if(setupBtn){
+    setupBtn.addEventListener('click', openSetup);
+    setupBtn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openSetup(); }});
+  }
   $('setupClose').onclick = ()=> $('setupModalMask').classList.remove('show');
   $('setupDoneBtn').onclick = ()=> $('setupModalMask').classList.remove('show');
 
@@ -1399,10 +1411,10 @@ async function enterApp(){
 bindEvents();
 // 检测是否需要显示初始化提示
 (async function checkReady(){
+  if(!supabase){ $('setupModalMask').classList.add('show'); return; }
   try{
     const { error } = await supabase.from('mylist_users').select('id').limit(1);
     if(error && (error.message && /relation|does not exist|schema/i.test(error.message))){
-      // 表未创建，自动弹出说明
       $('setupModalMask').classList.add('show');
     }
   }catch(e){}
