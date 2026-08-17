@@ -1,757 +1,1154 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>myList - 日常工作记录</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; }
-  .modal-mask { background: rgba(0,0,0,0.5); }
-  .calendar-day:hover { background: #eff6ff; }
-  .calendar-day.today { background: #dbeafe; font-weight: 600; }
-  .calendar-day.selected { background: #2563eb; color: white; }
-  .calendar-day.has-task::after {
-    content: ''; position: absolute; bottom: 4px; left: 50%;
-    transform: translateX(-50%); width: 6px; height: 6px;
-    border-radius: 50%; background: #ef4444;
-  }
-  .hide { display: none !important; }
-  .task-card { transition: all 0.2s; }
-  .task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-  .env-warning {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-    background: #fee2e2; color: #991b1b; padding: 12px; text-align: center; font-size: 14px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>myList - 日常工作记录</title>
+    <!-- 引入 Supabase JS 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+            min-height: 80vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .auth-container {
+            padding: 40px;
+            max-width: 400px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .main-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .calendar-container {
+            margin-bottom: 30px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            color: #666;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .calendar-day:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+
+        .calendar-day.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .calendar-day.today {
+            border: 2px solid #667eea;
+            font-weight: bold;
+        }
+
+        .calendar-day.has-tasks::after {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: #f44336;
+            border-radius: 50%;
+        }
+
+        .calendar-day.active.has-tasks::after {
+            background: white;
+        }
+
+        .day-number {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .task-count {
+            font-size: 10px;
+            color: #666;
+            margin-top: auto;
+            text-align: center;
+        }
+
+        .calendar-day.active .task-count {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tasks-container {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+        }
+
+        .task-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .task-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+
+        .task-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .category-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #eef2ff;
+            color: #667eea;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .category-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 8px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .auth-container {
+                margin: 20px auto;
+                padding: 20px;
+            }
+
+            .calendar-grid {
+                gap: 4px;
+            }
+
+            .calendar-day {
+                padding: 4px;
+                border-radius: 4px;
+            }
+
+            .day-number {
+                font-size: 12px;
+            }
+
+            .task-count {
+                font-size: 9px;
+            }
+
+            .modal-content {
+                padding: 20px;
+                width: 95%;
+            }
+            
+            .view-toggle {
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
-<body class="min-h-screen">
-
-<!-- 环境警告 -->
-<div id="envWarning" class="env-warning hide">
-  ⚠️ 当前环境不支持加密功能，请通过 HTTP/HTTPS 访问（本地可用 Live Server 或部署到 GitHub Pages）
-</div>
-
-<!-- 登录/注册页 -->
-<div id="authPage" class="min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-8">
-    <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">myList</h1>
-    <div class="flex mb-6 border-b">
-      <button id="tabLogin" class="flex-1 py-2 border-b-2 border-blue-500 text-blue-600 font-medium">登录</button>
-      <button id="tabRegister" class="flex-1 py-2 text-gray-500">注册</button>
-    </div>
-    <div id="loginForm">
-      <input id="loginUser" type="text" placeholder="用户名" class="w-full px-4 py-2 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <input id="loginPass" type="password" placeholder="密码" class="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <button id="btnLogin" onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium">登录</button>
-    </div>
-    <div id="registerForm" class="hide">
-      <input id="regUser" type="text" placeholder="用户名" class="w-full px-4 py-2 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <input id="regPass" type="password" placeholder="密码" class="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <button id="btnRegister" onclick="doRegister()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium">注册账号</button>
-    </div>
-    <p id="authMsg" class="text-red-500 text-sm mt-3 text-center"></p>
-  </div>
-</div>
-
-<!-- 主应用 -->
-<div id="appPage" class="hide">
-  <header class="bg-white shadow-sm sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-gray-800">myList</h1>
-      <div class="flex items-center gap-3">
-        <span id="currentUser" class="text-sm text-gray-600"></span>
-        <button onclick="openCategoryMgr()" class="text-sm text-blue-600 hover:underline">分类管理</button>
-        <button onclick="doLogout()" class="text-sm text-gray-500 hover:text-red-500">退出</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto p-4">
-    <div class="flex gap-2 mb-4 flex-wrap">
-      <button onclick="setView('day')" id="btnDay" class="px-4 py-1.5 rounded-lg bg-blue-500 text-white text-sm">日</button>
-      <button onclick="setView('week')" id="btnWeek" class="px-4 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-sm">周</button>
-      <button onclick="setView('month')" id="btnMonth" class="px-4 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-sm">月</button>
-      <button onclick="openTaskModal()" class="ml-auto bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm">+ 新建任务</button>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="prevPeriod()" class="p-2 hover:bg-gray-100 rounded">◀</button>
-        <h2 id="calendarTitle" class="text-lg font-semibold"></h2>
-        <button onclick="nextPeriod()" class="p-2 hover:bg-gray-100 rounded">▶</button>
-      </div>
-      <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-sm"></div>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm p-4">
-      <h3 id="taskListTitle" class="text-lg font-semibold mb-3"></h3>
-      <div id="taskList" class="space-y-2"></div>
-      <p id="emptyTip" class="text-gray-400 text-center py-8 hide">暂无任务</p>
-    </div>
-  </main>
-</div>
-
-<!-- 新建/编辑任务弹窗 -->
-<div id="taskModal" class="fixed inset-0 z-50 modal-mask flex items-center justify-center p-4 hide">
-  <div class="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-    <h3 id="taskModalTitle" class="text-lg font-bold mb-4">新建任务</h3>
-    <input id="taskId" type="hidden">
-    <div class="space-y-3">
-      <div>
-        <label class="text-sm text-gray-600 block mb-1">任务标题 *</label>
-        <input id="taskTitle" type="text" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-      </div>
-      <div>
-        <label class="text-sm text-gray-600 block mb-1">任务分类</label>
-        <select id="taskCategory" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"></select>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-sm text-gray-600 block mb-1">日期</label>
-          <input id="taskDate" type="date" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 myList</h1>
+            <div id="user-info" style="display: none; align-items: center; gap: 10px;">
+                <span id="current-user" style="font-weight: 500;"></span>
+                <button class="btn btn-secondary" onclick="app.logout()">退出</button>
+            </div>
         </div>
-        <div>
-          <label class="text-sm text-gray-600 block mb-1">时间</label>
-          <input id="taskTime" type="time" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+
+        <!-- 登录/注册界面 -->
+        <div id="auth-container" class="auth-container">
+            <div id="login-form">
+                <h2 style="margin-bottom: 20px; text-align: center; color: #333;">用户登录</h2>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="login-username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="login-password" placeholder="请输入密码">
+                </div>
+                <button class="btn btn-primary" onclick="app.login()" style="width: 100%; padding: 12px;">登录</button>
+                <p style="text-align: center; margin-top: 20px; color: #666;">
+                    还没有账号？<a href="#" onclick="app.showRegister()" style="color: #667eea; text-decoration: none; font-weight: 500;">立即注册</a>
+                </p>
+            </div>
+
+            <div id="register-form" style="display: none;">
+                <h2 style="margin-bottom: 20px; text-align: center; color: #333;">新用户注册</h2>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="register-username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="register-password" placeholder="请输入密码 (至少6位)">
+                </div>
+                <div class="form-group">
+                    <label>确认密码</label>
+                    <input type="password" id="register-confirm" placeholder="请再次输入密码">
+                </div>
+                <button class="btn btn-primary" onclick="app.register()" style="width: 100%; padding: 12px;">注册</button>
+                <p style="text-align: center; margin-top: 20px; color: #666;">
+                    已有账号？<a href="#" onclick="app.showLogin()" style="color: #667eea; text-decoration: none; font-weight: 500;">立即登录</a>
+                </p>
+            </div>
         </div>
-      </div>
-      <div>
-        <label class="text-sm text-gray-600 block mb-1">任务详情</label>
-        <textarea id="taskDesc" rows="4" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
-      </div>
-    </div>
-    <div class="flex gap-3 mt-6">
-      <button onclick="closeTaskModal()" class="flex-1 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">取消</button>
-      <button onclick="saveTask()" class="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">保存</button>
-    </div>
-    <button id="deleteTaskBtn" onclick="deleteTask()" class="w-full mt-2 py-2 text-red-500 hover:bg-red-50 rounded-lg hide">删除任务</button>
-  </div>
-</div>
 
-<!-- 分类管理弹窗 -->
-<div id="categoryModal" class="fixed inset-0 z-50 modal-mask flex items-center justify-center p-4 hide">
-  <div class="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-    <h3 class="text-lg font-bold mb-4">分类管理</h3>
-    <div class="flex gap-2 mb-4">
-      <input id="newCatName" type="text" placeholder="新分类名称" class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <input id="newCatColor" type="color" value="#3b82f6" class="w-10 h-10 border rounded cursor-pointer">
-      <button onclick="addCategory()" class="px-4 bg-blue-500 text-white rounded-lg">添加</button>
-    </div>
-    <div id="categoryList" class="space-y-2"></div>
-    <button onclick="closeCategoryMgr()" class="w-full mt-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">关闭</button>
-  </div>
-</div>
-
-<!-- 任务详情弹窗 -->
-<div id="detailModal" class="fixed inset-0 z-50 modal-mask flex items-center justify-center p-4 hide">
-  <div class="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-    <div class="flex items-start justify-between mb-3">
-      <h3 id="detailTitle" class="text-lg font-bold"></h3>
-      <button onclick="closeDetail()" class="text-gray-400 text-xl">×</button>
-    </div>
-    <div id="detailMeta" class="text-sm text-gray-500 mb-4"></div>
-    <div id="detailDesc" class="text-gray-700 whitespace-pre-wrap mb-4"></div>
-    <div class="flex gap-3">
-      <button onclick="editFromDetail()" class="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">编辑</button>
-      <button onclick="closeDetail()" class="flex-1 py-2 border rounded-lg text-gray-600">关闭</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// ===== 配置 =====
-const SUPABASE_URL = 'https://rrgizwisrepncaeyflmi.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ===== 全局状态 =====
-let currentUserId = null;
-let currentUsername = '';
-let encryptKey = null;
-let currentView = 'day';
-let viewDate = new Date();
-let selectedDate = formatDate(new Date());
-let categories = [];
-let tasks = [];
-let currentDetailId = null;
-
-// ===== 环境检测 =====
-function checkEnv() {
-  const cryptoOk = window.isSecureContext && window.crypto && window.crypto.subtle;
-  if (!cryptoOk) {
-    document.getElementById('envWarning').classList.remove('hide');
-  }
-  return cryptoOk;
-}
-
-// ===== 加密工具 =====
-async function deriveKey(password, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(password), { name: 'PBKDF2' }, false,
-    ['deriveBits', 'deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, { name: 'AES-GCM', length: 256 }, true,
-    ['encrypt', 'decrypt']
-  );
-}
-
-async function encrypt(text, key) {
-  const enc = new TextEncoder();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv }, key, enc.encode(text)
-  );
-  return btoa(String.fromCharCode(...iv, ...new Uint8Array(encrypted)));
-}
-
-async function decrypt(ciphertext, key) {
-  try {
-    const data = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
-    const iv = data.slice(0, 12);
-    const content = data.slice(12);
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv }, key, content
-    );
-    return new TextDecoder().decode(decrypted);
-  } catch (e) { return ''; }
-}
-
-async function hashPassword(password) {
-  const enc = new TextEncoder();
-  const buf = await crypto.subtle.digest('SHA-256', enc.encode(password));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// ===== 工具函数 =====
-function formatDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function showMsg(elId, text, isError = true) {
-  const el = document.getElementById(elId);
-  el.textContent = text;
-  el.className = isError ? 'text-red-500 text-sm mt-3 text-center' : 'text-green-500 text-sm mt-3 text-center';
-}
-
-function setBtnLoading(id, loading, text) {
-  const btn = document.getElementById(id);
-  btn.disabled = loading;
-  btn.textContent = loading ? '处理中...' : text;
-  btn.style.opacity = loading ? 0.7 : 1;
-}
-
-// ===== 认证 =====
-document.getElementById('tabLogin').onclick = () => {
-  document.getElementById('tabLogin').classList.add('border-b-2', 'border-blue-500', 'text-blue-600', 'font-medium');
-  document.getElementById('tabLogin').classList.remove('text-gray-500');
-  document.getElementById('tabRegister').classList.remove('border-b-2', 'border-blue-500', 'text-blue-600', 'font-medium');
-  document.getElementById('tabRegister').classList.add('text-gray-500');
-  document.getElementById('loginForm').classList.remove('hide');
-  document.getElementById('registerForm').classList.add('hide');
-  document.getElementById('authMsg').textContent = '';
-};
-
-document.getElementById('tabRegister').onclick = () => {
-  document.getElementById('tabRegister').classList.add('border-b-2', 'border-blue-500', 'text-blue-600', 'font-medium');
-  document.getElementById('tabRegister').classList.remove('text-gray-500');
-  document.getElementById('tabLogin').classList.remove('border-b-2', 'border-blue-500', 'text-blue-600', 'font-medium');
-  document.getElementById('tabLogin').classList.add('text-gray-500');
-  document.getElementById('registerForm').classList.remove('hide');
-  document.getElementById('loginForm').classList.add('hide');
-  document.getElementById('authMsg').textContent = '';
-};
-
-async function doRegister() {
-  if (!checkEnv()) return showMsg('authMsg', '当前环境不支持加密，无法注册');
-  
-  const username = document.getElementById('regUser').value.trim();
-  const password = document.getElementById('regPass').value;
-  if (!username || !password) return showMsg('authMsg', '请输入用户名和密码');
-  if (password.length < 4) return showMsg('authMsg', '密码至少4位');
-
-  setBtnLoading('btnRegister', true, '注册账号');
-
-  try {
-    // 检查用户名是否存在
-    const { data: exist, error: checkErr } = await supabase
-      .from('users').select('id').eq('username', username).maybeSingle();
-    if (checkErr) throw new Error('检查用户名失败: ' + checkErr.message);
-    if (exist) throw new Error('用户名已存在');
-
-    const pwdHash = await hashPassword(password);
-    const { error } = await supabase
-      .from('users').insert([{ username, password_hash: pwdHash }]);
-    if (error) throw new Error('注册失败: ' + error.message);
-
-    showMsg('authMsg', '注册成功，请登录', false);
-    setTimeout(() => {
-      document.getElementById('tabLogin').click();
-      document.getElementById('loginUser').value = username;
-    }, 800);
-  } catch (e) {
-    showMsg('authMsg', e.message);
-    console.error(e);
-  } finally {
-    setBtnLoading('btnRegister', false, '注册账号');
-  }
-}
-
-async function doLogin() {
-  if (!checkEnv()) return showMsg('authMsg', '当前环境不支持加密，无法登录');
-
-  const username = document.getElementById('loginUser').value.trim();
-  const password = document.getElementById('loginPass').value;
-  if (!username || !password) return showMsg('authMsg', '请输入用户名和密码');
-
-  setBtnLoading('btnLogin', true, '登录');
-
-  try {
-    const pwdHash = await hashPassword(password);
-    const { data, error } = await supabase
-      .from('users').select('id, username')
-      .eq('username', username).eq('password_hash', pwdHash)
-      .maybeSingle();
-
-    if (error) throw new Error('登录失败: ' + error.message);
-    if (!data) throw new Error('用户名或密码错误');
-
-    currentUserId = data.id;
-    currentUsername = data.username;
-    encryptKey = await deriveKey(password, username);
-
-    document.getElementById('authPage').classList.add('hide');
-    document.getElementById('appPage').classList.remove('hide');
-    document.getElementById('currentUser').textContent = '用户: ' + username;
-
-    await loadCategories();
-    await loadTasks();
-    renderCalendar();
-    renderTaskList();
-  } catch (e) {
-    showMsg('authMsg', e.message);
-    console.error(e);
-  } finally {
-    setBtnLoading('btnLogin', false, '登录');
-  }
-}
-
-function doLogout() {
-  currentUserId = null;
-  currentUsername = '';
-  encryptKey = null;
-  tasks = [];
-  categories = [];
-  document.getElementById('appPage').classList.add('hide');
-  document.getElementById('authPage').classList.remove('hide');
-  document.getElementById('loginPass').value = '';
-}
-
-// ===== 分类管理 =====
-async function loadCategories() {
-  try {
-    const { data, error } = await supabase
-      .from('categories').select('*').eq('user_id', currentUserId);
-    if (error) throw error;
-    categories = data || [];
-    updateCategorySelect();
-  } catch (e) {
-    console.error('加载分类失败', e);
-  }
-}
-
-function updateCategorySelect() {
-  const sel = document.getElementById('taskCategory');
-  sel.innerHTML = '<option value="">无分类</option>';
-  categories.forEach(c => {
-    sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-  });
-}
-
-async function openCategoryMgr() {
-  await renderCategoryList();
-  document.getElementById('categoryModal').classList.remove('hide');
-}
-
-function closeCategoryMgr() {
-  document.getElementById('categoryModal').classList.add('hide');
-}
-
-async function renderCategoryList() {
-  const container = document.getElementById('categoryList');
-  container.innerHTML = '';
-  categories.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'flex items-center justify-between p-2 border rounded-lg';
-    div.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span class="w-4 h-4 rounded-full" style="background:${c.color}"></span>
-        <span>${c.name}</span>
-      </div>
-      <button onclick="deleteCategory('${c.id}')" class="text-red-500 text-sm">删除</button>
-    `;
-    container.appendChild(div);
-  });
-}
-
-async function addCategory() {
-  const name = document.getElementById('newCatName').value.trim();
-  const color = document.getElementById('newCatColor').value;
-  if (!name) return;
-
-  try {
-    const { data, error } = await supabase
-      .from('categories').insert([{ user_id: currentUserId, name, color }])
-      .select('*').single();
-    if (error) throw error;
-    categories.push(data);
-    document.getElementById('newCatName').value = '';
-    updateCategorySelect();
-    renderCategoryList();
-  } catch (e) {
-    alert('添加失败: ' + e.message);
-  }
-}
-
-async function deleteCategory(id) {
-  if (!confirm('确定删除此分类？任务不会被删除，仅取消分类关联。')) return;
-  try {
-    await supabase.from('categories').delete().eq('id', id);
-    categories = categories.filter(c => c.id !== id);
-    updateCategorySelect();
-    renderCategoryList();
-    renderTaskList();
-  } catch (e) {
-    alert('删除失败: ' + e.message);
-  }
-}
-
-// ===== 任务管理 =====
-async function loadTasks() {
-  try {
-    const { data, error } = await supabase
-      .from('tasks').select('*').eq('user_id', currentUserId);
-    if (error) throw error;
-
-    tasks = [];
-    for (const t of data || []) {
-      try {
-        const title = await decrypt(t.title, encryptKey);
-        const desc = t.description ? await decrypt(t.description, encryptKey) : '';
-        tasks.push({ ...t, title, description: desc });
-      } catch (e) { /* 忽略解密失败 */ }
-    }
-  } catch (e) {
-    console.error('加载任务失败', e);
-  }
-}
-
-async function openTaskModal(taskId = null) {
-  document.getElementById('taskModalTitle').textContent = taskId ? '编辑任务' : '新建任务';
-  document.getElementById('taskId').value = taskId || '';
-  document.getElementById('deleteTaskBtn').classList.toggle('hide', !taskId);
-
-  if (taskId) {
-    const t = tasks.find(x => x.id === taskId);
-    if (t) {
-      document.getElementById('taskTitle').value = t.title;
-      document.getElementById('taskCategory').value = t.category_id || '';
-      document.getElementById('taskDate').value = t.task_date;
-      document.getElementById('taskTime').value = t.task_time || '';
-      document.getElementById('taskDesc').value = t.description || '';
-    }
-  } else {
-    document.getElementById('taskTitle').value = '';
-    document.getElementById('taskCategory').value = '';
-    document.getElementById('taskDate').value = selectedDate;
-    document.getElementById('taskTime').value = '';
-    document.getElementById('taskDesc').value = '';
-  }
-  document.getElementById('taskModal').classList.remove('hide');
-}
-
-function closeTaskModal() {
-  document.getElementById('taskModal').classList.add('hide');
-}
-
-async function saveTask() {
-  const id = document.getElementById('taskId').value;
-  const title = document.getElementById('taskTitle').value.trim();
-  const categoryId = document.getElementById('taskCategory').value || null;
-  const date = document.getElementById('taskDate').value;
-  const time = document.getElementById('taskTime').value || null;
-  const desc = document.getElementById('taskDesc').value.trim();
-
-  if (!title || !date) return alert('请填写标题和日期');
-
-  try {
-    const encTitle = await encrypt(title, encryptKey);
-    const encDesc = desc ? await encrypt(desc, encryptKey) : null;
-
-    if (id) {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ category_id: categoryId, title: encTitle, description: encDesc, task_date: date, task_time: time, updated_at: new Date() })
-        .eq('id', id);
-      if (error) throw error;
-    } else {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert([{ user_id: currentUserId, category_id: categoryId, title: encTitle, description: encDesc, task_date: date, task_time: time }])
-        .select('*').single();
-      if (error) throw error;
-      data.title = title;
-      data.description = desc;
-      tasks.push(data);
-    }
-
-    closeTaskModal();
-    await loadTasks();
-    renderCalendar();
-    renderTaskList();
-  } catch (e) {
-    alert('保存失败: ' + e.message);
-  }
-}
-
-async function deleteTask() {
-  const id = document.getElementById('taskId').value;
-  if (!id || !confirm('确定删除此任务？')) return;
-  try {
-    await supabase.from('tasks').delete().eq('id', id);
-    tasks = tasks.filter(t => t.id !== id);
-    closeTaskModal();
-    closeDetail();
-    renderCalendar();
-    renderTaskList();
-  } catch (e) {
-    alert('删除失败: ' + e.message);
-  }
-}
-
-function editFromDetail() {
-  closeDetail();
-  openTaskModal(currentDetailId);
-}
-
-// ===== 日历 =====
-function setView(v) {
-  currentView = v;
-  ['Day', 'Week', 'Month'].forEach(k => {
-    const btn = document.getElementById('btn' + k);
-    if (k.toLowerCase() === v) {
-      btn.className = 'px-4 py-1.5 rounded-lg bg-blue-500 text-white text-sm';
-    } else {
-      btn.className = 'px-4 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-sm';
-    }
-  });
-  renderCalendar();
-  renderTaskList();
-}
-
-function prevPeriod() {
-  if (currentView === 'day') viewDate.setDate(viewDate.getDate() - 1);
-  else if (currentView === 'week') viewDate.setDate(viewDate.getDate() - 7);
-  else viewDate.setMonth(viewDate.getMonth() - 1);
-  renderCalendar();
-  renderTaskList();
-}
-
-function nextPeriod() {
-  if (currentView === 'day') viewDate.setDate(viewDate.getDate() + 1);
-  else if (currentView === 'week') viewDate.setDate(viewDate.getDate() + 7);
-  else viewDate.setMonth(viewDate.getMonth() + 1);
-  renderCalendar();
-  renderTaskList();
-}
-
-function getWeekDates(d) {
-  const date = new Date(d);
-  const day = date.getDay() || 7;
-  date.setDate(date.getDate() - day + 1);
-  const dates = [];
-  for (let i = 0; i < 7; i++) {
-    dates.push(new Date(date));
-    date.setDate(date.getDate() + 1);
-  }
-  return dates;
-}
-
-function renderCalendar() {
-  const grid = document.getElementById('calendarGrid');
-  const title = document.getElementById('calendarTitle');
-  grid.innerHTML = '';
-
-  const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
-  weekDays.forEach(d => {
-    const div = document.createElement('div');
-    div.className = 'py-2 text-gray-500 font-medium text-xs';
-    div.textContent = d;
-    grid.appendChild(div);
-  });
-
-  const today = formatDate(new Date());
-  let dates = [];
-
-  if (currentView === 'day') {
-    title.textContent = formatDate(viewDate);
-    dates = [new Date(viewDate)];
-  } else if (currentView === 'week') {
-    const week = getWeekDates(viewDate);
-    title.textContent = `${formatDate(week[0])} ~ ${formatDate(week[6])}`;
-    dates = week;
-  } else {
-    const y = viewDate.getFullYear();
-    const m = viewDate.getMonth();
-    title.textContent = `${y}年${m + 1}月`;
-    const first = new Date(y, m, 1);
-    const startDay = first.getDay() || 7;
-    first.setDate(first.getDate() - startDay + 1);
-    for (let i = 0; i < 42; i++) {
-      dates.push(new Date(first));
-      first.setDate(first.getDate() + 1);
-    }
-  }
-
-  dates.forEach(d => {
-    const ds = formatDate(d);
-    const div = document.createElement('div');
-    div.className = 'calendar-day relative py-2 rounded cursor-pointer';
-    if (ds === today) div.classList.add('today');
-    if (ds === selectedDate) div.classList.add('selected');
-    if (currentView === 'month' && d.getMonth() !== viewDate.getMonth()) {
-      div.classList.add('text-gray-300');
-    }
-    const hasTask = tasks.some(t => t.task_date === ds);
-    if (hasTask) div.classList.add('has-task');
-
-    div.textContent = d.getDate();
-    div.onclick = () => {
-      selectedDate = ds;
-      if (currentView === 'month') {
-        viewDate = new Date(d);
-      }
-      renderCalendar();
-      renderTaskList();
-    };
-    grid.appendChild(div);
-  });
-}
-
-// ===== 任务列表 =====
-function getDateRange() {
-  if (currentView === 'day') return [selectedDate, selectedDate];
-  if (currentView === 'week') {
-    const week = getWeekDates(new Date(selectedDate));
-    return [formatDate(week[0]), formatDate(week[6])];
-  }
-  const d = new Date(selectedDate);
-  const start = new Date(d.getFullYear(), d.getMonth(), 1);
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return [formatDate(start), formatDate(end)];
-}
-
-function renderTaskList() {
-  const [start, end] = getDateRange();
-  const titleEl = document.getElementById('taskListTitle');
-  if (currentView === 'day') titleEl.textContent = `${selectedDate} 的任务`;
-  else if (currentView === 'week') titleEl.textContent = `本周 (${start} ~ ${end}) 任务`;
-  else titleEl.textContent = `本月任务`;
-
-  const list = tasks
-    .filter(t => t.task_date >= start && t.task_date <= end)
-    .sort((a, b) => {
-      if (a.task_date !== b.task_date) return a.task_date.localeCompare(b.task_date);
-      return (a.task_time || '').localeCompare(b.task_time || '');
-    });
-
-  const container = document.getElementById('taskList');
-  const emptyTip = document.getElementById('emptyTip');
-  container.innerHTML = '';
-
-  if (list.length === 0) {
-    emptyTip.classList.remove('hide');
-    return;
-  }
-  emptyTip.classList.add('hide');
-
-  let lastDate = '';
-  list.forEach(t => {
-    if (currentView !== 'day' && t.task_date !== lastDate) {
-      const dateHeader = document.createElement('div');
-      dateHeader.className = 'text-sm text-gray-500 mt-3 mb-1 font-medium';
-      dateHeader.textContent = t.task_date;
-      container.appendChild(dateHeader);
-      lastDate = t.task_date;
-    }
-
-    const cat = categories.find(c => c.id === t.category_id);
-    const card = document.createElement('div');
-    card.className = 'task-card p-3 border rounded-lg cursor-pointer bg-white';
-    card.innerHTML = `
-      <div class="flex items-start gap-3">
-        <span class="w-3 h-3 mt-1.5 rounded-full flex-shrink-0" style="background:${cat ? cat.color : '#9ca3af'}"></span>
-        <div class="flex-1 min-w-0">
-          <div class="font-medium text-gray-800 truncate">${escapeHtml(t.title)}</div>
-          <div class="text-xs text-gray-500 mt-1">
-            ${t.task_time || ''} ${cat ? '· ' + cat.name : ''}
-          </div>
+        <!-- 主界面 -->
+        <div id="main-content" class="main-content">
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button class="btn btn-secondary" onclick="app.prevMonth()">◀</button>
+                        <h2 id="current-month" style="min-width: 120px; text-align: center;"></h2>
+                        <button class="btn btn-secondary" onclick="app.nextMonth()">▶</button>
+                    </div>
+                    <button class="btn btn-primary" onclick="app.showAddTaskModal()">+ 新建任务</button>
+                </div>
+
+                <div class="view-toggle">
+                    <button class="btn btn-secondary" onclick="app.setView('day')" id="view-day">日视图</button>
+                    <button class="btn btn-secondary" onclick="app.setView('week')" id="view-week">周视图</button>
+                    <button class="btn btn-secondary" onclick="app.setView('month')" id="view-month">月视图</button>
+                    <button class="btn btn-secondary" onclick="app.showCategoryModal()">⚙️ 管理分类</button>
+                </div>
+
+                <div class="calendar-grid" id="calendar-grid"></div>
+            </div>
+
+            <div class="tasks-container">
+                <h3 id="tasks-title" style="margin-bottom: 15px; color: #333;">今日任务</h3>
+                <div id="tasks-list"></div>
+            </div>
         </div>
-      </div>
-    `;
-    card.onclick = () => showDetail(t.id);
-    container.appendChild(card);
-  });
-}
+    </div>
 
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
-}
+    <!-- 任务详情/编辑弹窗 -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="task-modal-title">新建任务</h2>
+                <button class="close-btn" onclick="app.closeTaskModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label>任务标题 *</label>
+                <input type="text" id="task-title" placeholder="例如：完成项目报告">
+            </div>
+            <div class="form-group">
+                <label>任务详情</label>
+                <textarea id="task-detail" placeholder="详细描述任务内容..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>任务分类 *</label>
+                <select id="task-category"></select>
+            </div>
+            <div class="form-group">
+                <label>日期 *</label>
+                <input type="date" id="task-date">
+            </div>
+            <div class="form-group">
+                <label>时间</label>
+                <input type="time" id="task-time">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="app.saveTask()" style="flex: 1;">保存任务</button>
+                <button class="btn btn-danger" id="delete-task-btn" onclick="app.deleteTask()" style="display: none;">删除</button>
+            </div>
+        </div>
+    </div>
 
-// ===== 详情 =====
-function showDetail(id) {
-  const t = tasks.find(x => x.id === id);
-  if (!t) return;
-  currentDetailId = id;
-  const cat = categories.find(c => c.id === t.category_id);
-  document.getElementById('detailTitle').textContent = t.title;
-  document.getElementById('detailMeta').textContent =
-    `${t.task_date} ${t.task_time || ''} ${cat ? ' · ' + cat.name : ''}`;
-  document.getElementById('detailDesc').textContent = t.description || '无详情';
-  document.getElementById('detailModal').classList.remove('hide');
-}
+    <!-- 分类管理弹窗 -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">管理分类</h2>
+                <button class="close-btn" onclick="app.closeCategoryModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label>添加新分类</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-category" placeholder="例如：工作、生活、学习">
+                    <button class="btn btn-primary" onclick="app.addCategory()">添加</button>
+                </div>
+            </div>
+            <div class="category-list" id="category-list"></div>
+        </div>
+    </div>
 
-function closeDetail() {
-  document.getElementById('detailModal').classList.add('hide');
-  currentDetailId = null;
-}
+    <script>
+        // 使用立即执行函数封装整个应用，避免全局变量污染和重复声明错误
+        (function() {
+            // Supabase配置
+            const SUPABASE_URL = 'https://rrgizwisrepncaeyflmi.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w';
+            
+            // 安全地获取 supabase 客户端
+            let supabaseClient;
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                console.error('Supabase library not loaded');
+                alert('无法加载核心库，请检查网络连接');
+            }
 
-// ===== 初始化 =====
-checkEnv();
+            // 应用状态
+            const state = {
+                currentUser: null,
+                encryptionKey: null,
+                currentDate: new Date(),
+                currentView: 'month',
+                selectedDate: new Date(),
+                categories: [],
+                tasks: [],
+                editingTaskId: null
+            };
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    closeTaskModal();
-    closeCategoryMgr();
-    closeDetail();
-  }
-});
+            // 加密相关函数
+            async function deriveKey(password, salt) {
+                const encoder = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(password),
+                    'PBKDF2',
+                    false,
+                    ['deriveBits', 'deriveKey']
+                );
 
-['taskModal', 'categoryModal', 'detailModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', e => {
-    if (e.target.id === id) document.getElementById(id).classList.add('hide');
-  });
-});
-</script>
+                return await crypto.subtle.deriveKey(
+                    {
+                        name: 'PBKDF2',
+                        salt: encoder.encode(salt),
+                        iterations: 100000,
+                        hash: 'SHA-256'
+                    },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['encrypt', 'decrypt']
+                );
+            }
+
+            async function encryptData(data, key) {
+                const encoder = new TextEncoder();
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    encoder.encode(JSON.stringify(data))
+                );
+
+                const combined = new Uint8Array(iv.length + encrypted.byteLength);
+                combined.set(iv);
+                combined.set(new Uint8Array(encrypted), iv.length);
+
+                return btoa(String.fromCharCode(...combined));
+            }
+
+            async function decryptData(encryptedData, key) {
+                try {
+                    const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+                    const iv = combined.slice(0, 12);
+                    const data = combined.slice(12);
+
+                    const decrypted = await crypto.subtle.decrypt(
+                        { name: 'AES-GCM', iv: iv },
+                        key,
+                        data
+                    );
+
+                    const decoder = new TextDecoder();
+                    return JSON.parse(decoder.decode(decrypted));
+                } catch (e) {
+                    console.error('Decryption failed', e);
+                    return null;
+                }
+            }
+
+            // 工具函数
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // 业务逻辑对象
+            const app = {
+                // 认证相关
+                showLogin() {
+                    document.getElementById('login-form').style.display = 'block';
+                    document.getElementById('register-form').style.display = 'none';
+                },
+
+                showRegister() {
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('register-form').style.display = 'block';
+                },
+
+                async register() {
+                    const username = document.getElementById('register-username').value.trim();
+                    const password = document.getElementById('register-password').value;
+                    const confirm = document.getElementById('register-confirm').value;
+
+                    if (!username || !password) {
+                        alert('请填写所有字段');
+                        return;
+                    }
+
+                    if (password !== confirm) {
+                        alert('两次输入的密码不一致');
+                        return;
+                    }
+
+                    if (password.length < 6) {
+                        alert('密码长度至少6位');
+                        return;
+                    }
+
+                    try {
+                        const salt = crypto.getRandomValues(new Uint8Array(16));
+                        const saltStr = btoa(String.fromCharCode(...salt));
+                        const key = await deriveKey(password, saltStr);
+                        const passwordHash = await encryptData({ password }, key);
+
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .insert([{ username, password_hash: passwordHash, salt: saltStr }]);
+
+                        if (error) throw error;
+
+                        alert('注册成功，请登录');
+                        this.showLogin();
+                    } catch (error) {
+                        if (error.code === '23505') {
+                            alert('用户名已存在');
+                        } else {
+                            alert('注册失败：' + error.message);
+                        }
+                    }
+                },
+
+                async login() {
+                    const username = document.getElementById('login-username').value.trim();
+                    const password = document.getElementById('login-password').value;
+
+                    if (!username || !password) {
+                        alert('请填写用户名和密码');
+                        return;
+                    }
+
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .select('*')
+                            .eq('username', username)
+                            .single();
+
+                        if (error || !data) {
+                            alert('用户名或密码错误');
+                            return;
+                        }
+
+                        const key = await deriveKey(password, data.salt);
+                        const decrypted = await decryptData(data.password_hash, key);
+
+                        if (decrypted && decrypted.password === password) {
+                            state.currentUser = { id: data.id, username: data.username };
+                            state.encryptionKey = key;
+                            
+                            document.getElementById('auth-container').style.display = 'none';
+                            document.getElementById('main-content').style.display = 'block';
+                            document.getElementById('user-info').style.display = 'flex';
+                            document.getElementById('current-user').textContent = `Hi, ${username}`;
+
+                            await this.loadCategories();
+                            await this.loadTasks();
+                            this.renderCalendar();
+                            this.updateTasksList();
+                        } else {
+                            alert('用户名或密码错误');
+                        }
+                    } catch (error) {
+                        alert('登录失败：' + error.message);
+                    }
+                },
+
+                logout() {
+                    state.currentUser = null;
+                    state.encryptionKey = null;
+                    state.tasks = [];
+                    state.categories = [];
+                    
+                    document.getElementById('auth-container').style.display = 'block';
+                    document.getElementById('main-content').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'none';
+                    document.getElementById('login-username').value = '';
+                    document.getElementById('login-password').value = '';
+                    this.showLogin();
+                },
+
+                // 分类管理
+                async loadCategories() {
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('categories')
+                            .select('*')
+                            .eq('user_id', state.currentUser.id);
+
+                        if (error) throw error;
+
+                        state.categories = [];
+                        for (const cat of data) {
+                            const decrypted = await decryptData(cat.encrypted_name, state.encryptionKey);
+                            if (decrypted) {
+                                state.categories.push({ ...cat, name: decrypted.name });
+                            }
+                        }
+                    } catch (error) {
+                        console.error('加载分类失败：', error);
+                    }
+                },
+
+                async addCategory() {
+                    const name = document.getElementById('new-category').value.trim();
+                    if (!name) {
+                        alert('请输入分类名称');
+                        return;
+                    }
+
+                    try {
+                        const encryptedName = await encryptData({ name }, state.encryptionKey);
+                        
+                        const { data, error } = await supabaseClient
+                            .from('categories')
+                            .insert([{ user_id: state.currentUser.id, encrypted_name: encryptedName }]);
+
+                        if (error) throw error;
+
+                        document.getElementById('new-category').value = '';
+                        await this.loadCategories();
+                        this.renderCategoryList();
+                    } catch (error) {
+                        alert('添加分类失败：' + error.message);
+                    }
+                },
+
+                async deleteCategory(id) {
+                    if (!confirm('确定要删除这个分类吗？该分类下的任务将不受影响但无法选择此分类。')) return;
+
+                    try {
+                        const { error } = await supabaseClient
+                            .from('categories')
+                            .delete()
+                            .eq('id', id);
+
+                        if (error) throw error;
+
+                        await this.loadCategories();
+                        this.renderCategoryList();
+                    } catch (error) {
+                        alert('删除分类失败：' + error.message);
+                    }
+                },
+
+                renderCategoryList() {
+                    const list = document.getElementById('category-list');
+                    if (state.categories.length === 0) {
+                        list.innerHTML = '<div class="empty-state">暂无分类，请添加</div>';
+                        return;
+                    }
+
+                    list.innerHTML = state.categories.map(cat => `
+                        <div class="category-item">
+                            <span>${cat.name}</span>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="app.deleteCategory(${cat.id})">删除</button>
+                        </div>
+                    `).join('');
+                },
+
+                showCategoryModal() {
+                    document.getElementById('category-modal').classList.add('active');
+                    this.renderCategoryList();
+                },
+
+                closeCategoryModal() {
+                    document.getElementById('category-modal').classList.remove('active');
+                },
+
+                // 任务管理
+                async loadTasks() {
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('tasks')
+                            .select('*')
+                            .eq('user_id', state.currentUser.id)
+                            .order('created_at', { ascending: false });
+
+                        if (error) throw error;
+
+                        state.tasks = [];
+                        for (const task of data) {
+                            const decrypted = await decryptData(task.encrypted_data, state.encryptionKey);
+                            if (decrypted) {
+                                state.tasks.push({ ...task, ...decrypted });
+                            }
+                        }
+                    } catch (error) {
+                        console.error('加载任务失败：', error);
+                    }
+                },
+
+                showAddTaskModal() {
+                    state.editingTaskId = null;
+                    document.getElementById('task-modal-title').textContent = '新建任务';
+                    document.getElementById('task-title').value = '';
+                    document.getElementById('task-detail').value = '';
+                    document.getElementById('task-date').value = formatDate(state.selectedDate);
+                    document.getElementById('task-time').value = new Date().toTimeString().slice(0, 5);
+                    document.getElementById('delete-task-btn').style.display = 'none';
+                    
+                    this.updateCategorySelect();
+                    document.getElementById('task-modal').classList.add('active');
+                },
+
+                showEditTaskModal(task) {
+                    state.editingTaskId = task.id;
+                    document.getElementById('task-modal-title').textContent = '编辑任务';
+                    document.getElementById('task-title').value = task.title;
+                    document.getElementById('task-detail').value = task.detail || '';
+                    document.getElementById('task-date').value = task.date;
+                    document.getElementById('task-time').value = task.time || '';
+                    document.getElementById('delete-task-btn').style.display = 'block';
+                    
+                    this.updateCategorySelect();
+                    if (task.category_id) {
+                        document.getElementById('task-category').value = task.category_id;
+                    }
+                    document.getElementById('task-modal').classList.add('active');
+                },
+
+                updateCategorySelect() {
+                    const select = document.getElementById('task-category');
+                    if (state.categories.length === 0) {
+                        select.innerHTML = '<option value="">请先添加分类</option>';
+                        return;
+                    }
+                    select.innerHTML = '<option value="">选择分类</option>' + 
+                        state.categories.map(cat => 
+                            `<option value="${cat.id}">${cat.name}</option>`
+                        ).join('');
+                },
+
+                async saveTask() {
+                    const title = document.getElementById('task-title').value.trim();
+                    const detail = document.getElementById('task-detail').value.trim();
+                    const category_id = document.getElementById('task-category').value;
+                    const date = document.getElementById('task-date').value;
+                    const time = document.getElementById('task-time').value;
+
+                    if (!title) {
+                        alert('请输入任务标题');
+                        return;
+                    }
+
+                    if (!category_id) {
+                        alert('请选择任务分类');
+                        return;
+                    }
+
+                    if (!date) {
+                        alert('请选择日期');
+                        return;
+                    }
+
+                    try {
+                        const taskData = { title, detail, category_id, date, time };
+                        const encryptedData = await encryptData(taskData, state.encryptionKey);
+
+                        if (state.editingTaskId) {
+                            const { error } = await supabaseClient
+                                .from('tasks')
+                                .update({ encrypted_data: encryptedData, updated_at: new Date().toISOString() })
+                                .eq('id', state.editingTaskId);
+
+                            if (error) throw error;
+                        } else {
+                            const { error } = await supabaseClient
+                                .from('tasks')
+                                .insert([{ user_id: state.currentUser.id, encrypted_data: encryptedData }]);
+
+                            if (error) throw error;
+                        }
+
+                        await this.loadTasks();
+                        this.closeTaskModal();
+                        this.renderCalendar();
+                        this.updateTasksList();
+                    } catch (error) {
+                        alert('保存任务失败：' + error.message);
+                    }
+                },
+
+                async deleteTask() {
+                    if (!state.editingTaskId) return;
+                    if (!confirm('确定要删除这个任务吗？')) return;
+
+                    try {
+                        const { error } = await supabaseClient
+                            .from('tasks')
+                            .delete()
+                            .eq('id', state.editingTaskId);
+
+                        if (error) throw error;
+
+                        await this.loadTasks();
+                        this.closeTaskModal();
+                        this.renderCalendar();
+                        this.updateTasksList();
+                    } catch (error) {
+                        alert('删除任务失败：' + error.message);
+                    }
+                },
+
+                closeTaskModal() {
+                    document.getElementById('task-modal').classList.remove('active');
+                    state.editingTaskId = null;
+                },
+
+                // 日历渲染
+                renderCalendar() {
+                    const year = state.currentDate.getFullYear();
+                    const month = state.currentDate.getMonth();
+                    
+                    document.getElementById('current-month').textContent = 
+                        `${year}年${month + 1}月`;
+
+                    const firstDay = new Date(year, month, 1);
+                    const lastDay = new Date(year, month + 1, 0);
+                    const startDay = firstDay.getDay();
+                    const totalDays = lastDay.getDate();
+
+                    const grid = document.getElementById('calendar-grid');
+                    grid.innerHTML = '';
+
+                    // 星期标题
+                    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+                    weekDays.forEach(day => {
+                        const header = document.createElement('div');
+                        header.className = 'calendar-day-header';
+                        header.textContent = day;
+                        grid.appendChild(header);
+                    });
+
+                    // 空白填充
+                    for (let i = 0; i < startDay; i++) {
+                        const empty = document.createElement('div');
+                        empty.className = 'calendar-day';
+                        empty.style.visibility = 'hidden';
+                        grid.appendChild(empty);
+                    }
+
+                    // 日期
+                    const today = new Date();
+                    for (let day = 1; day <= totalDays; day++) {
+                        const date = new Date(year, month, day);
+                        const dateStr = formatDate(date);
+                        const dayTasks = state.tasks.filter(t => t.date === dateStr);
+                        
+                        const dayEl = document.createElement('div');
+                        dayEl.className = 'calendar-day';
+                        
+                        if (date.toDateString() === today.toDateString()) {
+                            dayEl.classList.add('today');
+                        }
+                        
+                        if (date.toDateString() === state.selectedDate.toDateString()) {
+                            dayEl.classList.add('active');
+                        }
+                        
+                        if (dayTasks.length > 0) {
+                            dayEl.classList.add('has-tasks');
+                        }
+
+                        dayEl.innerHTML = `
+                            <div class="day-number">${day}</div>
+                            ${dayTasks.length > 0 ? `<div class="task-count">${dayTasks.length}</div>` : ''}
+                        `;
+
+                        dayEl.onclick = () => {
+                            state.selectedDate = date;
+                            this.renderCalendar();
+                            this.updateTasksList();
+                        };
+
+                        grid.appendChild(dayEl);
+                    }
+                },
+
+                prevMonth() {
+                    state.currentDate.setMonth(state.currentDate.getMonth() - 1);
+                    this.renderCalendar();
+                },
+
+                nextMonth() {
+                    state.currentDate.setMonth(state.currentDate.getMonth() + 1);
+                    this.renderCalendar();
+                },
+
+                setView(view) {
+                    state.currentView = view;
+                    document.querySelectorAll('.view-toggle .btn').forEach(btn => {
+                        if (btn.id.startsWith('view-')) {
+                            btn.classList.remove('btn-primary');
+                            btn.classList.add('btn-secondary');
+                        }
+                    });
+                    const activeBtn = document.getElementById(`view-${view}`);
+                    if (activeBtn) {
+                        activeBtn.classList.remove('btn-secondary');
+                        activeBtn.classList.add('btn-primary');
+                    }
+                    this.updateTasksList();
+                },
+
+                updateTasksList() {
+                    let filteredTasks = [];
+                    let title = '';
+
+                    if (state.currentView === 'day') {
+                        const dateStr = formatDate(state.selectedDate);
+                        filteredTasks = state.tasks.filter(t => t.date === dateStr);
+                        title = `${state.selectedDate.getMonth() + 1}月${state.selectedDate.getDate()}日的任务`;
+                    } else if (state.currentView === 'week') {
+                        const weekStart = new Date(state.selectedDate);
+                        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekEnd.getDate() + 6);
+                        
+                        filteredTasks = state.tasks.filter(t => {
+                            const taskDate = new Date(t.date);
+                            return taskDate >= weekStart && taskDate <= weekEnd;
+                        });
+                        title = `本周任务 (${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()})`;
+                    } else {
+                        const year = state.selectedDate.getFullYear();
+                        const month = state.selectedDate.getMonth();
+                        
+                        filteredTasks = state.tasks.filter(t => {
+                            const taskDate = new Date(t.date);
+                            return taskDate.getFullYear() === year && taskDate.getMonth() === month;
+                        });
+                        title = `${year}年${month + 1}月的任务`;
+                    }
+
+                    document.getElementById('tasks-title').textContent = title;
+                    this.renderTasksList(filteredTasks);
+                },
+
+                renderTasksList(filteredTasks) {
+                    const list = document.getElementById('tasks-list');
+                    
+                    if (filteredTasks.length === 0) {
+                        list.innerHTML = '<div class="empty-state">暂无任务，点击"+"添加新任务</div>';
+                        return;
+                    }
+
+                    // 按时间排序
+                    filteredTasks.sort((a, b) => {
+                        if (a.date !== b.date) return a.date.localeCompare(b.date);
+                        return (a.time || '').localeCompare(b.time || '');
+                    });
+
+                    list.innerHTML = filteredTasks.map(task => {
+                        const category = state.categories.find(c => c.id == task.category_id);
+                        return `
+                            <div class="task-item" onclick="app.showEditTaskModal(state.tasks.find(t => t.id === ${task.id}))">
+                                <div class="task-title">${task.title}</div>
+                                <div class="task-meta">
+                                    <span>📅 ${task.date}</span>
+                                    ${task.time ? `<span>⏰ ${task.time}</span>` : ''}
+                                    ${category ? `<span class="category-tag">${category.name}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            };
+
+            // 将 app 暴露给全局以便 HTML 中的 onclick 调用
+            window.app = app;
+            
+            // 初始化视图
+            app.setView('month');
+        })();
+    </script>
 </body>
 </html>
