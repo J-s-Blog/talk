@@ -21,9 +21,18 @@
   .hide { display: none !important; }
   .task-card { transition: all 0.2s; }
   .task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .env-warning {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #fee2e2; color: #991b1b; padding: 12px; text-align: center; font-size: 14px;
+  }
 </style>
 </head>
 <body class="min-h-screen">
+
+<!-- 环境警告 -->
+<div id="envWarning" class="env-warning hide">
+  ⚠️ 当前环境不支持加密功能，请通过 HTTP/HTTPS 访问（本地可用 Live Server 或部署到 GitHub Pages）
+</div>
 
 <!-- 登录/注册页 -->
 <div id="authPage" class="min-h-screen flex items-center justify-center p-4">
@@ -36,12 +45,12 @@
     <div id="loginForm">
       <input id="loginUser" type="text" placeholder="用户名" class="w-full px-4 py-2 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
       <input id="loginPass" type="password" placeholder="密码" class="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <button onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium">登录</button>
+      <button id="btnLogin" onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium">登录</button>
     </div>
     <div id="registerForm" class="hide">
       <input id="regUser" type="text" placeholder="用户名" class="w-full px-4 py-2 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
       <input id="regPass" type="password" placeholder="密码" class="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <button onclick="doRegister()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium">注册账号</button>
+      <button id="btnRegister" onclick="doRegister()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium">注册账号</button>
     </div>
     <p id="authMsg" class="text-red-500 text-sm mt-3 text-center"></p>
   </div>
@@ -49,7 +58,6 @@
 
 <!-- 主应用 -->
 <div id="appPage" class="hide">
-  <!-- 顶部导航 -->
   <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <h1 class="text-xl font-bold text-gray-800">myList</h1>
@@ -62,7 +70,6 @@
   </header>
 
   <main class="max-w-6xl mx-auto p-4">
-    <!-- 视图切换 -->
     <div class="flex gap-2 mb-4 flex-wrap">
       <button onclick="setView('day')" id="btnDay" class="px-4 py-1.5 rounded-lg bg-blue-500 text-white text-sm">日</button>
       <button onclick="setView('week')" id="btnWeek" class="px-4 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-sm">周</button>
@@ -70,7 +77,6 @@
       <button onclick="openTaskModal()" class="ml-auto bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm">+ 新建任务</button>
     </div>
 
-    <!-- 日历区 -->
     <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
       <div class="flex items-center justify-between mb-4">
         <button onclick="prevPeriod()" class="p-2 hover:bg-gray-100 rounded">◀</button>
@@ -80,7 +86,6 @@
       <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-sm"></div>
     </div>
 
-    <!-- 任务列表 -->
     <div class="bg-white rounded-xl shadow-sm p-4">
       <h3 id="taskListTitle" class="text-lg font-semibold mb-3"></h3>
       <div id="taskList" class="space-y-2"></div>
@@ -166,14 +171,23 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUserId = null;
 let currentUsername = '';
 let encryptKey = null;
-let currentView = 'day'; // day | week | month
-let viewDate = new Date(); // 当前视图基准日期
+let currentView = 'day';
+let viewDate = new Date();
 let selectedDate = formatDate(new Date());
 let categories = [];
 let tasks = [];
 let currentDetailId = null;
 
-// ===== 加密工具 (AES-GCM) =====
+// ===== 环境检测 =====
+function checkEnv() {
+  const cryptoOk = window.isSecureContext && window.crypto && window.crypto.subtle;
+  if (!cryptoOk) {
+    document.getElementById('envWarning').classList.remove('hide');
+  }
+  return cryptoOk;
+}
+
+// ===== 加密工具 =====
 async function deriveKey(password, salt) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -228,6 +242,13 @@ function showMsg(elId, text, isError = true) {
   el.className = isError ? 'text-red-500 text-sm mt-3 text-center' : 'text-green-500 text-sm mt-3 text-center';
 }
 
+function setBtnLoading(id, loading, text) {
+  const btn = document.getElementById(id);
+  btn.disabled = loading;
+  btn.textContent = loading ? '处理中...' : text;
+  btn.style.opacity = loading ? 0.7 : 1;
+}
+
 // ===== 认证 =====
 document.getElementById('tabLogin').onclick = () => {
   document.getElementById('tabLogin').classList.add('border-b-2', 'border-blue-500', 'text-blue-600', 'font-medium');
@@ -236,6 +257,7 @@ document.getElementById('tabLogin').onclick = () => {
   document.getElementById('tabRegister').classList.add('text-gray-500');
   document.getElementById('loginForm').classList.remove('hide');
   document.getElementById('registerForm').classList.add('hide');
+  document.getElementById('authMsg').textContent = '';
 };
 
 document.getElementById('tabRegister').onclick = () => {
@@ -245,59 +267,81 @@ document.getElementById('tabRegister').onclick = () => {
   document.getElementById('tabLogin').classList.add('text-gray-500');
   document.getElementById('registerForm').classList.remove('hide');
   document.getElementById('loginForm').classList.add('hide');
+  document.getElementById('authMsg').textContent = '';
 };
 
 async function doRegister() {
+  if (!checkEnv()) return showMsg('authMsg', '当前环境不支持加密，无法注册');
+  
   const username = document.getElementById('regUser').value.trim();
   const password = document.getElementById('regPass').value;
   if (!username || !password) return showMsg('authMsg', '请输入用户名和密码');
   if (password.length < 4) return showMsg('authMsg', '密码至少4位');
 
-  // 检查用户名是否存在
-  const { data: exist } = await supabase
-    .from('users').select('id').eq('username', username).maybeSingle();
-  if (exist) return showMsg('authMsg', '用户名已存在');
+  setBtnLoading('btnRegister', true, '注册账号');
 
-  const pwdHash = await hashPassword(password);
-  const { data, error } = await supabase
-    .from('users').insert([{ username, password_hash: pwdHash }])
-    .select('id').single();
+  try {
+    // 检查用户名是否存在
+    const { data: exist, error: checkErr } = await supabase
+      .from('users').select('id').eq('username', username).maybeSingle();
+    if (checkErr) throw new Error('检查用户名失败: ' + checkErr.message);
+    if (exist) throw new Error('用户名已存在');
 
-  if (error) return showMsg('authMsg', '注册失败: ' + error.message);
-  showMsg('authMsg', '注册成功，请登录', false);
+    const pwdHash = await hashPassword(password);
+    const { error } = await supabase
+      .from('users').insert([{ username, password_hash: pwdHash }]);
+    if (error) throw new Error('注册失败: ' + error.message);
 
-  // 自动切换到登录
-  setTimeout(() => {
-    document.getElementById('tabLogin').click();
-    document.getElementById('loginUser').value = username;
-  }, 800);
+    showMsg('authMsg', '注册成功，请登录', false);
+    setTimeout(() => {
+      document.getElementById('tabLogin').click();
+      document.getElementById('loginUser').value = username;
+    }, 800);
+  } catch (e) {
+    showMsg('authMsg', e.message);
+    console.error(e);
+  } finally {
+    setBtnLoading('btnRegister', false, '注册账号');
+  }
 }
 
 async function doLogin() {
+  if (!checkEnv()) return showMsg('authMsg', '当前环境不支持加密，无法登录');
+
   const username = document.getElementById('loginUser').value.trim();
   const password = document.getElementById('loginPass').value;
   if (!username || !password) return showMsg('authMsg', '请输入用户名和密码');
 
-  const pwdHash = await hashPassword(password);
-  const { data, error } = await supabase
-    .from('users').select('id, username')
-    .eq('username', username).eq('password_hash', pwdHash)
-    .maybeSingle();
+  setBtnLoading('btnLogin', true, '登录');
 
-  if (!data || error) return showMsg('authMsg', '用户名或密码错误');
+  try {
+    const pwdHash = await hashPassword(password);
+    const { data, error } = await supabase
+      .from('users').select('id, username')
+      .eq('username', username).eq('password_hash', pwdHash)
+      .maybeSingle();
 
-  currentUserId = data.id;
-  currentUsername = data.username;
-  encryptKey = await deriveKey(password, username);
+    if (error) throw new Error('登录失败: ' + error.message);
+    if (!data) throw new Error('用户名或密码错误');
 
-  document.getElementById('authPage').classList.add('hide');
-  document.getElementById('appPage').classList.remove('hide');
-  document.getElementById('currentUser').textContent = '用户: ' + username;
+    currentUserId = data.id;
+    currentUsername = data.username;
+    encryptKey = await deriveKey(password, username);
 
-  await loadCategories();
-  await loadTasks();
-  renderCalendar();
-  renderTaskList();
+    document.getElementById('authPage').classList.add('hide');
+    document.getElementById('appPage').classList.remove('hide');
+    document.getElementById('currentUser').textContent = '用户: ' + username;
+
+    await loadCategories();
+    await loadTasks();
+    renderCalendar();
+    renderTaskList();
+  } catch (e) {
+    showMsg('authMsg', e.message);
+    console.error(e);
+  } finally {
+    setBtnLoading('btnLogin', false, '登录');
+  }
 }
 
 function doLogout() {
@@ -313,11 +357,15 @@ function doLogout() {
 
 // ===== 分类管理 =====
 async function loadCategories() {
-  const { data, error } = await supabase
-    .from('categories').select('*').eq('user_id', currentUserId);
-  if (error) return;
-  categories = data || [];
-  updateCategorySelect();
+  try {
+    const { data, error } = await supabase
+      .from('categories').select('*').eq('user_id', currentUserId);
+    if (error) throw error;
+    categories = data || [];
+    updateCategorySelect();
+  } catch (e) {
+    console.error('加载分类失败', e);
+  }
 }
 
 function updateCategorySelect() {
@@ -359,40 +407,50 @@ async function addCategory() {
   const color = document.getElementById('newCatColor').value;
   if (!name) return;
 
-  const { data, error } = await supabase
-    .from('categories').insert([{ user_id: currentUserId, name, color }])
-    .select('*').single();
-
-  if (error) return alert('添加失败: ' + error.message);
-  categories.push(data);
-  document.getElementById('newCatName').value = '';
-  updateCategorySelect();
-  renderCategoryList();
+  try {
+    const { data, error } = await supabase
+      .from('categories').insert([{ user_id: currentUserId, name, color }])
+      .select('*').single();
+    if (error) throw error;
+    categories.push(data);
+    document.getElementById('newCatName').value = '';
+    updateCategorySelect();
+    renderCategoryList();
+  } catch (e) {
+    alert('添加失败: ' + e.message);
+  }
 }
 
 async function deleteCategory(id) {
   if (!confirm('确定删除此分类？任务不会被删除，仅取消分类关联。')) return;
-  await supabase.from('categories').delete().eq('id', id);
-  categories = categories.filter(c => c.id !== id);
-  updateCategorySelect();
-  renderCategoryList();
-  renderTaskList();
+  try {
+    await supabase.from('categories').delete().eq('id', id);
+    categories = categories.filter(c => c.id !== id);
+    updateCategorySelect();
+    renderCategoryList();
+    renderTaskList();
+  } catch (e) {
+    alert('删除失败: ' + e.message);
+  }
 }
 
 // ===== 任务管理 =====
 async function loadTasks() {
-  const { data, error } = await supabase
-    .from('tasks').select('*').eq('user_id', currentUserId);
-  if (error) return;
+  try {
+    const { data, error } = await supabase
+      .from('tasks').select('*').eq('user_id', currentUserId);
+    if (error) throw error;
 
-  // 解密
-  tasks = [];
-  for (const t of data || []) {
-    try {
-      const title = await decrypt(t.title, encryptKey);
-      const desc = t.description ? await decrypt(t.description, encryptKey) : '';
-      tasks.push({ ...t, title, description: desc });
-    } catch (e) { /* 忽略解密失败 */ }
+    tasks = [];
+    for (const t of data || []) {
+      try {
+        const title = await decrypt(t.title, encryptKey);
+        const desc = t.description ? await decrypt(t.description, encryptKey) : '';
+        tasks.push({ ...t, title, description: desc });
+      } catch (e) { /* 忽略解密失败 */ }
+    }
+  } catch (e) {
+    console.error('加载任务失败', e);
   }
 }
 
@@ -434,41 +492,49 @@ async function saveTask() {
 
   if (!title || !date) return alert('请填写标题和日期');
 
-  const encTitle = await encrypt(title, encryptKey);
-  const encDesc = desc ? await encrypt(desc, encryptKey) : null;
+  try {
+    const encTitle = await encrypt(title, encryptKey);
+    const encDesc = desc ? await encrypt(desc, encryptKey) : null;
 
-  if (id) {
-    const { error } = await supabase
-      .from('tasks')
-      .update({ category_id: categoryId, title: encTitle, description: encDesc, task_date: date, task_time: time, updated_at: new Date() })
-      .eq('id', id);
-    if (error) return alert('保存失败: ' + error.message);
-  } else {
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert([{ user_id: currentUserId, category_id: categoryId, title: encTitle, description: encDesc, task_date: date, task_time: time }])
-      .select('*').single();
-    if (error) return alert('保存失败: ' + error.message);
-    data.title = title;
-    data.description = desc;
-    tasks.push(data);
+    if (id) {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ category_id: categoryId, title: encTitle, description: encDesc, task_date: date, task_time: time, updated_at: new Date() })
+        .eq('id', id);
+      if (error) throw error;
+    } else {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([{ user_id: currentUserId, category_id: categoryId, title: encTitle, description: encDesc, task_date: date, task_time: time }])
+        .select('*').single();
+      if (error) throw error;
+      data.title = title;
+      data.description = desc;
+      tasks.push(data);
+    }
+
+    closeTaskModal();
+    await loadTasks();
+    renderCalendar();
+    renderTaskList();
+  } catch (e) {
+    alert('保存失败: ' + e.message);
   }
-
-  closeTaskModal();
-  await loadTasks();
-  renderCalendar();
-  renderTaskList();
 }
 
 async function deleteTask() {
   const id = document.getElementById('taskId').value;
   if (!id || !confirm('确定删除此任务？')) return;
-  await supabase.from('tasks').delete().eq('id', id);
-  tasks = tasks.filter(t => t.id !== id);
-  closeTaskModal();
-  closeDetail();
-  renderCalendar();
-  renderTaskList();
+  try {
+    await supabase.from('tasks').delete().eq('id', id);
+    tasks = tasks.filter(t => t.id !== id);
+    closeTaskModal();
+    closeDetail();
+    renderCalendar();
+    renderTaskList();
+  } catch (e) {
+    alert('删除失败: ' + e.message);
+  }
 }
 
 function editFromDetail() {
@@ -509,7 +575,7 @@ function nextPeriod() {
 
 function getWeekDates(d) {
   const date = new Date(d);
-  const day = date.getDay() || 7; // 周一为1
+  const day = date.getDay() || 7;
   date.setDate(date.getDate() - day + 1);
   const dates = [];
   for (let i = 0; i < 7; i++) {
@@ -564,7 +630,6 @@ function renderCalendar() {
     if (currentView === 'month' && d.getMonth() !== viewDate.getMonth()) {
       div.classList.add('text-gray-300');
     }
-    // 检查是否有任务
     const hasTask = tasks.some(t => t.task_date === ds);
     if (hasTask) div.classList.add('has-task');
 
@@ -672,6 +737,8 @@ function closeDetail() {
 }
 
 // ===== 初始化 =====
+checkEnv();
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeTaskModal();
@@ -680,7 +747,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// 点击遮罩关闭
 ['taskModal', 'categoryModal', 'detailModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target.id === id) document.getElementById(id).classList.add('hide');
