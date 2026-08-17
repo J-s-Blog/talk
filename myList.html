@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作任务记录｜Supabase云同步</title>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/plugin/weekOfYear.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .calendar-day{min-height:48px;cursor:pointer;position:relative;}
+        .calendar-day:hover{background:#e5e7eb;}
+        .has-task::after{content:"●";color:#2563eb;font-size:10px;position:absolute;bottom:2px;right:2px;}
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+<div id="app"></div>
+
+<script>
+dayjs.extend(window.dayjs_plugin_weekOfYear);
+
+// ========== 在这里填入你的Supabase信息 ==========
+const SUPABASE_URL = "https://rrgizwisrepncaeyflmi.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w";
+// =================================================
+
+const { createClient } = window.supabase;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// -------- AES加密工具（全部前端完成，不上传密码） --------
+function getAesKey(username, password) {
+    const salt = username + "_salt_worknote";
+    return CryptoJS.PBKDF2(password, salt, { keySize: 256 / 32, iterations: 10000, hasher: CryptoJS.algo.SHA256 });
+}
+function encryptData(obj, key) {
+    const str = JSON.stringify(obj);
+    return CryptoJS.AES.encrypt(str, key).toString();
+}
+function decryptData(cipherStr, key) {
+    try {
+        const bytes = CryptoJS.AES.decrypt(cipherStr, key);
+        return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+    } catch (e) {
+        return null;
+    }
+}
+function uuid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function escapeHtml(s) {
+    if (!s) return "";
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+// -------- 全局状态 --------
+let state = {
+    page: "login", // login register main taskEdit taskDetail categoryManage
+    currentUser: null,
+    aesKey: null,
+    tasks: [],
+    categories: [],
+    calendarCurrent: dayjs(),
+    filterType: "day",
+    filterDate: dayjs().format("YYYY-MM-DD"),
+    editTask: null,
+    detailTaskId: null
+};
+
+// -------- Supabase数据库操作 --------
+
+/** 注册用户：写入用户名+密码哈希 */
+async function userRegister(username, password) {
+    const pwdHash = CryptoJS.SHA256(password + username).toString();
+    // 查询是否已存在
+    const { data: existUser } = await supabase.from("app_users").select("username").eq("username", username).single();
+    if (existUser) throw new Error("用户名已存在");
+
+    const { error } = await supabase.from("app_users").insert({ username, pwd_hash: pwdHash });
+    if (error) throw new Error(error.message);
+}
+
+/** 登录：校验密码哈希，拉取密文，前端解密 */
+async function userLogin(username, password) {
+    const pwdHash = CryptoJS.SHA256(password + username).toString();
+    const { data: userRow, error: uErr } = await supabase.from("app_users").select("*").eq("username", username).single();
+    if (uErr || !userRow) throw new Error("用户不存在");
+    if (userRow.pwd_hash !== pwdHash) throw new Error("密码错误");
+
+    state.aesKey = getAesKey(username, password);
+    state.currentUser = username;
+
+    // 获取用户密文数据
+    const { data: cipherRow } = await supabase.from("user_cipher_data").select("cipher_payload").eq("username", username).single();
+    if (cipherRow?.cipher_payload) {
+        const plain = decryptData(cipherRow.cipher_payload, state.aesKey);
+        if (plain) {
+            state.tasks = plain.tasks || [];
+            state.categories = plain.categories || [];
+        }
+    }
+    // 初始化默认分类
+    if (state.categories.length === 0) {
+        state.categories.push(
+            { id: uuid(), name: "工作", color: "#2563eb" },
+            { id: uuid(), name: "个人", color: "#16a34a" }
+        );
+        await saveAllToCloud();
+    }
+}
+
+/** 将tasks+categories整体加密，存入云端 */
+async function saveAllToCloud() {
+    const payload = { tasks: state.tasks, categories: state.categories };
+    const cipher = encryptData(payload, state.aesKey);
+    const { error } = await supabase
+        .from("user_cipher_data")
+        .upsert({ username: state.currentUser, cipher_payload: cipher });
+    if (error) throw new Error(error.message);
+}
+
+// -------- 任务业务逻辑 --------
+async function saveTask(taskObj) {
+    taskObj.updatedAt = dayjs().format("YYYY-MM-DD HH:mm:ss");
+    const idx = state.tasks.findIndex(x => x.id === taskObj.id);
+    if (idx >= 0) state.tasks[idx] = taskObj;
+    else state.tasks.push(taskObj);
+    await saveAllToCloud();
+}
+
+async function delTask(taskId) {
+    state.tasks = state.tasks.filter(t => t.id !== taskId);
+    await saveAllToCloud();
+}
+
+async function saveCategories() {
+    await saveAllToCloud();
+}
+
+function getFilterTasks() {
+    let list = [...state.tasks];
+    const fd = dayjs(state.filterDate);
+    if (state.filterType === "day") list = list.filter(t => dayjs(t.taskDate).isSame(fd, "day"));
+    else if (state.filterType === "week") list = list.filter(t => dayjs(t.taskDate).isSame(fd, "week"));
+    else if (state.filterType === "month") list = list.filter(t => dayjs(t.taskDate).isSame(fd, "month"));
+    return list.sort((a, b) => dayjs(a.taskDateTime).valueOf() - dayjs(b.taskDateTime).valueOf());
+}
+
+// -------- 日历渲染 --------
+function renderCalendar() {
+    const cur = state.calendarCurrent;
+    const first = cur.startOf("month");
+    const last = cur.endOf("month");
+    const startDay = first.day();
+    const daysTotal = last.date();
+    let html = `<div class="flex justify-between items-center mb-2">
+        <button onclick="prevMonth()" class="px-2 py-1 bg-gray-200 rounded">←</button>
+        <div class="font-bold">${cur.format("YYYY‑MM")}</div>
+        <button onclick="nextMonth()" class="px-2 py-1 bg-gray-200 rounded">→</button>
+    </div>
+    <div class="grid grid-cols-7 gap-1 text-center text-sm">
+        <div class="py-1 font-medium">日</div><div class="py-1 font-medium">一</div><div class="py-1 font-medium">二</div><div class="py-1 font-medium">三</div><div class="py-1 font-medium">四</div><div class="py-1 font-medium">五</div><div class="py-1 font-medium">六</div>`;
+    for (let i = 0; i < startDay; i++) html += `<div class="calendar-day relative border rounded bg-gray-100"></div>`;
+    for (let d = 1; d <= daysTotal; d++) {
+        const dt = cur.date(d).format("YYYY-MM-DD");
+        const hasTask = state.tasks.some(t => dayjs(t.taskDate).isSame(dt, "day"));
+        const isSelect = state.filterDate === dt;
+        html += `<div onclick="clickCalendarDay('${dt}')" class="calendar-day relative border rounded py-2 ${isSelect ? 'bg-blue-100' : ''} ${hasTask ? 'has-task' : ''}">${d}</div>`;
+    }
+    html += `</div>`;
+    return html;
+}
+
+window.prevMonth = () => { state.calendarCurrent = state.calendarCurrent.subtract(1, "month"); render(); }
+window.nextMonth = () => { state.calendarCurrent = state.calendarCurrent.add(1, "month"); render(); }
+window.clickCalendarDay = (dateStr) => {
+    state.filterType = "day";
+    state.filterDate = dateStr;
+    render();
+}
+window.gotoPage = (p) => { state.page = p; state.editTask = null; render(); }
+window.setFilterType = (t) => { state.filterType = t; render(); }
+window.setDetail = (id) => { state.detailTaskId = id; state.page = "taskDetail"; render(); }
+
+// -------- 页面渲染 --------
+function render() {
+    const app = document.getElementById("app");
+    if (state.page === "login") {
+        app.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-bold mb-4 text-center">云同步工作任务记录</h2>
+                <div class="mb-3">
+                    <label class="block mb-1">用户名</label>
+                    <input id="loginUser" class="w-full border rounded px-3 py-2"/>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-1">密码</label>
+                    <input id="loginPwd" type="password" class="w-full border rounded px-3 py-2"/>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="doLogin()" class="flex-1 bg-blue-600 text-white py-2 rounded">登录</button>
+                    <button onclick="gotoPage('register')" class="flex-1 bg-gray-200 py-2 rounded">注册新用户</button>
+                </div>
+                <div id="loginErr" class="mt-3 text-red-500 text-sm"></div>
+            </div>
+        </div>`;
+    } else if (state.page === "register") {
+        app.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-bold mb-4 text-center">注册账号</h2>
+                <div class="mb-3">
+                    <label class="block mb-1">用户名</label>
+                    <input id="regUser" class="w-full border rounded px-3 py-2"/>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-1">设置密码</label>
+                    <input id="regPwd" type="password" class="w-full border rounded px-3 py-2"/>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="doRegister()" class="flex-1 bg-green-600 text-white py-2 rounded">注册</button>
+                    <button onclick="gotoPage('login')" class="flex-1 bg-gray-200 py-2 rounded">返回登录</button>
+                </div>
+                <div id="regErr" class="mt-3 text-red-500 text-sm"></div>
+            </div>
+        </div>`;
+    } else if (state.page === "main") {
+        const filterList = getFilterTasks();
+        const catOpts = state.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+        app.innerHTML = `
+        <div class="min-h-screen bg-gray-50">
+            <header class="bg-blue-600 text-white p-3 flex justify-between items-center">
+                <h1 class="text-lg font-bold">工作任务（云同步）</h1>
+                <div class="flex gap-2">
+                    <button onclick="gotoPage('categoryManage')" class="bg-blue‑700 px-2 py-1 rounded text-sm">分类</button>
+                    <button onclick="logout()" class="bg-blue‑800 px-2 py-1 rounded text-sm">退出</button>
+                </div>
+            </header>
+            <div class="p-3 max-w‑4xl mx-auto">
+                <div class="bg-white rounded shadow p-3 mb-3">
+                    ${renderCalendar()}
+                </div>
+                <div class="bg-white rounded shadow p-3 mb-3">
+                    <div class="flex gap-2 mb-3 flex-wrap">
+                        <button onclick="setFilterType('day')" class="px-3 py-1 rounded ${state.filterType==='day'?'bg-blue-600 text-white':'bg-gray-200'}">当日</button>
+                        <button onclick="setFilterType('week')" class="px-3 py-1 rounded ${state.filterType==='week'?'bg-blue-600 text-white':'bg-gray-200'}">本周</button>
+                        <button onclick="setFilterType('month')" class="px-3 py-1 rounded ${state.filterType==='month'?'bg-blue-600 text-white':'bg-gray-200'}">本月</button>
+                    </div>
+                    <div class="text-sm mb-2">当前筛选：${state.filterDate}｜${{"day":"当日","week":"本周","month":"本月"}[state.filterType]}</div>
+                    <button onclick="openAddTask()" class="w-full bg-green-600 text-white py-2 rounded mb-2">➕新建任务</button>
+                    <div class="space-y-2 mt-2">
+                        ${filterList.length===0?"<div class='text-gray‑500 text-center py‑4'>暂无任务</div>":filterList.map(t=>{
+                            const cat=state.categories.find(c=>c.id===t.categoryId);
+                            return `<div onclick="setDetail('${t.id}')" class="border rounded p-2 hover:bg-gray‑50 cursor-pointer">
+                                <div class="flex justify-between">
+                                    <div class="font-medium">${escapeHtml(t.title)}</div>
+                                    <span class="text-xs px-1 rounded text-white" style="background:${cat?.color||'#888'}">${cat?.name||"未分类"}</span>
+                                </div>
+                                <div class="text-xs text-gray‑500 mt‑1">${t.taskDate} ${t.taskTime}</div>
+                            </div>`
+                        }).join("")}
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    } else if (state.page === "taskEdit") {
+        const t = state.editTask || { id: uuid(), title: "", detail: "", taskDate: dayjs().format("YYYY‑MM‑DD"), taskTime: dayjs().format("HH:mm"), categoryId: state.categories[0]?.id };
+        const catOpts = state.categories.map(c => `<option value="${c.id}" ${t.categoryId===c.id?"selected":""}>${escapeHtml(c.name)}</option>`).join("");
+        app.innerHTML = `
+        <div class="min‑h‑screen p‑3 max‑w‑2xl mx-auto">
+            <div class="bg-white rounded shadow p‑4">
+                <h3 class="text-lg font-bold mb‑3">${state.editTask?"编辑任务":"新建任务"}</h3>
+                <div class="mb‑3">
+                    <label class="block mb‑1">任务标题</label>
+                    <input id="t_title" value="${escapeHtml(t.title)}" class="w‑full border rounded px‑3 py‑2"/>
+                </div>
+                <div class="mb‑3">
+                    <label class="block mb‑1">任务详情</label>
+                    <textarea id="t_detail" rows="4" class="w‑full border rounded px‑3 py‑2">${escapeHtml(t.detail)}</textarea>
+                </div>
+                <div class="grid grid‑cols‑1 md:grid‑cols‑3 gap‑3 mb‑3">
+                    <div>
+                        <label class="block mb‑1">任务日期</label>
+                        <input id="t_date" type="date" value="${t.taskDate}" class="w‑full border rounded px‑3 py‑2"/>
+                    </div>
+                    <div>
+                        <label class="block mb‑1">任务时间</label>
+                        <input id="t_time" type="time" value="${t.taskTime}" class="w‑full border rounded px‑3 py‑2"/>
+                    </div>
+                    <div>
+                        <label class="block mb‑1">任务分类</label>
+                        <select id="t_cat" class="w‑full border rounded px‑3 py‑2">${catOpts}</select>
+                    </div>
+                </div>
+                <div class="flex gap‑2 mt‑4">
+                    <button onclick="saveCurrentTask()" class="flex‑1 bg‑blue‑600 text‑white py‑2 rounded">保存并同步云端</button>
+                    <button onclick="gotoPage('main')" class="flex‑1 bg‑gray‑200 py‑2 rounded">取消</button>
+                </div>
+            </div>
+        </div>`;
+    } else if (state.page === "taskDetail") {
+        const tid = state.detailTaskId;
+        const task = state.tasks.find(x => x.id === tid);
+        if (!task) { gotoPage("main"); return; }
+        const cat = state.categories.find(c => c.id === task.categoryId);
+        app.innerHTML = `
+        <div class="min‑h‑screen p‑3 max‑w‑2xl mx-auto">
+            <div class="bg-white rounded shadow p‑4">
+                <div class="flex justify‑between items‑center mb‑3">
+                    <h3 class="text‑xl font‑bold">${escapeHtml(task.title)}</h3>
+                    <span class="text‑xs px‑2 py‑1 rounded text‑white" style="background:${cat?.color||'#888'}">${cat?.name||"未分类"}</span>
+                </div>
+                <div class="text‑sm text‑gray‑600 mb‑3">
+                    任务时间：${task.taskDate} ${task.taskTime}<br/>
+                    创建：${task.createdAt}<br/>
+                    更新：${task.updatedAt||"-"}
+                </div>
+                <div class="border‑t pt‑3 whitespace‑pre‑wrap">${escapeHtml(task.detail)}</div>
+                <div class="flex gap‑2 mt‑5">
+                    <button onclick="editThisTask('${task.id}')" class="flex‑1 bg‑blue‑600 text‑white py‑2 rounded">编辑</button>
+                    <button onclick="deleteThisTask('${task.id}')" class="flex‑1 bg‑red‑600 text‑white py‑2 rounded">删除</button>
+                    <button onclick="gotoPage('main')" class="flex‑1 bg‑gray‑200 py‑2 rounded">返回</button>
+                </div>
+            </div>
+        </div>`;
+    } else if (state.page === "categoryManage") {
+        app.innerHTML = `
+        <div class="min‑h‑screen p‑3 max‑w‑2xl mx-auto">
+            <div class="bg-white rounded shadow p‑4">
+                <div class="flex justify‑between items‑center mb‑3">
+                    <h3 class="text‑lg font‑bold">分类管理</h3>
+                    <button onclick="gotoPage('main')" class="bg‑gray‑200 px‑3 py‑1 rounded">返回</button>
+                </div>
+                <div class="mb‑4 border‑b pb‑3">
+                    <div class="flex gap‑2">
+                        <input id="catName" placeholder="新分类名称" class="flex‑1 border rounded px‑3 py‑2"/>
+                        <input id="catColor" type="color" value="#2563eb" class="w‑12 h‑10"/>
+                        <button onclick="addNewCategory()" class="bg‑green‑600 text‑white px‑3 py‑2 rounded">新增</button>
+                    </div>
+                </div>
+                <div class="space‑y‑2">
+                    ${state.categories.map(c=>`
+                    <div class="flex justify‑between items‑center border rounded p‑2">
+                        <div class="flex items‑center gap‑2">
+                            <div class="w‑4 h‑4 rounded" style="background:${c.color}"></div>
+                            <span>${escapeHtml(c.name)}</span>
+                        </div>
+                        <button onclick="delCategory('${c.id}')" class="text‑red‑500 text‑sm">删除</button>
+                    </div>`).join("")}
+                </div>
+            </div>
+        </div>`;
+    }
+}
+
+// -------- 页面事件绑定 --------
+window.doLogin = async () => {
+    const u = document.getElementById("loginUser").value.trim();
+    const p = document.getElementById("loginPwd").value;
+    const errDom = document.getElementById("loginErr");
+    try {
+        await userLogin(u, p);
+        state.page = "main"; render();
+    } catch (e) { errDom.innerText = e.message; }
+}
+
+window.doRegister = async () => {
+    const u = document.getElementById("regUser").value.trim();
+    const p = document.getElementById("regPwd").value;
+    const errDom = document.getElementById("regErr");
+    try {
+        if (!u || !p) throw new Error("用户名密码不能为空");
+        await userRegister(u, p);
+        errDom.innerText = "注册成功，请登录";
+        setTimeout(() => gotoPage("login"), 1200);
+    } catch (e) { errDom.innerText = e.message; }
+}
+
+window.logout = () => {
+    state = { page: "login", currentUser: null, aesKey: null, tasks: [], categories: [], calendarCurrent: dayjs(), filterType: "day", filterDate: dayjs().format("YYYY‑MM‑DD"), editTask: null, detailTaskId: null };
+    render();
+}
+
+window.openAddTask = () => {
+    state.editTask = null;
+    state.page = "taskEdit";
+    render();
+}
+
+window.saveCurrentTask = async () => {
+    const title = document.getElementById("t_title").value.trim();
+    const detail = document.getElementById("t_detail").value;
+    const taskDate = document.getElementById("t_date").value;
+    const taskTime = document.getElementById("t_time").value;
+    const categoryId = document.getElementById("t_cat").value;
+    if (!title) { alert("标题不能为空"); return; }
+    let task;
+    if (state.editTask) {
+        task = { ...state.editTask, title, detail, taskDate, taskTime, taskDateTime: `${taskDate} ${taskTime}`, categoryId };
+    } else {
+        const now = dayjs().format("YYYY‑MM‑DD HH:mm:ss");
+        task = { id: uuid(), title, detail, taskDate, taskTime, taskDateTime: `${taskDate} ${taskTime}`, categoryId, createdAt: now };
+    }
+    await saveTask(task);
+    gotoPage("main");
+}
+
+window.editThisTask = (id) => {
+    state.editTask = state.tasks.find(t => t.id === id);
+    state.page = "taskEdit"; render();
+}
+
+window.deleteThisTask = async (id) => {
+    if (!confirm("确认删除这条任务？")) return;
+    await delTask(id);
+    gotoPage("main");
+}
+
+window.addNewCategory = async () => {
+    const name = document.getElementById("catName").value.trim();
+    const color = document.getElementById("catColor").value;
+    if (!name) { alert("分类名称不能为空"); return; }
+    const c = { id: uuid(), name, color };
+    state.categories.push(c);
+    await saveCategories();
+    render();
+}
+
+window.delCategory = async (cid) => {
+    if (!confirm("确认删除该分类？")) return;
+    state.categories = state.categories.filter(x => x.id !== cid);
+    await saveCategories();
+    render();
+}
+
+// 初始化
+render();
+</script>
+</body>
+</html>
