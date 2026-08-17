@@ -3,1152 +3,999 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>myList - 日常工作记录</title>
-    <!-- 引入 Supabase JS 库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <title>SecureTask - 端到端加密任务管理器</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
             min-height: 100vh;
-            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
-            min-height: 80vh;
+            padding: 20px;
+            width: 100%;
+            flex: 1;
         }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
+        header {
+            background-color: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .header h1 {
-            font-size: 24px;
+        h1 {
+            font-size: 1.5rem;
+            color: var(--primary);
         }
 
         .btn {
-            padding: 10px 20px;
-            border: none;
+            padding: 8px 16px;
             border-radius: 6px;
+            border: none;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
             font-weight: 500;
+            transition: all 0.2s;
+            font-size: 0.9rem;
         }
 
         .btn-primary {
-            background: #667eea;
+            background-color: var(--primary);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #d0d0d0;
+            background-color: var(--primary-dark);
         }
 
         .btn-danger {
-            background: #f44336;
+            background-color: var(--danger);
             color: white;
         }
 
-        .btn-danger:hover {
-            background: #d32f2f;
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
         }
 
-        .auth-container {
-            padding: 40px;
-            max-width: 400px;
-            margin: 50px auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        .btn-outline:hover {
+            background-color: var(--bg);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 20px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
-        .form-group label {
+        label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
+            margin-bottom: 6px;
             font-weight: 500;
+            color: var(--text);
         }
 
-        .form-group input, .form-group select, .form-group textarea {
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        textarea {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .main-content {
-            display: none;
-            padding: 20px;
-        }
-
-        .calendar-container {
-            margin-bottom: 30px;
-        }
-
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .calendar-nav {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .calendar-day-header {
-            text-align: center;
-            font-weight: bold;
             padding: 10px;
-            background: #f5f5f5;
-            border-radius: 4px;
-            color: #666;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
         }
 
-        .calendar-day {
-            aspect-ratio: 1;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            background: white;
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
         }
 
-        .calendar-day:hover {
-            background: #f8f9fa;
-            border-color: #667eea;
+        .hidden {
+            display: none !important;
         }
 
-        .calendar-day.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-top: 8px;
         }
 
-        .calendar-day.today {
-            border: 2px solid #667eea;
-            font-weight: bold;
-        }
-
-        .calendar-day.has-tasks::after {
-            content: '';
-            position: absolute;
-            bottom: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 6px;
-            height: 6px;
-            background: #f44336;
-            border-radius: 50%;
-        }
-
-        .calendar-day.active.has-tasks::after {
-            background: white;
-        }
-
-        .day-number {
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .task-count {
-            font-size: 10px;
-            color: #666;
-            margin-top: auto;
-            text-align: center;
-        }
-
-        .calendar-day.active .task-count {
-            color: rgba(255,255,255,0.9);
-        }
-
-        .view-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .tasks-container {
-            background: #f9f9f9;
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 200px;
+        .success-msg {
+            color: var(--success);
+            font-size: 0.9rem;
+            margin-top: 8px;
         }
 
         .task-item {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
 
-        .task-item:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateX(5px);
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-content {
+            flex: 1;
         }
 
         .task-title {
-            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
+            margin-bottom: 4px;
         }
 
         .task-meta {
-            display: flex;
-            gap: 15px;
-            font-size: 13px;
-            color: #666;
-            flex-wrap: wrap;
-            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-light);
         }
 
-        .modal {
-            display: none;
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: var(--text-light);
+            border-radius: 4px;
+        }
+
+        .icon-btn:hover {
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
-        }
-
-        .modal.active {
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
             display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
         }
 
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 500px;
+        .modal {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 24px;
             width: 90%;
+            max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
+            margin-bottom: 16px;
         }
 
         .modal-title {
-            font-size: 20px;
+            font-size: 1.25rem;
             font-weight: 600;
-            color: #333;
         }
 
         .close-btn {
             background: none;
             border: none;
-            font-size: 28px;
+            font-size: 1.5rem;
             cursor: pointer;
-            color: #999;
-            line-height: 1;
-        }
-
-        .close-btn:hover {
-            color: #333;
+            color: var(--text-light);
         }
 
         .category-tag {
             display: inline-block;
-            padding: 4px 10px;
-            background: #eef2ff;
-            color: #667eea;
+            padding: 2px 8px;
+            background-color: #e0f2fe;
+            color: #0369a1;
             border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 0.75rem;
+            margin-right: 8px;
         }
 
-        .category-list {
-            margin-top: 20px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .category-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            background: #f5f5f5;
-            border-radius: 6px;
-            margin-bottom: 8px;
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #999;
+            padding: 40px 20px;
+            color: var(--text-light);
         }
 
-        /* 移动端适配 */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
 
-            .container {
-                border-radius: 8px;
-            }
+        .nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
 
-            .header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-                padding: 15px;
-            }
+        .nav-tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+        }
 
-            .auth-container {
-                margin: 20px auto;
-                padding: 20px;
-            }
+        .tab-content {
+            display: none;
+        }
 
-            .calendar-grid {
-                gap: 4px;
-            }
-
-            .calendar-day {
-                padding: 4px;
-                border-radius: 4px;
-            }
-
-            .day-number {
-                font-size: 12px;
-            }
-
-            .task-count {
-                font-size: 9px;
-            }
-
-            .modal-content {
-                padding: 20px;
-                width: 95%;
-            }
-            
-            .view-toggle {
-                justify-content: center;
-            }
+        .tab-content.active {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📋 myList</h1>
-            <div id="user-info" style="display: none; align-items: center; gap: 10px;">
-                <span id="current-user" style="font-weight: 500;"></span>
-                <button class="btn btn-secondary" onclick="app.logout()">退出</button>
+
+<header>
+    <div class="header-content">
+        <h1>🔒 SecureTask</h1>
+        <div id="auth-buttons">
+            <button class="btn btn-outline" onclick="showLogin()">登录</button>
+            <button class="btn btn-primary" onclick="showRegister()">注册</button>
+        </div>
+        <div id="user-menu" class="hidden">
+            <span id="username-display" style="margin-right: 12px; font-weight: 500;"></span>
+            <button class="btn btn-outline" onclick="logout()">退出</button>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <!-- Auth Forms -->
+    <div id="auth-container" class="card">
+        <div id="login-form" class="hidden">
+            <h2 style="margin-bottom: 20px;">登录</h2>
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" id="login-email" placeholder="your@email.com">
             </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+            <div id="login-error" class="error-msg"></div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="handleLogin()">登录</button>
+            <p style="margin-top: 16px; text-align: center; font-size: 0.9rem;">
+                还没有账号？ <a href="#" onclick="showRegister()" style="color: var(--primary);">立即注册</a>
+            </p>
         </div>
 
-        <!-- 登录/注册界面 -->
-        <div id="auth-container" class="auth-container">
-            <div id="login-form">
-                <h2 style="margin-bottom: 20px; text-align: center; color: #333;">用户登录</h2>
-                <div class="form-group">
-                    <label>用户名</label>
-                    <input type="text" id="login-username" placeholder="请输入用户名">
-                </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="login-password" placeholder="请输入密码">
-                </div>
-                <button class="btn btn-primary" onclick="app.login()" style="width: 100%; padding: 12px;">登录</button>
-                <p style="text-align: center; margin-top: 20px; color: #666;">
-                    还没有账号？<a href="#" onclick="app.showRegister()" style="color: #667eea; text-decoration: none; font-weight: 500;">立即注册</a>
-                </p>
+        <div id="register-form" class="hidden">
+            <h2 style="margin-bottom: 20px;">注册</h2>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="reg-username" placeholder="johndoe">
             </div>
-
-            <div id="register-form" style="display: none;">
-                <h2 style="margin-bottom: 20px; text-align: center; color: #333;">新用户注册</h2>
-                <div class="form-group">
-                    <label>用户名</label>
-                    <input type="text" id="register-username" placeholder="请输入用户名">
-                </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="register-password" placeholder="请输入密码 (至少6位)">
-                </div>
-                <div class="form-group">
-                    <label>确认密码</label>
-                    <input type="password" id="register-confirm" placeholder="请再次输入密码">
-                </div>
-                <button class="btn btn-primary" onclick="app.register()" style="width: 100%; padding: 12px;">注册</button>
-                <p style="text-align: center; margin-top: 20px; color: #666;">
-                    已有账号？<a href="#" onclick="app.showLogin()" style="color: #667eea; text-decoration: none; font-weight: 500;">立即登录</a>
-                </p>
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" id="reg-email" placeholder="your@email.com">
             </div>
-        </div>
-
-        <!-- 主界面 -->
-        <div id="main-content" class="main-content">
-            <div class="calendar-container">
-                <div class="calendar-header">
-                    <div class="calendar-nav">
-                        <button class="btn btn-secondary" onclick="app.prevMonth()">◀</button>
-                        <h2 id="current-month" style="min-width: 120px; text-align: center;"></h2>
-                        <button class="btn btn-secondary" onclick="app.nextMonth()">▶</button>
-                    </div>
-                    <button class="btn btn-primary" onclick="app.showAddTaskModal()">+ 新建任务</button>
-                </div>
-
-                <div class="view-toggle">
-                    <button class="btn btn-secondary" onclick="app.setView('day')" id="view-day">日视图</button>
-                    <button class="btn btn-secondary" onclick="app.setView('week')" id="view-week">周视图</button>
-                    <button class="btn btn-secondary" onclick="app.setView('month')" id="view-month">月视图</button>
-                    <button class="btn btn-secondary" onclick="app.showCategoryModal()">⚙️ 管理分类</button>
-                </div>
-
-                <div class="calendar-grid" id="calendar-grid"></div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="reg-password" placeholder="••••••••">
             </div>
-
-            <div class="tasks-container">
-                <h3 id="tasks-title" style="margin-bottom: 15px; color: #333;">今日任务</h3>
-                <div id="tasks-list"></div>
+            <div class="form-group">
+                <label>确认密码</label>
+                <input type="password" id="reg-confirm-password" placeholder="••••••••">
             </div>
+            <div id="register-error" class="error-msg"></div>
+            <div id="register-success" class="success-msg"></div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="handleRegister()">注册</button>
+            <p style="margin-top: 16px; text-align: center; font-size: 0.9rem;">
+                已有账号？ <a href="#" onclick="showLogin()" style="color: var(--primary);">立即登录</a>
+            </p>
         </div>
     </div>
 
-    <!-- 任务详情/编辑弹窗 -->
-    <div id="task-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="task-modal-title">新建任务</h2>
-                <button class="close-btn" onclick="app.closeTaskModal()">×</button>
+    <!-- Main App -->
+    <div id="app-container" class="hidden">
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('tasks')">我的任务</div>
+            <div class="nav-tab" onclick="switchTab('categories')">分类管理</div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks-tab" class="tab-content active">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>任务列表</h2>
+                <button class="btn btn-primary" onclick="openTaskModal()">+ 新建任务</button>
             </div>
-            <div class="form-group">
-                <label>任务标题 *</label>
-                <input type="text" id="task-title" placeholder="例如：完成项目报告">
+            <div id="tasks-list">
+                <div class="loading">加载中...</div>
             </div>
-            <div class="form-group">
-                <label>任务详情</label>
-                <textarea id="task-detail" placeholder="详细描述任务内容..."></textarea>
+        </div>
+
+        <!-- Categories Tab -->
+        <div id="categories-tab" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>分类管理</h2>
+                <button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button>
             </div>
-            <div class="form-group">
-                <label>任务分类 *</label>
-                <select id="task-category"></select>
-            </div>
-            <div class="form-group">
-                <label>日期 *</label>
-                <input type="date" id="task-date">
-            </div>
-            <div class="form-group">
-                <label>时间</label>
-                <input type="time" id="task-time">
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn btn-primary" onclick="app.saveTask()" style="flex: 1;">保存任务</button>
-                <button class="btn btn-danger" id="delete-task-btn" onclick="app.deleteTask()" style="display: none;">删除</button>
+            <div id="categories-list">
+                <div class="loading">加载中...</div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- 分类管理弹窗 -->
-    <div id="category-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">管理分类</h2>
-                <button class="close-btn" onclick="app.closeCategoryModal()">×</button>
-            </div>
-            <div class="form-group">
-                <label>添加新分类</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="new-category" placeholder="例如：工作、生活、学习">
-                    <button class="btn btn-primary" onclick="app.addCategory()">添加</button>
-                </div>
-            </div>
-            <div class="category-list" id="category-list"></div>
+<!-- Task Modal -->
+<div id="task-modal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title" id="task-modal-title">新建任务</h3>
+            <button class="close-btn" onclick="closeTaskModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>标题</label>
+            <input type="text" id="task-title" placeholder="任务标题">
+        </div>
+        <div class="form-group">
+            <label>内容</label>
+            <textarea id="task-content" rows="4" placeholder="任务详细内容..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>分类</label>
+            <select id="task-category" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+                <option value="">无分类</option>
+            </select>
+        </div>
+        <div id="task-error" class="error-msg"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-outline" onclick="closeTaskModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveTask()">保存</button>
         </div>
     </div>
+</div>
 
-    <script>
-        // 使用立即执行函数封装整个应用，避免全局变量污染和重复声明错误
-        (function() {
-            // Supabase配置
-            const SUPABASE_URL = 'https://rrgizwisrepncaeyflmi.supabase.co';
-            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w';
-            
-            // 安全地获取 supabase 客户端
-            let supabaseClient;
-            if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            } else {
-                console.error('Supabase library not loaded');
-                alert('无法加载核心库，请检查网络连接');
-            }
+<!-- Category Modal -->
+<div id="category-modal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">新建分类</h3>
+            <button class="close-btn" onclick="closeCategoryModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>分类名称</label>
+            <input type="text" id="category-name" placeholder="例如：工作、生活">
+        </div>
+        <div id="category-error" class="error-msg"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-outline" onclick="closeCategoryModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveCategory()">保存</button>
+        </div>
+    </div>
+</div>
 
-            // 应用状态
-            const state = {
-                currentUser: null,
-                encryptionKey: null,
-                currentDate: new Date(),
-                currentView: 'month',
-                selectedDate: new Date(),
-                categories: [],
-                tasks: [],
-                editingTaskId: null
-            };
+<script>
+    // ⚠️ 请替换为你的 Supabase 项目 URL 和 Anon Key
+    const SUPABASE_URL = 'https://your-project-id.supabase.co';
+    const SUPABASE_KEY = 'your-anon-key';
 
-            // 加密相关函数
-            async function deriveKey(password, salt) {
-                const encoder = new TextEncoder();
-                const keyMaterial = await crypto.subtle.importKey(
-                    'raw',
-                    encoder.encode(password),
-                    'PBKDF2',
-                    false,
-                    ['deriveBits', 'deriveKey']
-                );
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-                return await crypto.subtle.deriveKey(
-                    {
-                        name: 'PBKDF2',
-                        salt: encoder.encode(salt),
-                        iterations: 100000,
-                        hash: 'SHA-256'
-                    },
-                    keyMaterial,
-                    { name: 'AES-GCM', length: 256 },
-                    false,
-                    ['encrypt', 'decrypt']
-                );
-            }
+    let currentUser = null;
+    let encryptionKey = null;
+    let categories = [];
+    let currentEditingTaskId = null;
 
-            async function encryptData(data, key) {
-                const encoder = new TextEncoder();
-                const iv = crypto.getRandomValues(new Uint8Array(12));
+    // --- Crypto Functions ---
+    async function generateKey() {
+        return await window.crypto.subtle.generateKey(
+            {
+                name: "AES-GCM",
+                length: 256
+            },
+            true,
+            ["encrypt", "decrypt"]
+        );
+    }
+
+    async function exportKey(key) {
+        const exported = await window.crypto.subtle.exportKey("jwk", key);
+        return JSON.stringify(exported);
+    }
+
+    async function importKey(jwkString) {
+        const jwk = JSON.parse(jwkString);
+        return await window.crypto.subtle.importKey(
+            "jwk",
+            jwk,
+            {
+                name: "AES-GCM",
+                length: 256
+            },
+            true,
+            ["encrypt", "decrypt"]
+        );
+    }
+
+    async function encryptData(data, key) {
+        const encoder = new TextEncoder();
+        const encodedData = encoder.encode(data);
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        
+        const encryptedContent = await window.crypto.subtle.encrypt(
+            {
+                name: "AES-GCM",
+                iv: iv
+            },
+            key,
+            encodedData
+        );
+
+        // Combine IV and encrypted data for storage
+        const combined = new Uint8Array(iv.length + encryptedContent.byteLength);
+        combined.set(iv);
+        combined.set(new Uint8Array(encryptedContent), iv.length);
+        
+        // Convert to base64 for storage
+        return btoa(String.fromCharCode(...combined));
+    }
+
+    async function decryptData(base64Data, key) {
+        const combined = new Uint8Array(atob(base64Data).split('').map(char => char.charCodeAt(0)));
+        const iv = combined.slice(0, 12);
+        const encryptedContent = combined.slice(12);
+
+        try {
+            const decryptedContent = await window.crypto.subtle.decrypt(
+                {
+                    name: "AES-GCM",
+                    iv: iv
+                },
+                key,
+                encryptedContent
+            );
+
+            const decoder = new TextDecoder();
+            return decoder.decode(decryptedContent);
+        } catch (e) {
+            console.error("Decryption failed", e);
+            return "[解密失败]";
+        }
+    }
+
+    // --- Auth Functions ---
+    function showLogin() {
+        document.getElementById('login-form').classList.remove('hidden');
+        document.getElementById('register-form').classList.add('hidden');
+        document.getElementById('auth-container').classList.remove('hidden');
+        document.getElementById('app-container').classList.add('hidden');
+        clearErrors();
+    }
+
+    function showRegister() {
+        document.getElementById('login-form').classList.add('hidden');
+        document.getElementById('register-form').classList.remove('hidden');
+        document.getElementById('auth-container').classList.remove('hidden');
+        document.getElementById('app-container').classList.add('hidden');
+        clearErrors();
+    }
+
+    function clearErrors() {
+        document.getElementById('login-error').textContent = '';
+        document.getElementById('register-error').textContent = '';
+        document.getElementById('register-success').textContent = '';
+        document.getElementById('task-error').textContent = '';
+        document.getElementById('category-error').textContent = '';
+    }
+
+    async function handleRegister() {
+        clearErrors();
+        const username = document.getElementById('reg-username').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirmPassword = document.getElementById('reg-confirm-password').value;
+
+        if (!username || !email || !password) {
+            document.getElementById('register-error').textContent = '请填写所有字段';
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            document.getElementById('register-error').textContent = '两次输入的密码不一致';
+            return;
+        }
+
+        try {
+            // 1. Sign up with Supabase Auth
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        username: username
+                    }
+                }
+            });
+
+            if (error) throw error;
+
+            if (data.user) {
+                // 2. Generate encryption key for this user
+                const key = await generateKey();
+                const exportedKey = await exportKey(key);
                 
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: 'AES-GCM', iv: iv },
-                    key,
-                    encoder.encode(JSON.stringify(data))
-                );
+                // 3. Hash password for local storage verification (optional, but good practice)
+                // For simplicity in this demo, we'll store the key in localStorage associated with the user ID
+                // In a real app, you might want to derive the key from the password using PBKDF2
+                
+                // 4. Insert into public.users table
+                // We need to hash the password for our custom users table if we want to use it for login
+                // But since we are using Supabase Auth, we just need to store the username and encryption key reference
+                // However, our schema requires password_hash and salt. Let's generate dummy ones or skip if not needed for auth flow.
+                // To keep it simple and consistent with the schema, we will generate a random hash/salt as we rely on Supabase Auth for actual login.
+                
+                const randomSalt = btoa(window.crypto.getRandomValues(new Uint8Array(16)).join(''));
+                const randomHash = btoa(window.crypto.getRandomValues(new Uint8Array(32)).join(''));
 
-                const combined = new Uint8Array(iv.length + encrypted.byteLength);
-                combined.set(iv);
-                combined.set(new Uint8Array(encrypted), iv.length);
+                const { error: insertError } = await supabase
+                    .from('users')
+                    .insert([
+                        { 
+                            id: data.user.id, 
+                            username: username, 
+                            password_hash: randomHash, 
+                            salt: randomSalt 
+                        }
+                    ]);
 
-                return btoa(String.fromCharCode(...combined));
-            }
-
-            async function decryptData(encryptedData, key) {
-                try {
-                    const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
-                    const iv = combined.slice(0, 12);
-                    const data = combined.slice(12);
-
-                    const decrypted = await crypto.subtle.decrypt(
-                        { name: 'AES-GCM', iv: iv },
-                        key,
-                        data
-                    );
-
-                    const decoder = new TextDecoder();
-                    return JSON.parse(decoder.decode(decrypted));
-                } catch (e) {
-                    console.error('Decryption failed', e);
-                    return null;
+                if (insertError) {
+                    console.error('Insert error:', insertError);
+                    throw new Error('注册成功但创建用户资料失败: ' + insertError.message);
                 }
+
+                // Store encryption key securely (in real app, use more secure storage)
+                localStorage.setItem(`encryption_key_${data.user.id}`, exportedKey);
+
+                document.getElementById('register-success').textContent = '注册成功！正在跳转...';
+                setTimeout(() => {
+                    checkSession();
+                }, 1500);
             }
-
-            // 工具函数
-            function formatDate(date) {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-
-            // 业务逻辑对象
-            const app = {
-                // 认证相关
-                showLogin() {
-                    document.getElementById('login-form').style.display = 'block';
-                    document.getElementById('register-form').style.display = 'none';
-                },
-
-                showRegister() {
-                    document.getElementById('login-form').style.display = 'none';
-                    document.getElementById('register-form').style.display = 'block';
-                },
-
-                async register() {
-                    const username = document.getElementById('register-username').value.trim();
-                    const password = document.getElementById('register-password').value;
-                    const confirm = document.getElementById('register-confirm').value;
-
-                    if (!username || !password) {
-                        alert('请填写所有字段');
-                        return;
-                    }
-
-                    if (password !== confirm) {
-                        alert('两次输入的密码不一致');
-                        return;
-                    }
-
-                    if (password.length < 6) {
-                        alert('密码长度至少6位');
-                        return;
-                    }
-
-                    try {
-                        const salt = crypto.getRandomValues(new Uint8Array(16));
-                        const saltStr = btoa(String.fromCharCode(...salt));
-                        const key = await deriveKey(password, saltStr);
-                        const passwordHash = await encryptData({ password }, key);
-
-                        const { data, error } = await supabaseClient
-                            .from('users')
-                            .insert([{ username, password_hash: passwordHash, salt: saltStr }]);
-
-                        if (error) throw error;
-
-                        alert('注册成功，请登录');
-                        this.showLogin();
-                    } catch (error) {
-                        if (error.code === '23505') {
-                            alert('用户名已存在');
-                        } else {
-                            alert('注册失败：' + error.message);
-                        }
-                    }
-                },
-
-                async login() {
-                    const username = document.getElementById('login-username').value.trim();
-                    const password = document.getElementById('login-password').value;
-
-                    if (!username || !password) {
-                        alert('请填写用户名和密码');
-                        return;
-                    }
-
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('users')
-                            .select('*')
-                            .eq('username', username)
-                            .single();
-
-                        if (error || !data) {
-                            alert('用户名或密码错误');
-                            return;
-                        }
-
-                        const key = await deriveKey(password, data.salt);
-                        const decrypted = await decryptData(data.password_hash, key);
-
-                        if (decrypted && decrypted.password === password) {
-                            state.currentUser = { id: data.id, username: data.username };
-                            state.encryptionKey = key;
-                            
-                            document.getElementById('auth-container').style.display = 'none';
-                            document.getElementById('main-content').style.display = 'block';
-                            document.getElementById('user-info').style.display = 'flex';
-                            document.getElementById('current-user').textContent = `Hi, ${username}`;
-
-                            await this.loadCategories();
-                            await this.loadTasks();
-                            this.renderCalendar();
-                            this.updateTasksList();
-                        } else {
-                            alert('用户名或密码错误');
-                        }
-                    } catch (error) {
-                        alert('登录失败：' + error.message);
-                    }
-                },
-
-                logout() {
-                    state.currentUser = null;
-                    state.encryptionKey = null;
-                    state.tasks = [];
-                    state.categories = [];
-                    
-                    document.getElementById('auth-container').style.display = 'block';
-                    document.getElementById('main-content').style.display = 'none';
-                    document.getElementById('user-info').style.display = 'none';
-                    document.getElementById('login-username').value = '';
-                    document.getElementById('login-password').value = '';
-                    this.showLogin();
-                },
-
-                // 分类管理
-                async loadCategories() {
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('categories')
-                            .select('*')
-                            .eq('user_id', state.currentUser.id);
-
-                        if (error) throw error;
-
-                        state.categories = [];
-                        for (const cat of data) {
-                            const decrypted = await decryptData(cat.encrypted_name, state.encryptionKey);
-                            if (decrypted) {
-                                state.categories.push({ ...cat, name: decrypted.name });
-                            }
-                        }
-                    } catch (error) {
-                        console.error('加载分类失败：', error);
-                    }
-                },
-
-                async addCategory() {
-                    const name = document.getElementById('new-category').value.trim();
-                    if (!name) {
-                        alert('请输入分类名称');
-                        return;
-                    }
-
-                    try {
-                        const encryptedName = await encryptData({ name }, state.encryptionKey);
-                        
-                        const { data, error } = await supabaseClient
-                            .from('categories')
-                            .insert([{ user_id: state.currentUser.id, encrypted_name: encryptedName }]);
-
-                        if (error) throw error;
-
-                        document.getElementById('new-category').value = '';
-                        await this.loadCategories();
-                        this.renderCategoryList();
-                    } catch (error) {
-                        alert('添加分类失败：' + error.message);
-                    }
-                },
-
-                async deleteCategory(id) {
-                    if (!confirm('确定要删除这个分类吗？该分类下的任务将不受影响但无法选择此分类。')) return;
-
-                    try {
-                        const { error } = await supabaseClient
-                            .from('categories')
-                            .delete()
-                            .eq('id', id);
-
-                        if (error) throw error;
-
-                        await this.loadCategories();
-                        this.renderCategoryList();
-                    } catch (error) {
-                        alert('删除分类失败：' + error.message);
-                    }
-                },
-
-                renderCategoryList() {
-                    const list = document.getElementById('category-list');
-                    if (state.categories.length === 0) {
-                        list.innerHTML = '<div class="empty-state">暂无分类，请添加</div>';
-                        return;
-                    }
-
-                    list.innerHTML = state.categories.map(cat => `
-                        <div class="category-item">
-                            <span>${cat.name}</span>
-                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="app.deleteCategory(${cat.id})">删除</button>
-                        </div>
-                    `).join('');
-                },
-
-                showCategoryModal() {
-                    document.getElementById('category-modal').classList.add('active');
-                    this.renderCategoryList();
-                },
-
-                closeCategoryModal() {
-                    document.getElementById('category-modal').classList.remove('active');
-                },
-
-                // 任务管理
-                async loadTasks() {
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('tasks')
-                            .select('*')
-                            .eq('user_id', state.currentUser.id)
-                            .order('created_at', { ascending: false });
-
-                        if (error) throw error;
-
-                        state.tasks = [];
-                        for (const task of data) {
-                            const decrypted = await decryptData(task.encrypted_data, state.encryptionKey);
-                            if (decrypted) {
-                                state.tasks.push({ ...task, ...decrypted });
-                            }
-                        }
-                    } catch (error) {
-                        console.error('加载任务失败：', error);
-                    }
-                },
-
-                showAddTaskModal() {
-                    state.editingTaskId = null;
-                    document.getElementById('task-modal-title').textContent = '新建任务';
-                    document.getElementById('task-title').value = '';
-                    document.getElementById('task-detail').value = '';
-                    document.getElementById('task-date').value = formatDate(state.selectedDate);
-                    document.getElementById('task-time').value = new Date().toTimeString().slice(0, 5);
-                    document.getElementById('delete-task-btn').style.display = 'none';
-                    
-                    this.updateCategorySelect();
-                    document.getElementById('task-modal').classList.add('active');
-                },
-
-                showEditTaskModal(task) {
-                    state.editingTaskId = task.id;
-                    document.getElementById('task-modal-title').textContent = '编辑任务';
-                    document.getElementById('task-title').value = task.title;
-                    document.getElementById('task-detail').value = task.detail || '';
-                    document.getElementById('task-date').value = task.date;
-                    document.getElementById('task-time').value = task.time || '';
-                    document.getElementById('delete-task-btn').style.display = 'block';
-                    
-                    this.updateCategorySelect();
-                    if (task.category_id) {
-                        document.getElementById('task-category').value = task.category_id;
-                    }
-                    document.getElementById('task-modal').classList.add('active');
-                },
-
-                updateCategorySelect() {
-                    const select = document.getElementById('task-category');
-                    if (state.categories.length === 0) {
-                        select.innerHTML = '<option value="">请先添加分类</option>';
-                        return;
-                    }
-                    select.innerHTML = '<option value="">选择分类</option>' + 
-                        state.categories.map(cat => 
-                            `<option value="${cat.id}">${cat.name}</option>`
-                        ).join('');
-                },
-
-                async saveTask() {
-                    const title = document.getElementById('task-title').value.trim();
-                    const detail = document.getElementById('task-detail').value.trim();
-                    const category_id = document.getElementById('task-category').value;
-                    const date = document.getElementById('task-date').value;
-                    const time = document.getElementById('task-time').value;
-
-                    if (!title) {
-                        alert('请输入任务标题');
-                        return;
-                    }
-
-                    if (!category_id) {
-                        alert('请选择任务分类');
-                        return;
-                    }
-
-                    if (!date) {
-                        alert('请选择日期');
-                        return;
-                    }
-
-                    try {
-                        const taskData = { title, detail, category_id, date, time };
-                        const encryptedData = await encryptData(taskData, state.encryptionKey);
-
-                        if (state.editingTaskId) {
-                            const { error } = await supabaseClient
-                                .from('tasks')
-                                .update({ encrypted_data: encryptedData, updated_at: new Date().toISOString() })
-                                .eq('id', state.editingTaskId);
-
-                            if (error) throw error;
-                        } else {
-                            const { error } = await supabaseClient
-                                .from('tasks')
-                                .insert([{ user_id: state.currentUser.id, encrypted_data: encryptedData }]);
-
-                            if (error) throw error;
-                        }
-
-                        await this.loadTasks();
-                        this.closeTaskModal();
-                        this.renderCalendar();
-                        this.updateTasksList();
-                    } catch (error) {
-                        alert('保存任务失败：' + error.message);
-                    }
-                },
-
-                async deleteTask() {
-                    if (!state.editingTaskId) return;
-                    if (!confirm('确定要删除这个任务吗？')) return;
-
-                    try {
-                        const { error } = await supabaseClient
-                            .from('tasks')
-                            .delete()
-                            .eq('id', state.editingTaskId);
-
-                        if (error) throw error;
-
-                        await this.loadTasks();
-                        this.closeTaskModal();
-                        this.renderCalendar();
-                        this.updateTasksList();
-                    } catch (error) {
-                        alert('删除任务失败：' + error.message);
-                    }
-                },
-
-                closeTaskModal() {
-                    document.getElementById('task-modal').classList.remove('active');
-                    state.editingTaskId = null;
-                },
-
-                // 日历渲染
-                renderCalendar() {
-                    const year = state.currentDate.getFullYear();
-                    const month = state.currentDate.getMonth();
-                    
-                    document.getElementById('current-month').textContent = 
-                        `${year}年${month + 1}月`;
-
-                    const firstDay = new Date(year, month, 1);
-                    const lastDay = new Date(year, month + 1, 0);
-                    const startDay = firstDay.getDay();
-                    const totalDays = lastDay.getDate();
-
-                    const grid = document.getElementById('calendar-grid');
-                    grid.innerHTML = '';
-
-                    // 星期标题
-                    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-                    weekDays.forEach(day => {
-                        const header = document.createElement('div');
-                        header.className = 'calendar-day-header';
-                        header.textContent = day;
-                        grid.appendChild(header);
-                    });
-
-                    // 空白填充
-                    for (let i = 0; i < startDay; i++) {
-                        const empty = document.createElement('div');
-                        empty.className = 'calendar-day';
-                        empty.style.visibility = 'hidden';
-                        grid.appendChild(empty);
-                    }
-
-                    // 日期
-                    const today = new Date();
-                    for (let day = 1; day <= totalDays; day++) {
-                        const date = new Date(year, month, day);
-                        const dateStr = formatDate(date);
-                        const dayTasks = state.tasks.filter(t => t.date === dateStr);
-                        
-                        const dayEl = document.createElement('div');
-                        dayEl.className = 'calendar-day';
-                        
-                        if (date.toDateString() === today.toDateString()) {
-                            dayEl.classList.add('today');
-                        }
-                        
-                        if (date.toDateString() === state.selectedDate.toDateString()) {
-                            dayEl.classList.add('active');
-                        }
-                        
-                        if (dayTasks.length > 0) {
-                            dayEl.classList.add('has-tasks');
-                        }
-
-                        dayEl.innerHTML = `
-                            <div class="day-number">${day}</div>
-                            ${dayTasks.length > 0 ? `<div class="task-count">${dayTasks.length}</div>` : ''}
-                        `;
-
-                        dayEl.onclick = () => {
-                            state.selectedDate = date;
-                            this.renderCalendar();
-                            this.updateTasksList();
-                        };
-
-                        grid.appendChild(dayEl);
-                    }
-                },
-
-                prevMonth() {
-                    state.currentDate.setMonth(state.currentDate.getMonth() - 1);
-                    this.renderCalendar();
-                },
-
-                nextMonth() {
-                    state.currentDate.setMonth(state.currentDate.getMonth() + 1);
-                    this.renderCalendar();
-                },
-
-                setView(view) {
-                    state.currentView = view;
-                    document.querySelectorAll('.view-toggle .btn').forEach(btn => {
-                        if (btn.id.startsWith('view-')) {
-                            btn.classList.remove('btn-primary');
-                            btn.classList.add('btn-secondary');
-                        }
-                    });
-                    const activeBtn = document.getElementById(`view-${view}`);
-                    if (activeBtn) {
-                        activeBtn.classList.remove('btn-secondary');
-                        activeBtn.classList.add('btn-primary');
-                    }
-                    this.updateTasksList();
-                },
-
-                updateTasksList() {
-                    let filteredTasks = [];
-                    let title = '';
-
-                    if (state.currentView === 'day') {
-                        const dateStr = formatDate(state.selectedDate);
-                        filteredTasks = state.tasks.filter(t => t.date === dateStr);
-                        title = `${state.selectedDate.getMonth() + 1}月${state.selectedDate.getDate()}日的任务`;
-                    } else if (state.currentView === 'week') {
-                        const weekStart = new Date(state.selectedDate);
-                        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                        const weekEnd = new Date(weekStart);
-                        weekEnd.setDate(weekEnd.getDate() + 6);
-                        
-                        filteredTasks = state.tasks.filter(t => {
-                            const taskDate = new Date(t.date);
-                            return taskDate >= weekStart && taskDate <= weekEnd;
-                        });
-                        title = `本周任务 (${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()})`;
-                    } else {
-                        const year = state.selectedDate.getFullYear();
-                        const month = state.selectedDate.getMonth();
-                        
-                        filteredTasks = state.tasks.filter(t => {
-                            const taskDate = new Date(t.date);
-                            return taskDate.getFullYear() === year && taskDate.getMonth() === month;
-                        });
-                        title = `${year}年${month + 1}月的任务`;
-                    }
-
-                    document.getElementById('tasks-title').textContent = title;
-                    this.renderTasksList(filteredTasks);
-                },
-
-                renderTasksList(filteredTasks) {
-                    const list = document.getElementById('tasks-list');
-                    
-                    if (filteredTasks.length === 0) {
-                        list.innerHTML = '<div class="empty-state">暂无任务，点击"+"添加新任务</div>';
-                        return;
-                    }
-
-                    // 按时间排序
-                    filteredTasks.sort((a, b) => {
-                        if (a.date !== b.date) return a.date.localeCompare(b.date);
-                        return (a.time || '').localeCompare(b.time || '');
-                    });
-
-                    list.innerHTML = filteredTasks.map(task => {
-                        const category = state.categories.find(c => c.id == task.category_id);
-                        return `
-                            <div class="task-item" onclick="app.showEditTaskModal(state.tasks.find(t => t.id === ${task.id}))">
-                                <div class="task-title">${task.title}</div>
-                                <div class="task-meta">
-                                    <span>📅 ${task.date}</span>
-                                    ${task.time ? `<span>⏰ ${task.time}</span>` : ''}
-                                    ${category ? `<span class="category-tag">${category.name}</span>` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
+        } catch (err) {
+            document.getElementById('register-error').textContent = err.message;
+        }
+    }
+
+    async function handleLogin() {
+        clearErrors();
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        if (!email || !password) {
+            document.getElementById('login-error').textContent = '请填写邮箱和密码';
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) throw error;
+
+            if (data.user) {
+                // Retrieve encryption key
+                const storedKey = localStorage.getItem(`encryption_key_${data.user.id}`);
+                if (storedKey) {
+                    encryptionKey = await importKey(storedKey);
+                } else {
+                    // If key is missing, this is an error state for existing users
+                    // For new users, it should have been created during registration
+                    console.warn('No encryption key found for user');
                 }
-            };
+                checkSession();
+            }
+        } catch (err) {
+            document.getElementById('login-error').textContent = err.message;
+        }
+    }
 
-            // 将 app 暴露给全局以便 HTML 中的 onclick 调用
-            window.app = app;
+    async function logout() {
+        await supabase.auth.signOut();
+        currentUser = null;
+        encryptionKey = null;
+        showLogin();
+    }
+
+    async function checkSession() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            currentUser = session.user;
+            // Load encryption key
+            const storedKey = localStorage.getItem(`encryption_key_${currentUser.id}`);
+            if (storedKey) {
+                encryptionKey = await importKey(storedKey);
+            } else {
+                // If no key exists, maybe it's an old user or error. 
+                // For demo purposes, we might need to handle this gracefully.
+                alert('未找到加密密钥，部分功能可能不可用。');
+            }
             
-            // 初始化视图
-            app.setView('month');
-        })();
-    </script>
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('auth-buttons').classList.add('hidden');
+            document.getElementById('user-menu').classList.remove('hidden');
+            document.getElementById('username-display').textContent = currentUser.email;
+            
+            loadCategories();
+            loadTasks();
+        } else {
+            showLogin();
+        }
+    }
+
+    // --- Data Functions ---
+    async function loadCategories() {
+        if (!currentUser) return;
+        
+        const { data, error } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error loading categories:', error);
+            return;
+        }
+
+        categories = data || [];
+        renderCategories();
+        updateCategorySelect();
+    }
+
+    function renderCategories() {
+        const list = document.getElementById('categories-list');
+        if (categories.length === 0) {
+            list.innerHTML = '<div class="empty-state">暂无分类，点击右上角添加</div>';
+            return;
+        }
+
+        list.innerHTML = categories.map(cat => `
+            <div class="task-item">
+                <div class="task-content">
+                    <div class="task-title">${cat.encrypted_name ? '[加密]' : '未命名'}</div>
+                    <div class="task-meta">ID: ${cat.id}</div>
+                </div>
+                <div class="task-actions">
+                    <button class="icon-btn" onclick="deleteCategory(${cat.id})" title="删除">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateCategorySelect() {
+        const select = document.getElementById('task-category');
+        select.innerHTML = '<option value="">无分类</option>' + 
+            categories.map(cat => `<option value="${cat.id}">${cat.encrypted_name ? '[加密分类]' : '未命名'}</option>`).join('');
+    }
+
+    async function loadTasks() {
+        if (!currentUser) return;
+        
+        const list = document.getElementById('tasks-list');
+        list.innerHTML = '<div class="loading">加载中...</div>';
+
+        const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error loading tasks:', error);
+            list.innerHTML = '<div class="error-msg">加载任务失败</div>';
+            return;
+        }
+
+        if (!encryptionKey) {
+            list.innerHTML = '<div class="error-msg">加密密钥未加载，无法显示任务内容</div>';
+            return;
+        }
+
+        // Decrypt tasks
+        const decryptedTasks = await Promise.all(data.map(async task => {
+            try {
+                const decryptedData = await decryptData(task.encrypted_data, encryptionKey);
+                const parsed = JSON.parse(decryptedData);
+                return {
+                    ...task,
+                    title: parsed.title,
+                    content: parsed.content,
+                    categoryId: parsed.categoryId
+                };
+            } catch (e) {
+                return {
+                    ...task,
+                    title: '[解密失败]',
+                    content: '',
+                    categoryId: null
+                };
+            }
+        }));
+
+        renderTasks(decryptedTasks);
+    }
+
+    function renderTasks(tasks) {
+        const list = document.getElementById('tasks-list');
+        if (tasks.length === 0) {
+            list.innerHTML = '<div class="empty-state">暂无任务，点击右上角添加</div>';
+            return;
+        }
+
+        list.innerHTML = tasks.map(task => {
+            const category = categories.find(c => c.id == task.categoryId);
+            const categoryName = category ? category.encrypted_name : '无分类';
+            
+            return `
+            <div class="task-item">
+                <div class="task-content">
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-meta">
+                        <span class="category-tag">${categoryName ? '[加密]' : '无分类'}</span>
+                        ${new Date(task.created_at).toLocaleDateString()}
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.9rem; color: var(--text-light);">
+                        ${task.content ? task.content.substring(0, 100) + (task.content.length > 100 ? '...' : '') : ''}
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="icon-btn" onclick="editTask('${task.id}', '${encodeURIComponent(JSON.stringify({title: task.title, content: task.content, categoryId: task.categoryId}))}')" title="编辑">✏️</button>
+                    <button class="icon-btn" onclick="deleteTask('${task.id}')" title="删除">🗑️</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    // --- Modal Functions ---
+    function openTaskModal(taskId = null, taskData = null) {
+        currentEditingTaskId = taskId;
+        document.getElementById('task-modal-title').textContent = taskId ? '编辑任务' : '新建任务';
+        
+        if (taskData) {
+            const parsed = JSON.parse(decodeURIComponent(taskData));
+            document.getElementById('task-title').value = parsed.title;
+            document.getElementById('task-content').value = parsed.content;
+            document.getElementById('task-category').value = parsed.categoryId || '';
+        } else {
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-content').value = '';
+            document.getElementById('task-category').value = '';
+        }
+        
+        document.getElementById('task-modal').classList.remove('hidden');
+        clearErrors();
+    }
+
+    function closeTaskModal() {
+        document.getElementById('task-modal').classList.add('hidden');
+        currentEditingTaskId = null;
+    }
+
+    function openCategoryModal() {
+        document.getElementById('category-name').value = '';
+        document.getElementById('category-modal').classList.remove('hidden');
+        clearErrors();
+    }
+
+    function closeCategoryModal() {
+        document.getElementById('category-modal').classList.add('hidden');
+    }
+
+    // --- Save Functions ---
+    async function saveCategory() {
+        const name = document.getElementById('category-name').value.trim();
+        if (!name) {
+            document.getElementById('category-error').textContent = '请输入分类名称';
+            return;
+        }
+
+        if (!encryptionKey) {
+            document.getElementById('category-error').textContent = '加密密钥未加载';
+            return;
+        }
+
+        try {
+            const encryptedName = await encryptData(name, encryptionKey);
+            
+            const { error } = await supabase
+                .from('categories')
+                .insert([{ user_id: currentUser.id, encrypted_name: encryptedName }]);
+
+            if (error) throw error;
+
+            closeCategoryModal();
+            loadCategories();
+        } catch (err) {
+            document.getElementById('category-error').textContent = err.message;
+        }
+    }
+
+    async function saveTask() {
+        const title = document.getElementById('task-title').value.trim();
+        const content = document.getElementById('task-content').value.trim();
+        const categoryId = document.getElementById('task-category').value;
+
+        if (!title) {
+            document.getElementById('task-error').textContent = '请输入任务标题';
+            return;
+        }
+
+        if (!encryptionKey) {
+            document.getElementById('task-error').textContent = '加密密钥未加载';
+            return;
+        }
+
+        try {
+            const dataToEncrypt = JSON.stringify({
+                title: title,
+                content: content,
+                categoryId: categoryId || null
+            });
+            
+            const encryptedData = await encryptData(dataToEncrypt, encryptionKey);
+            
+            if (currentEditingTaskId) {
+                // Update existing task
+                const { error } = await supabase
+                    .from('tasks')
+                    .update({ 
+                        encrypted_data: encryptedData,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentEditingTaskId)
+                    .eq('user_id', currentUser.id); // Ensure ownership
+
+                if (error) throw error;
+            } else {
+                // Create new task
+                const { error } = await supabase
+                    .from('tasks')
+                    .insert([{ 
+                        user_id: currentUser.id, 
+                        encrypted_data: encryptedData 
+                    }]);
+
+                if (error) throw error;
+            }
+
+            closeTaskModal();
+            loadTasks();
+        } catch (err) {
+            document.getElementById('task-error').textContent = err.message;
+        }
+    }
+
+    function editTask(id, data) {
+        openTaskModal(id, data);
+    }
+
+    async function deleteTask(id) {
+        if (!confirm('确定要删除这个任务吗？')) return;
+
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', currentUser.id); // Ensure ownership
+
+            if (error) throw error;
+            
+            loadTasks();
+        } catch (err) {
+            alert('删除失败: ' + err.message);
+        }
+    }
+
+    async function deleteCategory(id) {
+        if (!confirm('确定要删除这个分类吗？相关任务将变为无分类。')) return;
+
+        try {
+            const { error } = await supabase
+                .from('categories')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', currentUser.id); // Ensure ownership
+
+            if (error) throw error;
+            
+            loadCategories();
+            loadTasks(); // Refresh tasks to update category names
+        } catch (err) {
+            alert('删除失败: ' + err.message);
+        }
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        if (tabName === 'tasks') {
+            document.querySelector('.nav-tab:nth-child(1)').classList.add('active');
+            document.getElementById('tasks-tab').classList.add('active');
+        } else {
+            document.querySelector('.nav-tab:nth-child(2)').classList.add('active');
+            document.getElementById('categories-tab').classList.add('active');
+        }
+    }
+
+    // Initialize
+    window.onload = () => {
+        checkSession();
+    };
+</script>
+
 </body>
 </html>
