@@ -80,6 +80,11 @@
         .view-switcher button { padding: 6px 12px; border: none; background: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: 500; color: var(--text-light); }
         .view-switcher button.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
+        /* 新增：状态筛选器样式 */
+        .status-filter { display: flex; background: var(--bg); border-radius: 6px; padding: 2px; flex-shrink: 0; }
+        .status-filter button { padding: 6px 12px; border: none; background: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: 500; color: var(--text-light); }
+        .status-filter button.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
         .category-filter { 
             display: flex; 
             gap: 8px; 
@@ -118,12 +123,68 @@
 
         .task-area { padding: 20px; flex: 1; }
         .task-list { display: flex; flex-direction: column; gap: 12px; }
-        .task-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; display: flex; gap: 12px; }
+        
+        /* 修改：任务卡片样式以支持状态和日期显示 */
+        .task-card { 
+            background: var(--card); 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            padding: 16px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            display: flex; 
+            gap: 12px; 
+            align-items: flex-start;
+        }
         .task-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .task-card .task-time { font-size: 14px; font-weight: 600; color: var(--primary); min-width: 50px; }
-        .task-card .task-info { flex: 1; }
-        .task-card .task-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-        .task-card .task-desc { font-size: 13px; color: var(--text-light); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        /* 已完成状态样式 */
+        .task-card.completed { opacity: 0.6; background: #f9fafb; }
+        .task-card.completed .task-title { text-decoration: line-through; color: var(--text-light); }
+        
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.2s;
+        }
+        .task-card.completed .task-checkbox {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+        .task-checkbox svg { width: 12px; height: 12px; display: none; }
+        .task-card.completed .task-checkbox svg { display: block; }
+
+        .task-main-info { flex: 1; }
+        
+        .task-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .task-time-badge {
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .task-date-badge {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .task-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .task-desc { font-size: 13px; color: var(--text-light); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         
         .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
         .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
@@ -187,12 +248,11 @@
                 justify-content: space-between;
             }
 
-            /* 核心修改：移动端视图按钮自适应平均分配 */
-            .view-switcher {
+            .view-switcher, .status-filter {
                 width: 100%;
                 display: flex;
             }
-            .view-switcher button {
+            .view-switcher button, .status-filter button {
                 flex: 1;
                 text-align: center;
                 padding: 10px 0;
@@ -289,6 +349,13 @@
                         <button id="view-month" onclick="setView('month')">月</button>
                     </div>
                     
+                    <!-- 新增：状态筛选 -->
+                    <div class="status-filter">
+                        <button id="status-all" class="active" onclick="setStatusFilter('all')">全部</button>
+                        <button id="status-pending" onclick="setStatusFilter('pending')">未完成</button>
+                        <button id="status-completed" onclick="setStatusFilter('completed')">已完成</button>
+                    </div>
+
                     <div id="category-list" class="category-filter"></div>
                 </div>
                 
@@ -342,6 +409,13 @@
                 <label>分类</label>
                 <select id="t-category" class="select"></select>
             </div>
+            <div class="form-group">
+                <label>状态</label>
+                <select id="t-status" class="select">
+                    <option value="pending">未完成</option>
+                    <option value="completed">已完成</option>
+                </select>
+            </div>
             <div class="modal-footer">
                 <button id="btn-delete-task" class="btn btn-danger hidden" onclick="deleteTask()">删除</button>
                 <button class="btn btn-primary" onclick="saveTask()">保存</button>
@@ -377,6 +451,7 @@
         tasks: [],
         currentDate: new Date(),
         viewMode: 'day',
+        statusFilter: 'all', // 新增：状态筛选
         calMonth: new Date(),
         selectedCategoryId: null
     };
@@ -497,7 +572,6 @@
         for (const row of (catRes.data || [])) {
             try { 
                 const decrypted = await decryptData(row.encrypted_data, key);
-                // 【核心修复】强制使用数据库的真实主键 ID，覆盖前端生成的假 ID
                 decrypted.id = row.id; 
                 state.categories.push(decrypted); 
             } catch(e) { console.error('解密分类失败', e); }
@@ -507,8 +581,9 @@
         for (const row of (taskRes.data || [])) {
             try { 
                 const decrypted = await decryptData(row.encrypted_data, key);
-                // 【核心修复】强制使用数据库的真实主键 ID，覆盖前端生成的假 ID
                 decrypted.id = row.id; 
+                // 兼容旧数据，如果没有 status 字段，默认为 pending
+                if (!decrypted.status) decrypted.status = 'pending';
                 state.tasks.push(decrypted); 
             } catch(e) { console.error('解密任务失败', e); }
         }
@@ -585,6 +660,14 @@
         renderTasks();
     }
 
+    // 新增：状态筛选逻辑
+    function setStatusFilter(status) {
+        state.statusFilter = status;
+        document.querySelectorAll('.status-filter button').forEach(b => b.classList.remove('active'));
+        document.getElementById(`status-${status}`).classList.add('active');
+        renderTasks();
+    }
+
     function renderCategories() {
         const list = document.getElementById('category-list');
         if (state.categories.length === 0) {
@@ -658,7 +741,6 @@
     async function deleteCategory(id) {
         if (!confirm('删除分类？')) return;
         
-        // 增加错误拦截
         const { error } = await sbClient.from('categories').delete().eq('id', id);
         if (error) {
             alert('删除分类失败，可能是数据库权限(RLS)问题: ' + error.message);
@@ -679,6 +761,7 @@
         let filtered = [];
         let titleText = '';
 
+        // 1. 时间范围过滤
         if (state.viewMode === 'day') {
             const ds = formatDate(now);
             filtered = state.tasks.filter(t => t.date === ds);
@@ -700,33 +783,86 @@
             titleText = `${y}年${m + 1}月`;
         }
 
+        // 2. 分类过滤
         if (state.selectedCategoryId) {
             filtered = filtered.filter(t => t.categoryId === state.selectedCategoryId);
             const catName = state.categories.find(c => c.id === state.selectedCategoryId)?.name || '未知分类';
             titleText += ` · ${catName}`;
         }
 
+        // 3. 状态过滤 (新增)
+        if (state.statusFilter !== 'all') {
+            filtered = filtered.filter(t => t.status === state.statusFilter);
+        }
+
         if (title) title.innerText = titleText;
-        filtered.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        
+        // 排序：未完成的在前，已完成的在后；同状态下按时间排序
+        filtered.sort((a, b) => {
+            if (a.status === b.status) {
+                return (a.date + a.time).localeCompare(b.date + b.time);
+            }
+            return a.status === 'pending' ? -1 : 1;
+        });
 
         if (filtered.length === 0) {
-            list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>当前时间段暂无任务</p></div>`;
+            list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>当前暂无任务</p></div>`;
             return;
         }
 
         list.innerHTML = filtered.map(t => {
             const cat = state.categories.find(c => c.id === t.categoryId);
             const badge = cat ? `<span class="badge" style="background:${cat.color}">${cat.name}</span>` : '';
+            const isCompleted = t.status === 'completed';
+            
+            // 格式化日期显示：如果是日视图且日期就是当天，可以不显示日期只显示时间，否则显示完整日期
+            let dateDisplay = t.date;
+            if (state.viewMode === 'day' && t.date === formatDate(state.currentDate)) {
+                // 日视图下，如果就是当天，可以简化显示，但为了明确，这里保留完整显示或根据需求调整
+                // 这里我们统一显示 MM-DD
+            }
+            const dateObj = new Date(t.date + 'T00:00:00');
+            const dateStrShort = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+
             return `
-                <div class="task-card" onclick="openTaskModal('${t.id}')">
-                    <div class="task-time">${t.time || '全天'}</div>
-                    <div class="task-info">
-                        <div class="task-title">${t.title} ${badge}</div>
+                <div class="task-card ${isCompleted ? 'completed' : ''}" onclick="openTaskModal('${t.id}')">
+                    <div class="task-checkbox" onclick="event.stopPropagation(); toggleTaskStatus('${t.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <div class="task-main-info">
+                        <div class="task-meta-row">
+                            <span class="task-time-badge">${t.time || '全天'}</span>
+                            <span class="task-date-badge">${dateStrShort}</span>
+                            ${badge}
+                        </div>
+                        <div class="task-title">${t.title}</div>
                         <div class="task-desc">${t.detail || '无详细描述'}</div>
                     </div>
                 </div>
             `;
         }).join('');
+    }
+
+    // 新增：快速切换任务状态
+    async function toggleTaskStatus(id) {
+        const task = state.tasks.find(t => t.id === id);
+        if (!task) return;
+        
+        const newStatus = task.status === 'pending' ? 'completed' : 'pending';
+        task.status = newStatus;
+        
+        // 更新数据库
+        const key = await getKey();
+        const encrypted = await encryptData(task, key);
+        const { error } = await sbClient.from('tasks').update({ encrypted_data: encrypted }).eq('id', id);
+        
+        if (error) {
+            alert('更新状态失败: ' + error.message);
+            // 回滚本地状态
+            task.status = task.status === 'completed' ? 'pending' : 'completed';
+        } else {
+            renderTasks();
+        }
     }
 
     function openTaskModal(id = null) {
@@ -745,13 +881,21 @@
             document.getElementById('t-date').value = t.date;
             document.getElementById('t-time').value = t.time || '';
             document.getElementById('t-category').value = t.categoryId || '';
+            document.getElementById('t-status').value = t.status || 'pending';
         } else {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTime = `${hours}:${minutes}`;
+            const currentDateStr = formatDate(now);
+
             document.getElementById('t-id').value = '';
             document.getElementById('t-title').value = '';
             document.getElementById('t-detail').value = '';
-            document.getElementById('t-date').value = formatDate(state.currentDate);
-            document.getElementById('t-time').value = '';
+            document.getElementById('t-date').value = currentDateStr;
+            document.getElementById('t-time').value = currentTime;
             document.getElementById('t-category').value = '';
+            document.getElementById('t-status').value = 'pending';
         }
     }
 
@@ -767,6 +911,7 @@
             date: document.getElementById('t-date').value,
             time: document.getElementById('t-time').value,
             categoryId: document.getElementById('t-category').value,
+            status: document.getElementById('t-status').value,
             createdAt: id ? state.tasks.find(t=>t.id===id).createdAt : new Date().toISOString()
         };
 
@@ -797,7 +942,6 @@
         const id = document.getElementById('t-id').value;
         if (!confirm('确定删除此任务？')) return;
         
-        // 增加错误拦截
         const { error } = await sbClient.from('tasks').delete().eq('id', id);
         if (error) {
             alert('删除任务失败，可能是数据库权限(RLS)问题: ' + error.message);
