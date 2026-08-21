@@ -249,7 +249,72 @@
         .data-table td:nth-child(13) {
             min-width: 150px; /* 跟进记录 */
         }
-        
+
+        /* 查询顾问跟进列表表格列宽度 */
+        #staffFollowUpTable th:nth-child(1),
+        #staffFollowUpTable td:nth-child(1) {
+            min-width: 40px; /* 序号 */
+            text-align: right;
+        }
+        #staffFollowUpTable th:nth-child(2),
+        #staffFollowUpTable td:nth-child(2) {
+            min-width: 110px; /* 类别 */
+            text-align: center;
+        }
+        #staffFollowUpTable th:nth-child(3),
+        #staffFollowUpTable td:nth-child(3) {
+            min-width: 90px; /* 用户ID */
+            text-align: right;
+        }
+        #staffFollowUpTable th:nth-child(4),
+        #staffFollowUpTable td:nth-child(4) {
+            min-width: 140px; /* 注册时间 */
+        }
+        #staffFollowUpTable th:nth-child(5),
+        #staffFollowUpTable td:nth-child(5) {
+            min-width: 140px; /* 近登时间 */
+        }
+        #staffFollowUpTable th:nth-child(6),
+        #staffFollowUpTable td:nth-child(6) {
+            min-width: 90px; /* 推荐码 */
+        }
+        #staffFollowUpTable th:nth-child(7),
+        #staffFollowUpTable td:nth-child(7) {
+            min-width: 70px; /* 总课时 */
+            text-align: right;
+        }
+        #staffFollowUpTable th:nth-child(8),
+        #staffFollowUpTable td:nth-child(8) {
+            min-width: 70px; /* 剩余课时 */
+            text-align: right;
+        }
+        #staffFollowUpTable th:nth-child(9),
+        #staffFollowUpTable td:nth-child(9) {
+            min-width: 90px; /* 已约消耗课时 */
+            text-align: right;
+        }
+        #staffFollowUpTable th:nth-child(10),
+        #staffFollowUpTable td:nth-child(10) {
+            min-width: 80px; /* 待续课课时 */
+            text-align: right;
+        }
+        #staffFollowUpTable th:nth-child(11),
+        #staffFollowUpTable td:nth-child(11) {
+            min-width: 70px; /* 是否试听 */
+            text-align: center;
+        }
+        #staffFollowUpTable th:nth-child(12),
+        #staffFollowUpTable td:nth-child(12) {
+            min-width: 70px; /* 是否成交 */
+            text-align: center;
+        }
+        #staffFollowUpTable td.sfu-sea { /* 公海池跟进列表行标识 */
+            background-color: #fff8e1;
+        }
+        #staffFollowUpTable td.sfu-bind { /* 绑定跟进列表行标识 */
+            background-color: #e8f5e9;
+        }
+
         /* 关键字管理区域样式 */
         .keyword-management {
             margin: 20px 0;
@@ -1920,6 +1985,7 @@
                     <option value="rechargeOrder">充值订单明细</option>
                     <option value="employeeManagement">员工管理</option>
                     <option value="batchAssign">批量用户分配</option>
+                    <option value="staffFollowUp">查询顾问跟进列表</option>
                 </select>
             </div>
             <!-- 桌面端按钮 -->
@@ -1932,6 +1998,7 @@
                 <button class="tab-button" data-tab="rechargeOrder">充值订单明细</button>
                 <button class="tab-button" data-tab="employeeManagement">员工管理</button>
                 <button class="tab-button" data-tab="batchAssign">批量用户分配</button>
+                <button class="tab-button" data-tab="staffFollowUp">查询顾问跟进列表</button>
             </div>
             
             <!-- 登录Tab -->
@@ -2826,7 +2893,129 @@
             <div id="batchResultMessage"></div>
         </div>
     </div>
-    
+
+    <!-- 查询顾问跟进列表Tab -->
+    <div id="staffFollowUp" class="tab-content">
+        <h2>查询顾问跟进列表</h2>
+
+        <!-- 查询条件 -->
+        <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div class="form-group inline">
+                <label for="sfuStaffInfo" style="margin-bottom: 5px; display: block;">顾问empID:</label>
+                <input type="text" id="sfuStaffInfo" placeholder="如 emp75" style="width: 160px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="queryStaffFollowUpBtn" style="padding: 8px 20px; width: auto;">查询</button>
+                <button type="button" id="exportStaffFollowUpCsvBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #28a745;">导出CSV</button>
+                <button type="button" id="exportStaffFollowUpExcelBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #17a2b8;">导出Excel</button>
+            </div>
+            <label style="font-size: 14px; color: #555; display: flex; align-items: center; gap: 5px; padding-bottom: 2px;" title="开启后会逐个用户查询已约消耗课时与待续课课时（数据量较大时较慢）">
+                <input type="checkbox" id="sfuQueryDetails"> 查询消耗课时
+            </label>
+        </div>
+
+        <p style="font-size: 13px; color: #666; margin: 8px 0 0 0;">
+            说明：将依次查询该顾问的「公海池跟进列表」与「绑定跟进列表」并合并展示。首次查询以 pageSize=1 获取 totalCount，再以 totalCount 作为 pageSize 一次性拉取全部记录。
+        </p>
+
+        <!-- 汇总信息 -->
+        <div id="staffFollowUpSummary" style="display: none; margin-bottom: 20px; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                <div><strong>顾问empID:</strong> <span id="sfuStaffInfoDisplay">-</span></div>
+                <div><strong>公海池跟进:</strong> <span id="sfuSeaCount">0</span> 条</div>
+                <div><strong>绑定跟进:</strong> <span id="sfuBindCount">0</span> 条</div>
+                <div><strong>合计:</strong> <span id="sfuTotalCount">0</span> 条</div>
+            </div>
+        </div>
+
+        <!-- 结果表格 -->
+        <div id="staffFollowUpResult" style="display: none;">
+            <div id="staffFollowUpStatus" style="margin-bottom: 15px;"></div>
+            <div class="table-container">
+                <table id="staffFollowUpTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>类别</th>
+                            <th>用户ID</th>
+                            <th>注册时间</th>
+                            <th>近登时间</th>
+                            <th>推荐码</th>
+                            <th>总课时</th>
+                            <th>剩余课时</th>
+                            <th>已约消耗课时</th>
+                            <th>待续课课时</th>
+                            <th>是否试听</th>
+                            <th>是否成交</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 批量查询并导出区域 -->
+        <div class="batch-sfu-section" style="margin-top: 25px; padding: 15px; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #ddd;">
+            <h3 style="margin-top: 0;">批量查询并导出</h3>
+            <p style="font-size: 13px; color: #666; margin: 5px 0 12px 0;">
+                导入 empID 列表（支持 .txt / .csv / .xlsx），依次查询每个顾问的跟进用户，并按 empID 单独导出 Excel 文件（不在页面展示明细）。查询完成后给出汇总表。
+            </p>
+
+            <!-- 文件选择 -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <input type="file" id="sfuBatchFile" accept=".txt,.csv,.xlsx,.xls" style="display: none;">
+                <button type="button" id="sfuBatchImportBtn" style="padding: 8px 20px; width: auto; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">批量查询</button>
+                <span id="sfuBatchFileName" style="font-size: 13px; color: #666;"></span>
+            </div>
+
+            <!-- 导入数据列表与列选择 -->
+            <div id="sfuBatchImportSection" style="display: none; margin-top: 15px;">
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                    <label style="font-weight: bold; color: #555;">选择 empID 所在列：</label>
+                    <select id="sfuBatchColumnSelect" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></select>
+                    <label style="font-size: 13px; color: #666;"><input type="checkbox" id="sfuBatchHasHeader"> 首行为表头</label>
+                    <span id="sfuBatchValidation" style="font-size: 13px;"></span>
+                </div>
+                <div class="table-container" style="max-height: 300px; overflow: auto; border: 1px solid #ddd;">
+                    <table id="sfuBatchImportTable" class="data-table" style="width: 100%;">
+                        <thead><tr></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                    <button type="button" id="sfuBatchStartBtn" style="padding: 8px 20px; width: auto; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">开始批量查询并导出</button>
+                    <button type="button" id="sfuBatchClearBtn" style="padding: 8px 20px; width: auto; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空</button>
+                </div>
+            </div>
+
+            <!-- 进度 -->
+            <div id="sfuBatchProgress" style="display: none; margin-top: 15px;"></div>
+
+            <!-- 汇总表 -->
+            <div id="sfuBatchSummarySection" style="display: none; margin-top: 15px;">
+                <h3 style="margin-bottom: 10px;">批量查询汇总</h3>
+                <div style="margin-bottom: 10px;">
+                    <button type="button" id="sfuBatchExportSummaryBtn" style="padding: 8px 20px; width: auto; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">导出汇总Excel</button>
+                </div>
+                <div class="table-container">
+                    <table id="sfuBatchSummaryTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>empID</th>
+                                <th>公海池跟进列表用户数</th>
+                                <th>绑定跟进列表用户数</th>
+                                <th>合计</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SheetJS CDN for Excel support -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
@@ -10033,7 +10222,782 @@
                 </div>
             `;
         });
-        
+
+        // ==================== 查询顾问跟进列表 Tab ====================
+        let staffFollowUpMergedData = []; // 合并后的完整数据，供导出使用
+
+        // 构建 querySeaPoolFollow 请求 payload
+        function buildStaffFollowUpPayload(staffInfo, listType, pageSize) {
+            if (listType === 1) {
+                // 公海池跟进列表
+                return {
+                    "listType": 1,
+                    "sortType": 1,
+                    "userBindType": 1,
+                    "sortItem": 3,
+                    "seaNotDealNum": "",
+                    "contactType": "",
+                    "finalActiveStartTime": "",
+                    "finalActiveEndTime": "",
+                    "packagePast": "",
+                    "seaNotInteractNum": "",
+                    "shareUserId": "",
+                    "getTrialClass": "",
+                    "bindNotDealNum": "",
+                    "bindNotInteractNum": "",
+                    "remarkByAgent": "",
+                    "userInfo": "",
+                    "staffInfo": staffInfo,
+                    "isAudition": "",
+                    "isDeal": "",
+                    "receiveStartTime": "",
+                    "receiveEndTime": "",
+                    "createStartTime": "",
+                    "createEndTime": "",
+                    "mobileArea": "",
+                    "teachCourse": "",
+                    "feedbackType": "",
+                    "salesmanTalkId": "",
+                    "isHasShareUserId": "",
+                    "changeReason": "",
+                    "currPage": 0,
+                    "pageSize": pageSize
+                };
+            } else {
+                // 绑定跟进列表
+                return {
+                    "listType": 2,
+                    "sortType": 1,
+                    "sortItem": 3,
+                    "packagePast": "",
+                    "finalActiveStartTime": "",
+                    "finalActiveEndTime": "",
+                    "seaNotDealNum": "",
+                    "contactType": "",
+                    "seaNotInteractNum": "",
+                    "shareUserId": "",
+                    "getTrialClass": "",
+                    "bindNotDealNum": "",
+                    "bindNotInteractNum": "",
+                    "remarkByAgent": "",
+                    "userInfo": "",
+                    "staffInfo": staffInfo,
+                    "isAudition": "",
+                    "isDeal": "",
+                    "receiveStartTime": "",
+                    "receiveEndTime": "",
+                    "createStartTime": "",
+                    "createEndTime": "",
+                    "mobileArea": "",
+                    "teachCourse": "",
+                    "feedbackType": "",
+                    "salesmanTalkId": "",
+                    "isHasShareUserId": "",
+                    "currPage": 0,
+                    "pageSize": pageSize
+                };
+            }
+        }
+
+        // 查询单个列表（先 pageSize=1 取 totalCount，再用 totalCount 作为 pageSize 查全部）
+        async function fetchStaffFollowUpList(token, staffInfo, listType) {
+            const headers = {
+                'Content-Type': 'application/json;charset=UTF-8',
+                'Accept': 'application/json, text/plain, */*',
+                'User-Agent': navigator.userAgent,
+                'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                'Origin': 'https://www.talk915.com',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'token': token
+            };
+
+            // 第一步：pageSize=1，取 totalCount
+            const probePayload = buildStaffFollowUpPayload(staffInfo, listType, 1);
+            const probeResp = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(probePayload),
+                credentials: 'include'
+            });
+            const probeData = await probeResp.json();
+            if (!probeResp.ok || probeData.resultCode !== 0) {
+                return { success: false, message: probeData.resultMessage || '未知错误', totalCount: 0, list: [] };
+            }
+
+            const totalCount = probeData.totalCount || 0;
+            if (totalCount <= 0) {
+                return { success: true, totalCount: 0, list: [] };
+            }
+
+            // 第二步：pageSize=totalCount，一次性查全部
+            const fullPayload = buildStaffFollowUpPayload(staffInfo, listType, totalCount);
+            const fullResp = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(fullPayload),
+                credentials: 'include'
+            });
+            const fullData = await fullResp.json();
+            if (!fullResp.ok || fullData.resultCode !== 0) {
+                return { success: false, message: fullData.resultMessage || '未知错误', totalCount: totalCount, list: [] };
+            }
+
+            return { success: true, totalCount: fullData.totalCount || 0, list: fullData.resultData || [] };
+        }
+
+        // 是否试听文本（依据 teacherType：空-未试听，1-已试听）
+        function sfuTrialText(val) {
+            if (val === '' || val === null || val === undefined) return '未试听';
+            if (String(val) === '1') return '已试听';
+            return String(val);
+        }
+
+        // 是否成交文本：0-未成交，1-已成交
+        function sfuDealText(val) {
+            if (String(val) === '1') return '已成交';
+            return '未成交';
+        }
+
+        // 总课时：累加 tpackageList 中各套餐的 initialPoint，空则 0
+        function sfuInitialPoint(tpackageList) {
+            if (!Array.isArray(tpackageList) || tpackageList.length === 0) return 0;
+            return tpackageList.reduce((sum, pkg) => sum + (parseFloat(pkg.initialPoint) || 0), 0);
+        }
+        // 剩余课时：累加 tpackageList 中各套餐的 balance，空则 0
+        function sfuBalance(tpackageList) {
+            if (!Array.isArray(tpackageList) || tpackageList.length === 0) return 0;
+            return tpackageList.reduce((sum, pkg) => sum + (parseFloat(pkg.balance) || 0), 0);
+        }
+
+        // 查询用户消耗课时明细（GET，userId 拼接在 URL 末尾）
+        async function fetchPackageDetails(token, userId) {
+            try {
+                const resp = await fetch(`https://www.talk915.com/users/adminSeaPool/queryFollowListPackageDetails/${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    credentials: 'include'
+                });
+                const data = await resp.json();
+                if (!resp.ok || data.resultCode !== 0) {
+                    return { success: false, message: data.resultMessage || '未知错误' };
+                }
+                return { success: true, data: data.resultData || {} };
+            } catch (err) {
+                return { success: false, message: err.message };
+            }
+        }
+
+        // 为合并数据批量补充消耗课时（分批并发，带延时）
+        // statusCallback(done, total) 用于更新进度
+        async function enrichWithPackageDetails(token, mergedData, statusCallback) {
+            const batchSize = 10;
+            const delay = 300;
+            for (let i = 0; i < mergedData.length; i += batchSize) {
+                const batch = mergedData.slice(i, i + batchSize);
+                await Promise.all(batch.map(async (item) => {
+                    const result = await fetchPackageDetails(token, item.userId);
+                    if (result.success && result.data) {
+                        item._attended = result.data.attendedClassesTotalNum;
+                        item._continued = result.data.continuedClassesTotalNum;
+                    } else {
+                        item._attended = null;
+                        item._continued = null;
+                    }
+                }));
+                if (statusCallback) statusCallback(Math.min(i + batchSize, mergedData.length), mergedData.length);
+                if (i + batchSize < mergedData.length) {
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
+        }
+
+        // 已约消耗课时显示文本
+        function sfuAttendedText(item) {
+            return item._attended != null ? item._attended : '-';
+        }
+        // 待续课课时显示文本
+        function sfuContinuedText(item) {
+            return item._continued != null ? item._continued : '-';
+        }
+
+        // 渲染表格
+        function renderStaffFollowUpTable(mergedData) {
+            const tbody = document.querySelector('#staffFollowUpTable tbody');
+            tbody.innerHTML = '';
+
+            if (!mergedData || mergedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#999;padding:20px;">暂无数据</td></tr>';
+                return;
+            }
+
+            mergedData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                const catClass = item._category === '公海池跟进列表' ? 'sfu-sea' : 'sfu-bind';
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td class="${catClass}">${item._category}</td>
+                    <td>${item.userId != null ? item.userId : ''}</td>
+                    <td>${item.createTime || ''}</td>
+                    <td>${item.finalActiveTime || ''}</td>
+                    <td>${item.teachCourse || ''}</td>
+                    <td>${sfuInitialPoint(item.tpackageList)}</td>
+                    <td>${sfuBalance(item.tpackageList)}</td>
+                    <td>${sfuAttendedText(item)}</td>
+                    <td>${sfuContinuedText(item)}</td>
+                    <td>${sfuTrialText(item.teacherType)}</td>
+                    <td>${sfuDealText(item.isDeal)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 查询按钮事件
+        document.getElementById('queryStaffFollowUpBtn').addEventListener('click', async function() {
+            const queryBtn = this;
+            const staffInfo = document.getElementById('sfuStaffInfo').value.trim();
+            const statusDiv = document.getElementById('staffFollowUpStatus');
+            const token = localStorage.getItem('talk915_token');
+
+            if (!staffInfo) {
+                statusDiv.innerHTML = '<div class="error-message">请输入顾问empID</div>';
+                document.getElementById('staffFollowUpResult').style.display = 'block';
+                return;
+            }
+            if (!token) {
+                statusDiv.innerHTML = '<div class="error-message">请先登录获取token</div>';
+                document.getElementById('staffFollowUpResult').style.display = 'block';
+                return;
+            }
+
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
+            statusDiv.innerHTML = '<div class="success-message">正在查询公海池跟进列表...</div>';
+            document.getElementById('staffFollowUpResult').style.display = 'block';
+            document.getElementById('staffFollowUpSummary').style.display = 'none';
+            document.getElementById('exportStaffFollowUpCsvBtn').style.display = 'none';
+            document.getElementById('exportStaffFollowUpExcelBtn').style.display = 'none';
+
+            try {
+                // 1) 公海池跟进列表（listType=1）
+                statusDiv.innerHTML = '<div class="success-message">正在查询公海池跟进列表...</div>';
+                const seaResult = await fetchStaffFollowUpList(token, staffInfo, 1);
+                if (!seaResult.success) {
+                    statusDiv.innerHTML = `<div class="error-message">公海池跟进列表查询失败: ${seaResult.message}</div>`;
+                    return;
+                }
+                const seaList = seaResult.list.map(item => ({ ...item, _category: '公海池跟进列表' }));
+
+                // 2) 绑定跟进列表（listType=2）
+                statusDiv.innerHTML = `<div class="success-message">公海池跟进列表查询完成（${seaList.length} 条），正在查询绑定跟进列表...</div>`;
+                const bindResult = await fetchStaffFollowUpList(token, staffInfo, 2);
+                if (!bindResult.success) {
+                    statusDiv.innerHTML = `<div class="error-message">绑定跟进列表查询失败: ${bindResult.message}</div>`;
+                    // 仍展示已查到的公海池数据
+                    staffFollowUpMergedData = seaList;
+                    if (document.getElementById('sfuQueryDetails').checked && staffFollowUpMergedData.length > 0) {
+                        statusDiv.innerHTML = `<div class="success-message">正在查询消耗课时（0/${staffFollowUpMergedData.length}）...</div>`;
+                        await enrichWithPackageDetails(token, staffFollowUpMergedData, (done, total) => {
+                            statusDiv.innerHTML = `<div class="success-message">正在查询消耗课时（${done}/${total}）...</div>`;
+                        });
+                    }
+                    renderStaffFollowUpTable(staffFollowUpMergedData);
+                    document.getElementById('staffFollowUpSummary').style.display = 'block';
+                    document.getElementById('sfuStaffInfoDisplay').textContent = staffInfo;
+                    document.getElementById('sfuSeaCount').textContent = seaList.length;
+                    document.getElementById('sfuBindCount').textContent = 0;
+                    document.getElementById('sfuTotalCount').textContent = seaList.length;
+                    if (seaList.length > 0) {
+                        document.getElementById('exportStaffFollowUpCsvBtn').style.display = 'inline-block';
+                        document.getElementById('exportStaffFollowUpExcelBtn').style.display = 'inline-block';
+                    }
+                    return;
+                }
+                const bindList = bindResult.list.map(item => ({ ...item, _category: '绑定跟进列表' }));
+
+                // 3) 合并
+                staffFollowUpMergedData = seaList.concat(bindList);
+
+                // 3.5) 可选：查询消耗课时
+                if (document.getElementById('sfuQueryDetails').checked && staffFollowUpMergedData.length > 0) {
+                    statusDiv.innerHTML = `<div class="success-message">正在查询消耗课时（0/${staffFollowUpMergedData.length}）...</div>`;
+                    await enrichWithPackageDetails(token, staffFollowUpMergedData, (done, total) => {
+                        statusDiv.innerHTML = `<div class="success-message">正在查询消耗课时（${done}/${total}）...</div>`;
+                    });
+                }
+
+                // 4) 渲染
+                renderStaffFollowUpTable(staffFollowUpMergedData);
+
+                document.getElementById('staffFollowUpSummary').style.display = 'block';
+                document.getElementById('sfuStaffInfoDisplay').textContent = staffInfo;
+                document.getElementById('sfuSeaCount').textContent = seaList.length;
+                document.getElementById('sfuBindCount').textContent = bindList.length;
+                document.getElementById('sfuTotalCount').textContent = staffFollowUpMergedData.length;
+
+                statusDiv.innerHTML = `<div class="success-message">查询成功！公海池跟进 ${seaList.length} 条，绑定跟进 ${bindList.length} 条，合计 ${staffFollowUpMergedData.length} 条</div>`;
+
+                if (staffFollowUpMergedData.length > 0) {
+                    document.getElementById('exportStaffFollowUpCsvBtn').style.display = 'inline-block';
+                    document.getElementById('exportStaffFollowUpExcelBtn').style.display = 'inline-block';
+                }
+            } catch (error) {
+                console.error('查询顾问跟进列表错误:', error);
+                statusDiv.innerHTML = '<div class="error-message">网络请求出错: ' + error.message + '</div>';
+            } finally {
+                queryBtn.disabled = false;
+                queryBtn.textContent = '查询';
+            }
+        });
+
+        // 导出CSV
+        document.getElementById('exportStaffFollowUpCsvBtn').addEventListener('click', function() {
+            const data = staffFollowUpMergedData;
+            if (!data || data.length === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+            const staffInfo = document.getElementById('sfuStaffInfo').value.trim() || 'advisor';
+            const headers = ['序号', '类别', '用户ID', '注册时间', '近登时间', '推荐码', '总课时', '剩余课时', '已约消耗课时', '待续课课时', '是否试听', '是否成交'];
+            let csvContent = '\ufeff' + headers.join(',') + '\n';
+            data.forEach((item, index) => {
+                const row = [
+                    index + 1,
+                    `"${(item._category || '').replace(/"/g, '""')}"`,
+                    item.userId != null ? item.userId : '',
+                    `"${(item.createTime || '').replace(/"/g, '""')}"`,
+                    `"${(item.finalActiveTime || '').replace(/"/g, '""')}"`,
+                    `"${(item.teachCourse || '').replace(/"/g, '""')}"`,
+                    sfuInitialPoint(item.tpackageList),
+                    sfuBalance(item.tpackageList),
+                    item._attended != null ? item._attended : '',
+                    item._continued != null ? item._continued : '',
+                    `"${sfuTrialText(item.teacherType).replace(/"/g, '""')}"`,
+                    `"${sfuDealText(item.isDeal).replace(/"/g, '""')}"`
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `顾问跟进列表_${staffInfo}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // 导出Excel（使用 XLSX 库）
+        document.getElementById('exportStaffFollowUpExcelBtn').addEventListener('click', function() {
+            const data = staffFollowUpMergedData;
+            if (!data || data.length === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+            const staffInfo = document.getElementById('sfuStaffInfo').value.trim() || 'advisor';
+            writeSfuExcelFile(`顾问跟进列表_${staffInfo}_${new Date().toISOString().split('T')[0]}.xlsx`, data);
+        });
+
+        // 回车触发查询
+        document.getElementById('sfuStaffInfo').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('queryStaffFollowUpBtn').click();
+            }
+        });
+
+        // ==================== 顾问跟进列表 批量查询与导出 ====================
+        let sfuBatchRawRows = [];     // 解析后的原始行（二维数组）
+        let sfuBatchMaxCols = 0;      // 最大列数
+        let sfuBatchSummaryData = [];  // 汇总结果 [{empId, seaCount, bindCount, status}]
+        let sfuBatchValidList = [];    // 去重后的有效 empID 列表
+
+        // 构建导出行数据（单条与批量导出复用）
+        function buildSfuExportRows(mergedData) {
+            return mergedData.map((item, index) => ({
+                '序号': index + 1,
+                '类别': item._category || '',
+                '用户ID': item.userId != null ? item.userId : '',
+                '注册时间': item.createTime || '',
+                '近登时间': item.finalActiveTime || '',
+                '推荐码': item.teachCourse || '',
+                '总课时': sfuInitialPoint(item.tpackageList),
+                '剩余课时': sfuBalance(item.tpackageList),
+                '已约消耗课时': item._attended != null ? item._attended : '',
+                '待续课课时': item._continued != null ? item._continued : '',
+                '是否试听': sfuTrialText(item.teacherType),
+                '是否成交': sfuDealText(item.isDeal)
+            }));
+        }
+
+        // 写出 Excel 文件（复用单条/批量导出）
+        function writeSfuExcelFile(fileName, mergedData) {
+            const exportData = buildSfuExportRows(mergedData);
+            const ws = XLSX.utils.json_to_sheet(exportData, { header: ['序号', '类别', '用户ID', '注册时间', '近登时间', '推荐码', '总课时', '剩余课时', '已约消耗课时', '待续课课时', '是否试听', '是否成交'] });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '顾问跟进列表');
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // empID 有效性：以 emp 开头
+        function isValidSfuEmpId(val) {
+            if (val === null || val === undefined) return false;
+            return String(val).trim().toLowerCase().startsWith('emp');
+        }
+
+        // 解析导入文件 → 返回二维数组
+        function parseSfuBatchFile(file) {
+            return new Promise((resolve, reject) => {
+                const fileName = file.name.toLowerCase();
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
+                            const rows = json.filter(row => row && row.length > 0 && row.some(c => String(c).trim() !== ''));
+                            resolve(rows);
+                        } catch (err) {
+                            reject(new Error('Excel解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const text = e.target.result;
+                            const lines = text.split(/\r?\n/).filter(line => line.trim());
+                            const rows = lines.map(line => line.split(/[,\t]/).map(c => c.trim()));
+                            resolve(rows);
+                        } catch (err) {
+                            reject(new Error('文件解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file, 'UTF-8');
+                }
+            });
+        }
+
+        // 填充列选择下拉
+        function populateSfuBatchColumnSelect() {
+            const colSelect = document.getElementById('sfuBatchColumnSelect');
+            colSelect.innerHTML = '';
+            let bestCol = 0;
+            let bestCount = -1;
+            for (let c = 0; c < sfuBatchMaxCols; c++) {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = `第${c + 1}列`;
+                colSelect.appendChild(opt);
+                // 默认选中有效 empID 数量最多的列
+                let cnt = 0;
+                sfuBatchRawRows.forEach(r => { if (isValidSfuEmpId(r[c])) cnt++; });
+                if (cnt > bestCount) { bestCount = cnt; bestCol = c; }
+            }
+            colSelect.value = bestCol;
+        }
+
+        // 渲染导入预览表 + 校验
+        function renderSfuBatchImportTable() {
+            const hasHeader = document.getElementById('sfuBatchHasHeader').checked;
+            const colSelect = document.getElementById('sfuBatchColumnSelect');
+            const selectedCol = parseInt(colSelect.value) || 0;
+            const thead = document.querySelector('#sfuBatchImportTable thead tr');
+            const tbody = document.querySelector('#sfuBatchImportTable tbody');
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (sfuBatchRawRows.length === 0) return;
+
+            for (let c = 0; c < sfuBatchMaxCols; c++) {
+                const th = document.createElement('th');
+                th.textContent = hasHeader ? (sfuBatchRawRows[0][c] || `列${c + 1}`) : `列${c + 1}`;
+                thead.appendChild(th);
+            }
+            const thValid = document.createElement('th');
+            thValid.textContent = 'empID校验';
+            thead.appendChild(thValid);
+
+            const dataRows = hasHeader ? sfuBatchRawRows.slice(1) : sfuBatchRawRows;
+            dataRows.forEach(row => {
+                const tr = document.createElement('tr');
+                for (let c = 0; c < sfuBatchMaxCols; c++) {
+                    const td = document.createElement('td');
+                    td.textContent = row[c] != null ? row[c] : '';
+                    tr.appendChild(td);
+                }
+                const empId = String(row[selectedCol] || '').trim();
+                const tdValid = document.createElement('td');
+                if (isValidSfuEmpId(empId)) {
+                    tdValid.textContent = '✓ ' + empId;
+                    tdValid.style.color = '#155724';
+                } else {
+                    tdValid.textContent = '✗ ' + (empId || '(空)');
+                    tdValid.style.color = '#dc3545';
+                }
+                tr.appendChild(tdValid);
+                tbody.appendChild(tr);
+            });
+
+            updateSfuBatchValidation();
+        }
+
+        // 更新校验统计
+        function updateSfuBatchValidation() {
+            const colSelect = document.getElementById('sfuBatchColumnSelect');
+            const selectedCol = parseInt(colSelect.value) || 0;
+            const hasHeader = document.getElementById('sfuBatchHasHeader').checked;
+            const dataRows = hasHeader ? sfuBatchRawRows.slice(1) : sfuBatchRawRows;
+            let valid = 0, invalid = 0;
+            const seen = new Set();
+            sfuBatchValidList = [];
+            dataRows.forEach(row => {
+                const empId = String(row[selectedCol] || '').trim();
+                if (isValidSfuEmpId(empId)) {
+                    valid++;
+                    if (!seen.has(empId.toLowerCase())) {
+                        seen.add(empId.toLowerCase());
+                        sfuBatchValidList.push(empId);
+                    }
+                } else {
+                    invalid++;
+                }
+            });
+            document.getElementById('sfuBatchValidation').innerHTML =
+                `有效 <strong style="color:#155724">${valid}</strong> 条，无效 <strong style="color:#dc3545">${invalid}</strong> 条，去重后 <strong>${sfuBatchValidList.length}</strong> 个 empID`;
+        }
+
+        // 重置批量区域
+        function resetSfuBatchArea() {
+            sfuBatchRawRows = [];
+            sfuBatchMaxCols = 0;
+            sfuBatchSummaryData = [];
+            sfuBatchValidList = [];
+            document.getElementById('sfuBatchFileName').textContent = '';
+            document.getElementById('sfuBatchImportSection').style.display = 'none';
+            document.getElementById('sfuBatchProgress').style.display = 'none';
+            document.getElementById('sfuBatchProgress').innerHTML = '';
+            document.getElementById('sfuBatchSummarySection').style.display = 'none';
+            document.querySelector('#sfuBatchImportTable thead tr').innerHTML = '';
+            document.querySelector('#sfuBatchImportTable tbody').innerHTML = '';
+            document.querySelector('#sfuBatchSummaryTable tbody').innerHTML = '';
+            document.getElementById('sfuBatchFile').value = '';
+        }
+
+        // 渲染汇总表（含合计行）
+        function renderSfuBatchSummary() {
+            const tbody = document.querySelector('#sfuBatchSummaryTable tbody');
+            tbody.innerHTML = '';
+            let totalSea = 0, totalBind = 0, totalAll = 0;
+            sfuBatchSummaryData.forEach((item, index) => {
+                const sea = item.seaCount || 0;
+                const bind = item.bindCount || 0;
+                const sum = sea + bind;
+                totalSea += sea;
+                totalBind += bind;
+                totalAll += sum;
+                const statusColor = item.status === '成功' ? '#155724' : '#dc3545';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:right">${index + 1}</td>
+                    <td>${item.empId || ''}</td>
+                    <td style="text-align:right">${sea}</td>
+                    <td style="text-align:right">${bind}</td>
+                    <td style="text-align:right">${sum}</td>
+                    <td style="color:${statusColor}">${item.status || ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            const trTotal = document.createElement('tr');
+            trTotal.style.fontWeight = 'bold';
+            trTotal.style.backgroundColor = '#e9ecef';
+            trTotal.innerHTML = `
+                <td colspan="2" style="text-align:right">合计</td>
+                <td style="text-align:right">${totalSea}</td>
+                <td style="text-align:right">${totalBind}</td>
+                <td style="text-align:right">${totalAll}</td>
+                <td></td>
+            `;
+            tbody.appendChild(trTotal);
+        }
+
+        // 批量查询按钮 → 触发文件选择
+        document.getElementById('sfuBatchImportBtn').addEventListener('click', function() {
+            document.getElementById('sfuBatchFile').click();
+        });
+
+        // 文件选择后解析
+        document.getElementById('sfuBatchFile').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('sfuBatchFileName').textContent = file.name;
+            document.getElementById('sfuBatchSummarySection').style.display = 'none';
+            sfuBatchSummaryData = [];
+            try {
+                const rows = await parseSfuBatchFile(file);
+                if (!rows || rows.length === 0) {
+                    alert('未解析到有效数据');
+                    resetSfuBatchArea();
+                    document.getElementById('sfuBatchFileName').textContent = file.name + '（无数据）';
+                    return;
+                }
+                sfuBatchRawRows = rows;
+                sfuBatchMaxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
+                document.getElementById('sfuBatchHasHeader').checked = false;
+                populateSfuBatchColumnSelect();
+                document.getElementById('sfuBatchImportSection').style.display = 'block';
+                renderSfuBatchImportTable();
+            } catch (err) {
+                alert('文件解析失败: ' + err.message);
+                resetSfuBatchArea();
+                document.getElementById('sfuBatchFileName').textContent = file.name + '（解析失败）';
+            }
+        });
+
+        // 列选择/表头切换 → 重新渲染与校验
+        document.getElementById('sfuBatchColumnSelect').addEventListener('change', renderSfuBatchImportTable);
+        document.getElementById('sfuBatchHasHeader').addEventListener('change', renderSfuBatchImportTable);
+
+        // 清空
+        document.getElementById('sfuBatchClearBtn').addEventListener('click', resetSfuBatchArea);
+
+        // 开始批量查询并导出
+        document.getElementById('sfuBatchStartBtn').addEventListener('click', async function() {
+            const startBtn = this;
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录获取token');
+                return;
+            }
+            if (sfuBatchValidList.length === 0) {
+                alert('没有有效的 empID（需以 emp 开头），请检查所选列');
+                return;
+            }
+
+            startBtn.disabled = true;
+            document.getElementById('sfuBatchClearBtn').disabled = true;
+            const progress = document.getElementById('sfuBatchProgress');
+            progress.style.display = 'block';
+            sfuBatchSummaryData = [];
+            document.getElementById('sfuBatchSummarySection').style.display = 'none';
+            const dateStr = new Date().toISOString().split('T')[0];
+            const queryDetails = document.getElementById('sfuQueryDetails').checked;
+
+            for (let i = 0; i < sfuBatchValidList.length; i++) {
+                const empId = sfuBatchValidList[i];
+                progress.innerHTML = `<div class="success-message">正在查询 (${i + 1}/${sfuBatchValidList.length}): <strong>${empId}</strong> ...</div>`;
+                try {
+                    // 公海池跟进列表
+                    const seaResult = await fetchStaffFollowUpList(token, empId, 1);
+                    if (!seaResult.success) {
+                        sfuBatchSummaryData.push({ empId, seaCount: 0, bindCount: 0, status: '公海池失败:' + seaResult.message });
+                        renderSfuBatchSummary();
+                        document.getElementById('sfuBatchSummarySection').style.display = 'block';
+                        continue;
+                    }
+                    const seaList = seaResult.list.map(it => ({ ...it, _category: '公海池跟进列表' }));
+
+                    // 绑定跟进列表
+                    const bindResult = await fetchStaffFollowUpList(token, empId, 2);
+                    if (!bindResult.success) {
+                        if (seaList.length > 0) {
+                            if (queryDetails) {
+                                progress.innerHTML = `<div class="success-message">正在查询 ${empId} 消耗课时（0/${seaList.length}）...</div>`;
+                                await enrichWithPackageDetails(token, seaList, (done, total) => {
+                                    progress.innerHTML = `<div class="success-message">正在查询 ${empId} 消耗课时（${done}/${total}）...</div>`;
+                                });
+                            }
+                            writeSfuExcelFile(`顾问跟进列表_${empId}_${dateStr}.xlsx`, seaList);
+                        }
+                        sfuBatchSummaryData.push({ empId, seaCount: seaList.length, bindCount: 0, status: '绑定失败:' + bindResult.message });
+                        renderSfuBatchSummary();
+                        document.getElementById('sfuBatchSummarySection').style.display = 'block';
+                        continue;
+                    }
+                    const bindList = bindResult.list.map(it => ({ ...it, _category: '绑定跟进列表' }));
+                    const merged = seaList.concat(bindList);
+
+                    // 可选：查询消耗课时
+                    if (queryDetails && merged.length > 0) {
+                        progress.innerHTML = `<div class="success-message">正在查询 ${empId} 消耗课时（0/${merged.length}）...</div>`;
+                        await enrichWithPackageDetails(token, merged, (done, total) => {
+                            progress.innerHTML = `<div class="success-message">正在查询 ${empId} 消耗课时（${done}/${total}）...</div>`;
+                        });
+                    }
+
+                    // 按 empID 单独导出 Excel
+                    if (merged.length > 0) {
+                        writeSfuExcelFile(`顾问跟进列表_${empId}_${dateStr}.xlsx`, merged);
+                    }
+                    sfuBatchSummaryData.push({ empId, seaCount: seaList.length, bindCount: bindList.length, status: '成功' });
+                    renderSfuBatchSummary();
+                    document.getElementById('sfuBatchSummarySection').style.display = 'block';
+                } catch (err) {
+                    console.error('批量查询错误', empId, err);
+                    sfuBatchSummaryData.push({ empId, seaCount: 0, bindCount: 0, status: '异常:' + err.message });
+                    renderSfuBatchSummary();
+                    document.getElementById('sfuBatchSummarySection').style.display = 'block';
+                }
+            }
+
+            const successCount = sfuBatchSummaryData.filter(d => d.status === '成功').length;
+            progress.innerHTML = `<div class="success-message">批量查询完成！共处理 ${sfuBatchValidList.length} 个 empID，成功 ${successCount} 个。</div>`;
+            startBtn.disabled = false;
+            document.getElementById('sfuBatchClearBtn').disabled = false;
+        });
+
+        // 导出汇总 Excel
+        document.getElementById('sfuBatchExportSummaryBtn').addEventListener('click', function() {
+            if (!sfuBatchSummaryData || sfuBatchSummaryData.length === 0) {
+                alert('没有汇总数据可导出');
+                return;
+            }
+            let totalSea = 0, totalBind = 0, totalAll = 0;
+            const rows = sfuBatchSummaryData.map((item, index) => {
+                const sea = item.seaCount || 0;
+                const bind = item.bindCount || 0;
+                totalSea += sea;
+                totalBind += bind;
+                totalAll += sea + bind;
+                return {
+                    '序号': index + 1,
+                    'empID': item.empId || '',
+                    '公海池跟进列表用户数': sea,
+                    '绑定跟进列表用户数': bind,
+                    '合计': sea + bind,
+                    '状态': item.status || ''
+                };
+            });
+            rows.push({
+                '序号': '',
+                'empID': '合计',
+                '公海池跟进列表用户数': totalSea,
+                '绑定跟进列表用户数': totalBind,
+                '合计': totalAll,
+                '状态': ''
+            });
+            const ws = XLSX.utils.json_to_sheet(rows, { header: ['序号', 'empID', '公海池跟进列表用户数', '绑定跟进列表用户数', '合计', '状态'] });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '批量查询汇总');
+            XLSX.writeFile(wb, `顾问跟进批量查询汇总_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
+
     </script>
 </body>
 </html>
