@@ -7378,6 +7378,7 @@
                         const totalClass = resultData.reduce((sum, item) => sum + (item.stuClassNum || 0), 0);
                         const totalOpen = resultData.reduce((sum, item) => sum + (item.openNum || 0), 0);
                         statsHtml += `总注册学员数: ${totalRegist}\n`;
+                        statsHtml += `日均注册学员数: ${(totalRegist / dayDiff).toFixed(2)}\n`;
                         statsHtml += `总上课学员数: ${totalClass}\n`;
                         statsHtml += `总开课数: ${totalOpen}\n`;
                     }
