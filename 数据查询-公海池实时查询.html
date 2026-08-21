@@ -10399,12 +10399,23 @@
         }
 
         // 为合并数据批量补充消耗课时（分批并发，带延时）
-        // statusCallback(done, total) 用于更新进度
+        // 总课时为0的用户无需查询，直接置0并跳过；statusCallback(done, total) 用于更新进度
         async function enrichWithPackageDetails(token, mergedData, statusCallback) {
             const batchSize = 10;
             const delay = 300;
-            for (let i = 0; i < mergedData.length; i += batchSize) {
-                const batch = mergedData.slice(i, i + batchSize);
+            let processed = 0;
+            const toQuery = [];
+            mergedData.forEach(item => {
+                if (sfuInitialPoint(item.tpackageList) === 0) {
+                    item._attended = 0;
+                    item._continued = 0;
+                    processed++;
+                } else {
+                    toQuery.push(item);
+                }
+            });
+            for (let i = 0; i < toQuery.length; i += batchSize) {
+                const batch = toQuery.slice(i, i + batchSize);
                 await Promise.all(batch.map(async (item) => {
                     const result = await fetchPackageDetails(token, item.userId);
                     if (result.success && result.data) {
@@ -10415,10 +10426,15 @@
                         item._continued = null;
                     }
                 }));
-                if (statusCallback) statusCallback(Math.min(i + batchSize, mergedData.length), mergedData.length);
-                if (i + batchSize < mergedData.length) {
+                processed += batch.length;
+                if (statusCallback) statusCallback(processed, mergedData.length);
+                if (i + batchSize < toQuery.length) {
                     await new Promise(r => setTimeout(r, delay));
                 }
+            }
+            // 全部被跳过时也通知完成
+            if (statusCallback && toQuery.length === 0) {
+                statusCallback(mergedData.length, mergedData.length);
             }
         }
 
