@@ -356,6 +356,21 @@
             padding: 20px;
             flex: 1;
         }
+        
+        /* 新增：任务统计栏样式 */
+        .task-stats-bar {
+            padding: 10px 15px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .task-list {
             display: flex;
             flex-direction: column;
@@ -712,6 +727,11 @@
             <div class="task-area">
                 <div class="main-header-mobile">
                     <h2 id="mobile-main-title">今日任务</h2>
+                </div>
+
+                <!-- 新增：任务统计显示区域 -->
+                <div id="task-stats" class="task-stats-bar hidden">
+                    <span id="stats-text">当前共 0 条记录</span>
                 </div>
 
                 <div id="task-list" class="task-list"></div>
@@ -1103,6 +1123,8 @@
         // 核心渲染：支持 'all' 视图，并显示记录条数
         function renderTasks() {
             const list = document.getElementById('task-list');
+            const statsBar = document.getElementById('task-stats');
+            const statsText = document.getElementById('stats-text');
             const title = document.getElementById('mobile-main-title');
             const now = state.currentDate;
             let filtered = [];
@@ -1152,6 +1174,12 @@
 
             // 更新标题，增加记录条数
             if (title) title.innerText = `${titleText} (共 ${filtered.length} 条)`;
+
+            // 更新统计栏
+            if (statsBar) {
+                statsBar.classList.remove('hidden');
+                statsText.innerText = `当前筛选条件下共 ${filtered.length} 条记录`;
+            }
 
             // 排序：未完成优先，同状态按时间
             filtered.sort((a, b) => {
