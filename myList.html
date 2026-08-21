@@ -762,6 +762,27 @@
                 margin-bottom: 15px;
             }
         }
+        
+        /* PC Specific Fixes */
+        @media (min-width: 769px) {
+            /* Hide mobile toggle button on PC */
+            .cal-toggle-btn {
+                display: none !important;
+            }
+            
+            /* Ensure sidebar buttons fill width evenly on PC */
+            .view-switcher,
+            .status-filter {
+                width: 100%;
+                display: flex;
+            }
+            
+            .view-switcher button,
+            .status-filter button {
+                flex: 1;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
