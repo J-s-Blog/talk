@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>myList · 所有视图</title>
+    <title>myList</title>
+    <!-- 引入 SheetJS 用于导出 Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js">
     </script>
     <style>
@@ -702,6 +704,7 @@
 
                 <div class="toolbar-right">
                     <button class="btn btn-sm btn-secondary" onclick="openCategoryModal()">管理分类</button>
+                    <button class="btn btn-sm btn-secondary" onclick="exportToExcel()" title="导出当前筛选结果">📥 导出</button>
                     <button class="btn btn-primary" onclick="openTaskModal()">+ 新建</button>
                 </div>
             </div>
@@ -782,8 +785,7 @@
 
     <script>
         const SUPABASE_URL = 'https://rrgizwisrepncaeyflmi.supabase.co';
-        const SUPABASE_KEY =
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w';
+        const SUPABASE_KEY =            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ2l6d2lzcmVwbmNhZXlmbG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MTMwNTksImV4cCI6MjEwMjQ4OTA1OX0.oxPXvPN2marFbRPi69l3Z084bUlk35PUl3GGO_nOi8w';
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const state = {
@@ -1098,7 +1100,7 @@
             renderTasks();
         }
 
-        // 核心渲染：支持 'all' 视图
+        // 核心渲染：支持 'all' 视图，并显示记录条数
         function renderTasks() {
             const list = document.getElementById('task-list');
             const title = document.getElementById('mobile-main-title');
@@ -1148,7 +1150,8 @@
                 filtered = filtered.filter(t => t.status === state.statusFilter);
             }
 
-            if (title) title.innerText = titleText;
+            // 更新标题，增加记录条数
+            if (title) title.innerText = `${titleText} (共 ${filtered.length} 条)`;
 
             // 排序：未完成优先，同状态按时间
             filtered.sort((a, b) => {
@@ -1307,6 +1310,94 @@
             document.getElementById(id).classList.add('hidden');
         }
 
+        // 新增：导出Excel功能 - 优化文件名
+        function exportToExcel() {
+            // 1. 获取当前筛选后的任务列表 (复用 renderTasks 中的逻辑)
+            const now = state.currentDate;
+            let filtered = [];
+
+            if (state.viewMode === 'day') {
+                const ds = formatDate(now);
+                filtered = state.tasks.filter(t => t.date === ds);
+            } else if (state.viewMode === 'week') {
+                const start = new Date(now);
+                start.setDate(now.getDate() - now.getDay());
+                const end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                filtered = state.tasks.filter(t => t.date >= formatDate(start) && t.date <= formatDate(end));
+            } else if (state.viewMode === 'month') {
+                const y = now.getFullYear(), m = now.getMonth();
+                filtered = state.tasks.filter(t => {
+                    const d = new Date(t.date);
+                    return d.getFullYear() === y && d.getMonth() === m;
+                });
+            } else if (state.viewMode === 'all') {
+                filtered = [...state.tasks];
+            }
+
+            // 2. 应用分类和状态过滤
+            if (state.selectedCategoryId) {
+                filtered = filtered.filter(t => t.categoryId === state.selectedCategoryId);
+            }
+            if (state.statusFilter !== 'all') {
+                filtered = filtered.filter(t => t.status === state.statusFilter);
+            }
+
+            if (filtered.length === 0) {
+                alert("当前筛选条件下没有任务可导出");
+                return;
+            }
+
+            // 3. 准备Excel数据
+            const excelData = filtered.map(t => {
+                const cat = state.categories.find(c => c.id === t.categoryId);
+                return {
+                    "日期": t.date,
+                    "时间": t.time || "全天",
+                    "状态": t.status === 'completed' ? "已完成" : "未完成",
+                    "分类": cat ? cat.name : "无",
+                    "标题": t.title,
+                    "详情": t.detail || ""
+                };
+            });
+
+            // 4. 创建工作簿
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "任务清单");
+
+            // 5. 生成文件名
+            const nowTime = new Date();
+            // 格式化时间: YYYYMMDD_HHmmss
+            const timeStr = nowTime.getFullYear() + 
+                           String(nowTime.getMonth() + 1).padStart(2, '0') + 
+                           String(nowTime.getDate()).padStart(2, '0') + '_' + 
+                           String(nowTime.getHours()).padStart(2, '0') + 
+                           String(nowTime.getMinutes()).padStart(2, '0') + 
+                           String(nowTime.getSeconds()).padStart(2, '0');
+            
+            // 构建描述部分
+            let descPart = '';
+            if (state.viewMode === 'day') descPart = '日视图';
+            else if (state.viewMode === 'week') descPart = '周视图';
+            else if (state.viewMode === 'month') descPart = '月视图';
+            else descPart = '全部';
+
+            if (state.selectedCategoryId) {
+                const cat = state.categories.find(c => c.id === state.selectedCategoryId);
+                if (cat) descPart += `-${cat.name}`;
+            }
+
+            if (state.statusFilter !== 'all') {
+                descPart += `-${state.statusFilter === 'completed' ? '已完成' : '未完成'}`;
+            }
+
+            const fileName = `myList_${descPart}_${timeStr}.xlsx`;
+
+            // 6. 导出文件
+            XLSX.writeFile(wb, fileName);
+        }
+
         window.onload = async () => {
             const session = sessionStorage.getItem('mylist_session');
             if (session) {
@@ -1325,3 +1416,6 @@
     </script>
 </body>
 </html>
+
+
+
