@@ -764,6 +764,8 @@
                     <span id="time-nav-display" onclick="triggerMonthPicker()"></span>
                     <button id="time-nav-next" onclick="navigateTime(1)">›</button>
                 </div>
+                <!-- Quick Jump Button (New) -->
+                <button id="time-nav-now" class="btn btn-sm btn-secondary" style="width:100%; margin-top:5px;" onclick="jumpToCurrentPeriod()">回到当前</button>
             </div>
         </div>
 
@@ -1115,15 +1117,18 @@
             const timeNav = document.getElementById('time-nav-container');
             const navLabel = document.getElementById('time-nav-label-text');
             const navDisplay = document.getElementById('time-nav-display');
+            const nowBtn = document.getElementById('time-nav-now');
             
             if (mode === 'week') {
                 timeNav.classList.remove('hidden');
                 navLabel.innerText = "周范围";
                 updateWeekRangeLabel();
+                nowBtn.innerText = "回到本周";
             } else if (mode === 'month') {
                 timeNav.classList.remove('hidden');
                 navLabel.innerText = "年月选择";
                 updateMonthLabel();
+                nowBtn.innerText = "回到本月";
             } else {
                 timeNav.classList.add('hidden');
             }
@@ -1140,6 +1145,21 @@
                 state.currentDate.setMonth(state.currentDate.getMonth() + delta);
                 state.calMonth = new Date(state.currentDate); // Sync sidebar calendar
                 renderCalendar();
+                updateMonthLabel();
+            }
+            renderTasks();
+        }
+
+        // New Function: Jump to Current Period
+        function jumpToCurrentPeriod() {
+            const now = new Date();
+            state.currentDate = now;
+            state.calMonth = new Date(now);
+            
+            renderCalendar();
+            if (state.viewMode === 'week') {
+                updateWeekRangeLabel();
+            } else if (state.viewMode === 'month') {
                 updateMonthLabel();
             }
             renderTasks();
