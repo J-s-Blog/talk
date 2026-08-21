@@ -238,8 +238,8 @@
             background: white;
         }
 
-        /* Week Selector Styles */
-        .week-selector {
+        /* Unified Time Navigation Styles (Week/Month) */
+        .time-nav {
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid var(--border);
@@ -247,7 +247,12 @@
             flex-direction: column;
             gap: 10px;
         }
-        .week-nav {
+        .time-nav-label {
+            font-size: 12px; 
+            color: var(--text-light); 
+            margin-bottom: 2px;
+        }
+        .nav-control {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -255,18 +260,30 @@
             padding: 8px;
             border-radius: 8px;
         }
-        .week-nav span {
+        .nav-control span {
             font-size: 13px;
             font-weight: 600;
             color: var(--text);
+            cursor: pointer; /* Indicates clickable for month picker */
+            padding: 0 5px;
         }
-        .week-nav button {
+        .nav-control span:hover {
+            color: var(--primary);
+        }
+        .nav-control button {
             background: none;
             border: none;
             cursor: pointer;
             color: var(--primary);
             font-size: 16px;
             padding: 0 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-control button:hover {
+            background: rgba(79, 70, 229, 0.1);
+            border-radius: 4px;
         }
 
         .main-content {
@@ -565,6 +582,21 @@
             margin-top: 20px;
         }
 
+        /* Custom Month Picker Styles */
+        .month-picker-inputs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .month-picker-inputs select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
         @media (max-width: 768px) {
             .app-layout {
                 grid-template-columns: 1fr;
@@ -724,13 +756,13 @@
                 <div class="calendar-grid" id="calendar-grid"></div>
             </div>
             
-            <!-- 新增：周选择器 (仅在周视图模式下逻辑相关，但始终渲染以便切换) -->
-            <div id="week-selector-container" class="week-selector hidden">
-                <div style="font-size:12px; color:var(--text-light); margin-bottom:5px;">周范围选择</div>
-                <div class="week-nav">
-                    <button onclick="changeWeek(-1)">‹ 上一周</button>
-                    <span id="week-range-label"></span>
-                    <button onclick="changeWeek(1)">下一周 ›</button>
+            <!-- Unified Time Navigation Container -->
+            <div id="time-nav-container" class="time-nav hidden">
+                <div class="time-nav-label" id="time-nav-label-text">范围选择</div>
+                <div class="nav-control">
+                    <button id="time-nav-prev" onclick="navigateTime(-1)">‹</button>
+                    <span id="time-nav-display" onclick="triggerMonthPicker()"></span>
+                    <button id="time-nav-next" onclick="navigateTime(1)">›</button>
                 </div>
             </div>
         </div>
@@ -744,11 +776,6 @@
                         <button id="view-week" onclick="setView('week')">周</button>
                         <button id="view-month" onclick="setView('month')">月</button>
                         <button id="view-all" onclick="setView('all')">所有</button>
-                    </div>
-
-                    <!-- 新增：月视图下的年月选择器 -->
-                    <div id="month-picker-container" class="hidden" style="display:flex; align-items:center;">
-                        <input type="month" id="month-picker-input" class="input" style="width:auto; padding:6px 10px;" onchange="handleMonthPickerChange()">
                     </div>
 
                     <div class="status-filter">
@@ -839,6 +866,24 @@
                 <button class="btn btn-primary" onclick="addCategory()">添加</button>
             </div>
             <div id="category-manage-list" class="category-list" style="margin-top:15px; max-height:300px"></div>
+        </div>
+    </div>
+
+    <!-- 自定义年月选择弹窗 (新增) -->
+    <div id="month-picker-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 350px;">
+            <div class="modal-header">
+                <h3>选择年月</h3>
+                <button class="modal-close" onclick="closeMonthPicker()">×</button>
+            </div>
+            <div class="month-picker-inputs">
+                <select id="mp-year"></select>
+                <select id="mp-month"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMonthPicker()">取消</button>
+                <button class="btn btn-primary" onclick="confirmMonthPicker()">确定</button>
+            </div>
         </div>
     </div>
 
@@ -1051,6 +1096,8 @@
             state.calMonth = new Date();
             renderCalendar();
             renderTasks();
+            // Reset view to day if needed, or just update context
+            setView('day'); 
         }
 
         function selectDate(dateStr) {
@@ -1059,42 +1106,97 @@
             renderTasks();
         }
 
-        // 视图切换
+        // View Switching Logic
         function setView(mode) {
             state.viewMode = mode;
             document.querySelectorAll('.view-switcher button').forEach(b => b.classList.remove('active'));
             document.getElementById(`view-${mode}`).classList.add('active');
             
-            // UI Logic for Week/Month helpers
-            const weekSelector = document.getElementById('week-selector-container');
-            const monthPicker = document.getElementById('month-picker-container');
+            const timeNav = document.getElementById('time-nav-container');
+            const navLabel = document.getElementById('time-nav-label-text');
+            const navDisplay = document.getElementById('time-nav-display');
             
             if (mode === 'week') {
-                weekSelector.classList.remove('hidden');
-                monthPicker.classList.add('hidden');
+                timeNav.classList.remove('hidden');
+                navLabel.innerText = "周范围";
                 updateWeekRangeLabel();
             } else if (mode === 'month') {
-                weekSelector.classList.add('hidden');
-                monthPicker.classList.remove('hidden');
-                // Sync picker with current state
-                const y = state.currentDate.getFullYear();
-                const m = String(state.currentDate.getMonth() + 1).padStart(2, '0');
-                document.getElementById('month-picker-input').value = `${y}-${m}`;
+                timeNav.classList.remove('hidden');
+                navLabel.innerText = "年月选择";
+                updateMonthLabel();
             } else {
-                weekSelector.classList.add('hidden');
-                monthPicker.classList.add('hidden');
+                timeNav.classList.add('hidden');
             }
 
             renderTasks();
         }
 
-        // Week Navigation Logic
-        function changeWeek(delta) {
-            // Move currentDate by 7 days
-            state.currentDate.setDate(state.currentDate.getDate() + (delta * 7));
-            updateWeekRangeLabel();
+        // Unified Navigation Logic
+        function navigateTime(delta) {
+            if (state.viewMode === 'week') {
+                state.currentDate.setDate(state.currentDate.getDate() + (delta * 7));
+                updateWeekRangeLabel();
+            } else if (state.viewMode === 'month') {
+                state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+                state.calMonth = new Date(state.currentDate); // Sync sidebar calendar
+                renderCalendar();
+                updateMonthLabel();
+            }
             renderTasks();
         }
+
+        // --- Custom Month Picker Logic Start ---
+        function triggerMonthPicker() {
+            if (state.viewMode !== 'month') return;
+            
+            const yearSelect = document.getElementById('mp-year');
+            const monthSelect = document.getElementById('mp-month');
+            
+            // Clear existing options
+            yearSelect.innerHTML = '';
+            monthSelect.innerHTML = '';
+
+            const currentYear = state.currentDate.getFullYear();
+            const currentMonth = state.currentDate.getMonth();
+
+            // Populate Years (Current Year ± 5 years)
+            for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.text = y + '年';
+                if (y === currentYear) option.selected = true;
+                yearSelect.appendChild(option);
+            }
+
+            // Populate Months
+            for (let m = 0; m < 12; m++) {
+                const option = document.createElement('option');
+                option.value = m;
+                option.text = (m + 1) + '月';
+                if (m === currentMonth) option.selected = true;
+                monthSelect.appendChild(option);
+            }
+
+            document.getElementById('month-picker-modal').classList.remove('hidden');
+        }
+
+        function closeMonthPicker() {
+            document.getElementById('month-picker-modal').classList.add('hidden');
+        }
+
+        function confirmMonthPicker() {
+            const y = parseInt(document.getElementById('mp-year').value);
+            const m = parseInt(document.getElementById('mp-month').value);
+            
+            state.currentDate = new Date(y, m, 1);
+            state.calMonth = new Date(state.currentDate);
+            
+            renderCalendar();
+            updateMonthLabel();
+            renderTasks();
+            closeMonthPicker();
+        }
+        // --- Custom Month Picker Logic End ---
 
         function updateWeekRangeLabel() {
             const now = state.currentDate;
@@ -1103,22 +1205,16 @@
             const end = new Date(start);
             end.setDate(start.getDate() + 6); // Saturday
             
-            const label = document.getElementById('week-range-label');
+            const label = document.getElementById('time-nav-display');
             const startStr = `${start.getMonth()+1}/${start.getDate()}`;
             const endStr = `${end.getMonth()+1}/${end.getDate()}`;
             label.innerText = `${startStr} - ${endStr}`;
         }
 
-        // Month Picker Logic
-        function handleMonthPickerChange() {
-            const val = document.getElementById('month-picker-input').value;
-            if (val) {
-                const [y, m] = val.split('-');
-                state.currentDate = new Date(parseInt(y), parseInt(m)-1, 1);
-                state.calMonth = new Date(state.currentDate); // Also update sidebar calendar
-                renderCalendar();
-                renderTasks();
-            }
+        function updateMonthLabel() {
+            const y = state.currentDate.getFullYear();
+            const m = state.currentDate.getMonth() + 1;
+            document.getElementById('time-nav-display').innerText = `${y}年 ${m}月`;
         }
 
         function setStatusFilter(status) {
@@ -1213,7 +1309,7 @@
             renderTasks();
         }
 
-        // 核心渲染：支持 'all' 视图，并显示记录条数到标题中
+        // Core Render Logic
         function renderTasks() {
             const list = document.getElementById('task-list');
             const titleEl = document.getElementById('mobile-main-title');
@@ -1223,7 +1319,7 @@
             let filtered = [];
             let titleText = '';
 
-            // 1. 时间范围过滤 (所有视图)
+            // 1. Time Range Filter
             if (state.viewMode === 'day') {
                 const ds = formatDate(now);
                 filtered = state.tasks.filter(t => t.date === ds);
@@ -1246,35 +1342,33 @@
                 });
                 titleText = `${y}年${m + 1}月`;
             } else if (state.viewMode === 'all') {
-                // 所有任务：按日期排序
                 filtered = [...state.tasks];
-                // 按日期升序
                 filtered.sort((a, b) => a.date.localeCompare(b.date));
                 titleText = '所有任务';
             }
 
-            // 2. 分类过滤
+            // 2. Category Filter
             if (state.selectedCategoryId) {
                 filtered = filtered.filter(t => t.categoryId === state.selectedCategoryId);
                 const catName = state.categories.find(c => c.id === state.selectedCategoryId)?.name || '未知分类';
                 titleText += ` · ${catName}`;
             }
 
-            // 3. 状态过滤
+            // 3. Status Filter
             if (state.statusFilter !== 'all') {
                 filtered = filtered.filter(t => t.status === state.statusFilter);
                 const statusText = state.statusFilter === 'completed' ? '已完成' : '未完成';
                 titleText += ` · ${statusText}`;
             }
 
-            // 更新标题和计数徽章
+            // Update Title and Badge
             if (titleEl) titleEl.innerText = titleText;
             if (countBadge) {
                 countBadge.innerText = `${filtered.length} 条`;
                 countBadge.classList.remove('hidden');
             }
 
-            // 排序：未完成优先，同状态按时间
+            // Sort: Pending first, then by time
             filtered.sort((a, b) => {
                 if (a.status === b.status) {
                     return (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00'));
@@ -1294,9 +1388,7 @@
                 const isCompleted = t.status === 'completed';
                 const dateObj = new Date(t.date + 'T00:00:00');
                 
-                // Format Date: MM/DD
                 const dateStrShort = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
-                // Format Time
                 const timeStr = t.time || '全天';
 
                 return `
@@ -1306,7 +1398,6 @@
                                 </div>
                                 <div class="task-main-info">
                                     <div class="task-meta-row">
-                                        <!-- Modified: Date first, highlighted. Time second, normal. -->
                                         <span class="task-date-badge">${dateStrShort}</span>
                                         <span class="task-time-text">${timeStr}</span>
                                         ${badge}
@@ -1436,9 +1527,7 @@
             document.getElementById(id).classList.add('hidden');
         }
 
-        // 新增：导出Excel功能 - 优化文件名
         function exportToExcel() {
-            // 1. 获取当前筛选后的任务列表 (复用 renderTasks 中的逻辑)
             const now = state.currentDate;
             let filtered = [];
 
@@ -1461,7 +1550,6 @@
                 filtered = [...state.tasks];
             }
 
-            // 2. 应用分类和状态过滤
             if (state.selectedCategoryId) {
                 filtered = filtered.filter(t => t.categoryId === state.selectedCategoryId);
             }
@@ -1474,7 +1562,6 @@
                 return;
             }
 
-            // 3. 准备Excel数据
             const excelData = filtered.map(t => {
                 const cat = state.categories.find(c => c.id === t.categoryId);
                 return {
@@ -1487,14 +1574,11 @@
                 };
             });
 
-            // 4. 创建工作簿
             const ws = XLSX.utils.json_to_sheet(excelData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "任务清单");
 
-            // 5. 生成文件名
             const nowTime = new Date();
-            // 格式化时间: YYYYMMDD_HHmmss
             const timeStr = nowTime.getFullYear() + 
                            String(nowTime.getMonth() + 1).padStart(2, '0') + 
                            String(nowTime.getDate()).padStart(2, '0') + '_' + 
@@ -1502,7 +1586,6 @@
                            String(nowTime.getMinutes()).padStart(2, '0') + 
                            String(nowTime.getSeconds()).padStart(2, '0');
             
-            // 构建描述部分
             let descPart = '';
             if (state.viewMode === 'day') descPart = '日视图';
             else if (state.viewMode === 'week') descPart = '周视图';
@@ -1519,8 +1602,6 @@
             }
 
             const fileName = `myList_${descPart}_${timeStr}.xlsx`;
-
-            // 6. 导出文件
             XLSX.writeFile(wb, fileName);
         }
 
