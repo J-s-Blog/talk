@@ -1655,9 +1655,9 @@
                 padding: 5px 6px !important;
                 font-size: 12px !important;
             }
-            /* 在手机布局下，隐藏“更多筛选条件”面板及其占用的空间 */
-            #roAdvancedPanel {
-                display: none !important;
+            /* 在手机布局下，未展开时隐藏整个面板避免空边框占位；展开时随 .open 显示 */
+            #roAdvancedPanel:not(.open) {
+                display: none;
             }
         }
         
