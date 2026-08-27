@@ -379,6 +379,54 @@
             word-break: break-all;
         }
 
+        /* 综合评价数据表格列宽度 */
+        #userEvaluationSumTable {
+            table-layout: fixed;
+        }
+        #userEvaluationSumTable th,
+        #userEvaluationSumTable td {
+            padding: 8px 10px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        #userEvaluationSumTable th:nth-child(1),
+        #userEvaluationSumTable td:nth-child(1) {
+            min-width: 50px; /* 序号 */
+            text-align: right;
+        }
+        #userEvaluationSumTable th:nth-child(2),
+        #userEvaluationSumTable td:nth-child(2) {
+            min-width: 110px; /* 被评人ID */
+        }
+        #userEvaluationSumTable th:nth-child(3),
+        #userEvaluationSumTable td:nth-child(3) {
+            min-width: 100px; /* 被评人姓名 */
+        }
+        #userEvaluationSumTable th:nth-child(4),
+        #userEvaluationSumTable td:nth-child(4) {
+            min-width: 110px; /* 被评人员类型 */
+        }
+        #userEvaluationSumTable th:nth-child(5),
+        #userEvaluationSumTable td:nth-child(5) {
+            min-width: 110px; /* 当前评论总数 */
+            text-align: center;
+        }
+        #userEvaluationSumTable th:nth-child(6),
+        #userEvaluationSumTable td:nth-child(6) {
+            min-width: 160px; /* 最近一次评论时间 */
+        }
+        #userEvaluationSumTable th:nth-child(7),
+        #userEvaluationSumTable td:nth-child(7),
+        #userEvaluationSumTable th:nth-child(8),
+        #userEvaluationSumTable td:nth-child(8),
+        #userEvaluationSumTable th:nth-child(9),
+        #userEvaluationSumTable td:nth-child(9),
+        #userEvaluationSumTable th:nth-child(10),
+        #userEvaluationSumTable td:nth-child(10) {
+            min-width: 130px; /* 平均分列 */
+            text-align: center;
+        }
+
         /* 关键字管理区域样式 */
         .keyword-management {
             margin: 20px 0;
@@ -1877,6 +1925,30 @@
             #userEvaluationTable {
                 min-width: 900px !important;
             }
+
+            /* 综合评价数据 - 移动端优化 */
+            #userEvaluationSum .date-conditions {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            #userEvaluationSum .date-conditions > div,
+            #userEvaluationSum .date-conditions .form-group.inline {
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            #userEvaluationSum .date-conditions input[type="text"],
+            #userEvaluationSum .date-conditions select {
+                width: 100% !important;
+                box-sizing: border-box;
+                height: 38px;
+            }
+            #userEvaluationSum .date-conditions > div:last-child {
+                display: flex;
+                gap: 10px;
+            }
+            #userEvaluationSumTable {
+                min-width: 1000px !important;
+            }
         }
 
 
@@ -2079,6 +2151,7 @@
                     <option value="batchAssign">批量用户分配</option>
                     <option value="staffFollowUp">查询顾问跟进列表</option>
                     <option value="userEvaluation">用户评价</option>
+                    <option value="userEvaluationSum">综合评价数据</option>
                 </select>
             </div>
             <!-- 桌面端按钮 -->
@@ -2093,6 +2166,7 @@
                 <button class="tab-button" data-tab="batchAssign">批量用户分配</button>
                 <button class="tab-button" data-tab="staffFollowUp">查询顾问跟进列表</button>
                 <button class="tab-button" data-tab="userEvaluation">用户评价</button>
+                <button class="tab-button" data-tab="userEvaluationSum">综合评价数据</button>
             </div>
             
             <!-- 登录Tab -->
@@ -3183,6 +3257,63 @@
                             <th>平均分</th>
                             <th>反馈图片</th>
                             <th>处理记录</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 综合评价数据Tab -->
+    <div id="userEvaluationSum" class="tab-content">
+        <h2>综合评价数据</h2>
+
+        <!-- 查询条件 -->
+        <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div class="form-group inline">
+                <label for="uesFollowTalkId" style="margin-bottom: 5px; display: block;">被评人Id:</label>
+                <input type="text" id="uesFollowTalkId" placeholder="员工empID（可空）" style="width: 140px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div class="form-group inline">
+                <label for="uesUserType" style="margin-bottom: 5px; display: block;">被评人员类型:</label>
+                <select id="uesUserType" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="11" selected>员工</option>
+                    <option value="5">业务员</option>
+                    <option value="3">经销商</option>
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="queryUserEvaluationSumBtn" style="padding: 8px 20px; width: auto;">查询</button>
+                <button type="button" id="exportUserEvaluationSumExcelBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #17a2b8;">导出Excel</button>
+            </div>
+        </div>
+
+        <!-- 汇总信息 -->
+        <div id="userEvaluationSumSummary" style="display: none; margin-bottom: 20px; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                <div><strong>总条数:</strong> <span id="uesTotalCount">0</span> 条</div>
+            </div>
+        </div>
+
+        <!-- 结果表格 -->
+        <div id="userEvaluationSumResult" style="display: none;">
+            <div id="userEvaluationSumStatus" style="margin-bottom: 15px;"></div>
+            <div class="table-container">
+                <table id="userEvaluationSumTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>被评人ID</th>
+                            <th>被评人姓名</th>
+                            <th>被评人员类型</th>
+                            <th>当前评论总数</th>
+                            <th>最近一次评论时间</th>
+                            <th>专业程度平均分</th>
+                            <th>回复效率平均分</th>
+                            <th>服务态度平均分</th>
+                            <th>总平均分</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -11364,7 +11495,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '用户评价');
             const followId = document.getElementById('ueFollowTalkId').value.trim() || 'all';
-            const dateStr = new Date().toISOString().split('T')[0];
+            const dateStr = new Date().toISOString().replace('T','_').replace(/\.\d+Z$/,'').replace(/:/g,'-');
             XLSX.writeFile(wb, `用户评价_${followId}_${dateStr}.xlsx`);
         }
 
@@ -11440,6 +11571,172 @@
             if (el) {
                 el.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') document.getElementById('queryUserEvaluationBtn').click();
+                });
+            }
+        });
+
+        // ==================== 综合评价数据 Tab ====================
+        let userEvaluationSumData = [];
+
+        // userType 映射（复用）
+        function uesUserTypeText(v) {
+            if (v === '' || v === null || v === undefined) return '全部';
+            const map = { '5': '业务员', '3': '经销商', '11': '员工' };
+            return map[String(v)] || String(v);
+        }
+
+        // 格式化平均分
+        function uesAvg(val) {
+            if (val === null || val === undefined || val === '') return '-';
+            const n = parseFloat(val);
+            return isNaN(n) ? '-' : n.toFixed(1);
+        }
+
+        // 构建 payload
+        function buildUserEvaluationSumPayload(pageSize) {
+            const followTalkId = document.getElementById('uesFollowTalkId').value.trim();
+            const userType = document.getElementById('uesUserType').value;
+            return {
+                followTalkId: followTalkId,
+                userType: userType === '' ? '' : Number(userType),
+                currPage: 0,
+                pageSize: pageSize || 50
+            };
+        }
+
+        // 查询接口
+        async function fetchUserEvaluationSum(token, pageSize) {
+            const payload = buildUserEvaluationSumPayload(pageSize);
+            const resp = await fetch('https://www.talk915.com/market/adminOperation/queryCommentFeedbackSum', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/plain, */*',
+                    'token': token
+                },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.resultCode !== 0) {
+                return { success: false, message: data.resultMessage || '未知错误' };
+            }
+            return {
+                success: true,
+                list: data.resultData || [],
+                totalCount: data.totalCount || 0
+            };
+        }
+
+        // 渲染表格
+        function renderUserEvaluationSumTable(data) {
+            const tbody = document.querySelector('#userEvaluationSumTable tbody');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">暂无数据</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map((item, index) => `
+                <tr>
+                    <td style="text-align:right">${index + 1}</td>
+                    <td>${item.followTalkId || ''}</td>
+                    <td>${item.followName || ''}</td>
+                    <td>${uesUserTypeText(item.userType)}</td>
+                    <td style="text-align:center">${item.commentCount != null ? item.commentCount : 0}</td>
+                    <td>${item.lastCommentTime || ''}</td>
+                    <td style="text-align:center">${uesAvg(item.professionalLevelAvg)}</td>
+                    <td style="text-align:center">${uesAvg(item.replyEfficiencyAvg)}</td>
+                    <td style="text-align:center">${uesAvg(item.serviceAttitudeAvg)}</td>
+                    <td style="text-align:center">${uesAvg(item.allAverageScore)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // 导出 Excel
+        function exportUserEvaluationSumExcel() {
+            if (!userEvaluationSumData || userEvaluationSumData.length === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+            const rows = userEvaluationSumData.map((item, index) => ({
+                '序号': index + 1,
+                '被评人ID': item.followTalkId || '',
+                '被评人姓名': item.followName || '',
+                '被评人员类型': uesUserTypeText(item.userType),
+                '当前评论总数': item.commentCount != null ? item.commentCount : 0,
+                '最近一次评论时间': item.lastCommentTime || '',
+                '专业程度平均分': uesAvg(item.professionalLevelAvg),
+                '回复效率平均分': uesAvg(item.replyEfficiencyAvg),
+                '服务态度平均分': uesAvg(item.serviceAttitudeAvg),
+                '总平均分': uesAvg(item.allAverageScore)
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows, { header: ['序号', '被评人ID', '被评人姓名', '被评人员类型', '当前评论总数', '最近一次评论时间', '专业程度平均分', '回复效率平均分', '服务态度平均分', '总平均分'] });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '综合评价数据');
+            const followId = document.getElementById('uesFollowTalkId').value.trim() || 'all';
+            const dateStr = new Date().toISOString().replace('T','_').replace(/\.\d+Z$/,'').replace(/:/g,'-');
+            XLSX.writeFile(wb, `综合评价数据_${followId}_${dateStr}.xlsx`);
+        }
+
+        // 查询按钮
+        document.getElementById('queryUserEvaluationSumBtn').addEventListener('click', async function() {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录获取token');
+                return;
+            }
+            const statusDiv = document.getElementById('userEvaluationSumStatus');
+            const summaryDiv = document.getElementById('userEvaluationSumSummary');
+            const resultDiv = document.getElementById('userEvaluationSumResult');
+            statusDiv.innerHTML = '<div class="success-message">正在查询（第1次探测总量）...</div>';
+            summaryDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+            document.getElementById('exportUserEvaluationSumExcelBtn').style.display = 'none';
+
+            try {
+                const firstRes = await fetchUserEvaluationSum(token, 50);
+                if (!firstRes.success) {
+                    statusDiv.innerHTML = `<div class="error-message">查询失败: ${firstRes.message}</div>`;
+                    return;
+                }
+                let finalList = firstRes.list;
+                const totalCount = firstRes.totalCount || 0;
+
+                if (totalCount > 50) {
+                    statusDiv.innerHTML = `<div class="success-message">共 ${totalCount} 条，正在拉取全量数据...</div>`;
+                    const secondRes = await fetchUserEvaluationSum(token, totalCount);
+                    if (!secondRes.success) {
+                        statusDiv.innerHTML = `<div class="error-message">全量查询失败: ${secondRes.message}（已展示首50条）</div>`;
+                        userEvaluationSumData = finalList;
+                    } else {
+                        finalList = secondRes.list;
+                        userEvaluationSumData = finalList;
+                    }
+                } else {
+                    userEvaluationSumData = finalList;
+                }
+
+                renderUserEvaluationSumTable(userEvaluationSumData);
+
+                document.getElementById('uesTotalCount').textContent = userEvaluationSumData.length;
+                summaryDiv.style.display = 'block';
+                resultDiv.style.display = 'block';
+                document.getElementById('exportUserEvaluationSumExcelBtn').style.display = 'inline-block';
+                statusDiv.innerHTML = '';
+            } catch (err) {
+                console.error('综合评价数据查询错误:', err);
+                statusDiv.innerHTML = `<div class="error-message">查询异常: ${err.message}</div>`;
+            }
+        });
+
+        // 导出按钮
+        document.getElementById('exportUserEvaluationSumExcelBtn').addEventListener('click', exportUserEvaluationSumExcel);
+
+        // 回车触发查询
+        ['uesFollowTalkId'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') document.getElementById('queryUserEvaluationSumBtn').click();
                 });
             }
         });
