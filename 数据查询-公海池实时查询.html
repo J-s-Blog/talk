@@ -3190,27 +3190,31 @@
     <div id="userEvaluation" class="tab-content">
         <h2>用户评价</h2>
 
-        <!-- 查询条件 -->
-        <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+        <!-- 查询条件：手机也强制一行2个，大屏自动多列 -->
+        <div class="date-conditions" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        ">
             <div class="form-group inline">
                 <label for="ueUserInfo" style="margin-bottom: 5px; display: block;">评价人:</label>
-                <input type="text" id="ueUserInfo" placeholder="用户ID（可空）" style="box-sizing: border-box; width: 140px; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="text" id="ueUserInfo" placeholder="用户ID（可空）" style="box-sizing: border-box; width:100%; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div class="form-group inline">
                 <label for="ueFollowTalkId" style="margin-bottom: 5px; display: block;">被评人Id:</label>
-                <input type="text" id="ueFollowTalkId" placeholder="员工empID" style="box-sizing: border-box; width: 140px; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="text" id="ueFollowTalkId" placeholder="员工empID" style="box-sizing: border-box; width:100%; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div class="form-group inline">
                 <label for="ueStartDate" style="margin-bottom: 5px; display: block;">评价开始日期:</label>
-                <input type="date" id="ueStartDate" data-default-start style="box-sizing: border-box; width: 150px; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="date" id="ueStartDate" data-default-start style="box-sizing: border-box; width:100%; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div class="form-group inline">
                 <label for="ueEndDate" style="margin-bottom: 5px; display: block;">评价结束日期:</label>
-                <input type="date" id="ueEndDate" data-default-end style="box-sizing: border-box; width: 150px; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="date" id="ueEndDate" data-default-end style="box-sizing: border-box; width:100%; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div class="form-group inline">
                 <label for="ueUserType" style="margin-bottom: 5px; display: block;">被评人员类型:</label>
-                <select id="ueUserType" style="box-sizing: border-box; width: 120px; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <select id="ueUserType" style="box-sizing: border-box; width:100%; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="11" selected>员工</option>
                     <option value="5">业务员</option>
                     <option value="3">经销商</option>
@@ -3219,17 +3223,23 @@
             </div>
             <div class="form-group inline">
                 <label for="ueHandleStatus" style="margin-bottom: 5px; display: block;">处理状态:</label>
-                <select id="ueHandleStatus" style="box-sizing: border-box; width: 120px; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <select id="ueHandleStatus" style="box-sizing: border-box; width:100%; height:36px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="" selected>全部</option>
                     <option value="1">待处理</option>
                     <option value="2">已处理</option>
                 </select>
             </div>
-            <div style="display: flex; gap: 10px;">
+
+            <!-- 按钮独占整行 -->
+            <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
                 <button type="button" id="queryUserEvaluationBtn" style="padding: 8px 20px; width: auto;">查询</button>
-                <button type="button" id="exportUserEvaluationExcelBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #17a2b8;">导出Excel</button>
+                <button type="button" id="exportUserEvaluationExcelBtn" style="padding: 8px 20px; width: auto; background-color: #17a2b8;">导出Excel</button>
             </div>
         </div>
+
+
+
+
 
         <!-- 汇总信息 -->
         <div id="userEvaluationSummary" style="display: none; margin-bottom: 20px; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
