@@ -3072,7 +3072,8 @@
                 <label for="sfuStaffInfo" style="margin-bottom: 5px; display: block;">顾问empID:</label>
                 <input type="text" id="sfuStaffInfo" placeholder="如 emp75" style="width: 160px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
-            <div style="display: flex; gap: 10px;">
+            <!-- 关键：这一层 width:100% 会强制换行占满整行，按钮全部落在这一行 -->
+            <div style="width:100%; display: flex; gap: 10px;">
                 <button type="button" id="queryStaffFollowUpBtn" style="padding: 8px 20px; width: auto;">查询</button>
                 <button type="button" id="exportStaffFollowUpCsvBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #28a745;">导出CSV</button>
                 <button type="button" id="exportStaffFollowUpExcelBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #17a2b8;">导出Excel</button>
@@ -3081,6 +3082,7 @@
                 <input type="checkbox" id="sfuQueryDetails"> 查询消耗课时
             </label>
         </div>
+
 
         <p style="font-size: 13px; color: #666; margin: 8px 0 0 0;">
             说明：将依次查询该顾问的「公海池跟进列表」与「绑定跟进列表」并合并展示。首次查询以 pageSize=1 获取 totalCount，再以 totalCount 作为 pageSize 一次性拉取全部记录。
