@@ -4189,8 +4189,8 @@
             const courseSummary = {};
             data.forEach(item => {
                 const isOverseasUser = overseasUserIds.has(String(item.userId));
-                const teachCourse = item.teachCourse || '未知';
-                const key = isOverseasUser && item.teachCourse ? item.teachCourse + '-海外' : teachCourse;
+                const teachCourse = (item.teachCourse && item.teachCourse.trim()) || '未知';
+                const key = isOverseasUser && item.teachCourse && item.teachCourse.trim() ? item.teachCourse.trim() + '-海外' : teachCourse;
                 if (!courseSummary[key]) {
                     courseSummary[key] = {
                         teachCourse: key,
@@ -4200,10 +4200,14 @@
                 courseSummary[key].count++;
             });
             
+            // 按公海池用户数从大到小排序
+            const courseSummaryList = Object.values(courseSummary).sort((a, b) => b.count - a.count);
+            const totalCount = courseSummaryList.reduce((sum, item) => sum + item.count, 0);
+            
             const courseSummaryTable = document.getElementById('courseSummaryTable').querySelector('tbody');
             courseSummaryTable.innerHTML = '';
             
-            Object.values(courseSummary).forEach((item, index) => {
+            courseSummaryList.forEach((item, index) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${index + 1}</td>
@@ -4212,6 +4216,17 @@
                 `;
                 courseSummaryTable.appendChild(row);
             });
+            
+            // 添加汇总行
+            const totalRow = document.createElement('tr');
+            totalRow.style.fontWeight = 'bold';
+            totalRow.style.backgroundColor = '#f0f0f0';
+            totalRow.innerHTML = `
+                <td></td>
+                <td>合计</td>
+                <td>${totalCount}</td>
+            `;
+            courseSummaryTable.appendChild(totalRow);
             
             // 4. 填充注销用户列表
             const canceledUsersTable = document.getElementById('canceledUsersTable').querySelector('tbody');
@@ -5462,7 +5477,7 @@
                 }
                 
                 // 推荐码维度统计
-                const salesmanTalkId = item.teachCourse || '未知';
+                const salesmanTalkId = (item.teachCourse && item.teachCourse.trim()) || '未知';
                 if (!salesmanStats[salesmanTalkId]) {
                     salesmanStats[salesmanTalkId] = initFollowUpStats();
                 }
@@ -6364,7 +6379,7 @@
                         }
                         
                         // 推荐码维度统计
-                        const salesmanTalkId = item.teachCourse || '未知';
+                        const salesmanTalkId = (item.teachCourse && item.teachCourse.trim()) || '未知';
                         if (!salesmanStats[salesmanTalkId]) {
                             salesmanStats[salesmanTalkId] = initExportStats();
                         }
@@ -7426,8 +7441,8 @@
             const courseSummary = {};
             data.forEach(item => {
                 const isOverseasUser = overseasUserIds.has(String(item.userId));
-                const teachCourse = item.teachCourse || '未知';
-                const key = isOverseasUser && item.teachCourse ? item.teachCourse + '-海外' : teachCourse;
+                const teachCourse = (item.teachCourse && item.teachCourse.trim()) || '未知';
+                const key = isOverseasUser && item.teachCourse && item.teachCourse.trim() ? item.teachCourse.trim() + '-海外' : teachCourse;
                 if (!courseSummary[key]) {
                     courseSummary[key] = {
                         teachCourse: key,
@@ -7437,13 +7452,29 @@
                 courseSummary[key].count++;
             });
             
+            // 按公海池用户数从大到小排序
+            const courseSummaryList = Object.values(courseSummary).sort((a, b) => b.count - a.count);
+            const totalCount = courseSummaryList.reduce((sum, item) => sum + item.count, 0);
+            
             // 填充推荐码汇总表数据
-            Object.values(courseSummary).forEach((item, index) => {
+            courseSummaryList.forEach((item, index) => {
                 courseSummarySheet.addRow({
                     index: index + 1,
                     teachCourse: item.teachCourse,
                     count: item.count
                 });
+            });
+            
+            // 添加汇总行
+            const totalRow = courseSummarySheet.addRow({
+                index: '',
+                teachCourse: '合计',
+                count: totalCount
+            });
+            totalRow.font = { bold: true };
+            // 为每个单元格设置背景色
+            totalRow.eachCell({ includeEmpty: false }, (cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
             });
             
             // 创建待分配用户列表sheet
