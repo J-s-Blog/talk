@@ -315,6 +315,70 @@
             background-color: #e8f5e9;
         }
 
+        /* 用户评价表格列宽度 */
+        #userEvaluationTable {
+            table-layout: fixed;
+        }
+        #userEvaluationTable th,
+        #userEvaluationTable td {
+            padding: 8px 10px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        #userEvaluationTable th:nth-child(1),
+        #userEvaluationTable td:nth-child(1) {
+            min-width: 50px; /* 序号 */
+            text-align: right;
+        }
+        #userEvaluationTable th:nth-child(2),
+        #userEvaluationTable td:nth-child(2) {
+            min-width: 100px; /* 评价人 */
+        }
+        #userEvaluationTable th:nth-child(3),
+        #userEvaluationTable td:nth-child(3) {
+            min-width: 110px; /* 被评人员类型 */
+        }
+        #userEvaluationTable th:nth-child(4),
+        #userEvaluationTable td:nth-child(4) {
+            min-width: 110px; /* 被评人ID */
+        }
+        #userEvaluationTable th:nth-child(5),
+        #userEvaluationTable td:nth-child(5) {
+            min-width: 100px; /* 被评人姓名 */
+        }
+        #userEvaluationTable th:nth-child(6),
+        #userEvaluationTable td:nth-child(6) {
+            min-width: 160px; /* 评论时间 */
+        }
+        #userEvaluationTable th:nth-child(7),
+        #userEvaluationTable td:nth-child(7) {
+            min-width: 260px; /* 评论内容 */
+            max-width: 360px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        #userEvaluationTable th:nth-child(8),
+        #userEvaluationTable td:nth-child(8),
+        #userEvaluationTable th:nth-child(9),
+        #userEvaluationTable td:nth-child(9),
+        #userEvaluationTable th:nth-child(10),
+        #userEvaluationTable td:nth-child(10),
+        #userEvaluationTable th:nth-child(11),
+        #userEvaluationTable td:nth-child(11) {
+            min-width: 80px; /* 评分列 */
+            text-align: center;
+        }
+        #userEvaluationTable th:nth-child(12),
+        #userEvaluationTable td:nth-child(12) {
+            min-width: 100px; /* 反馈图片 */
+        }
+        #userEvaluationTable th:nth-child(13),
+        #userEvaluationTable td:nth-child(13) {
+            min-width: 160px; /* 处理记录 */
+            word-break: break-all;
+        }
+
         /* 关键字管理区域样式 */
         .keyword-management {
             margin: 20px 0;
@@ -1787,7 +1851,35 @@
         .toggle-advanced-btn.collapsed:hover {
             background-color: #1e7e34;
         }
-        
+
+        /* 用户评价 - 移动端优化 */
+        @media screen and (max-width: 768px) {
+            #userEvaluation .date-conditions {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            #userEvaluation .date-conditions > div,
+            #userEvaluation .date-conditions .form-group.inline {
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            #userEvaluation .date-conditions input[type="text"],
+            #userEvaluation .date-conditions input[type="date"],
+            #userEvaluation .date-conditions select {
+                width: 100% !important;
+                box-sizing: border-box;
+                height: 38px;
+            }
+            #userEvaluation .date-conditions > div:last-child {
+                display: flex;
+                gap: 10px;
+            }
+            #userEvaluationTable {
+                min-width: 900px !important;
+            }
+        }
+
+
         /* 超小屏幕适配 (max-width: 380px) */
         @media screen and (max-width: 380px) {
             body {
@@ -1986,6 +2078,7 @@
                     <option value="employeeManagement">员工管理</option>
                     <option value="batchAssign">批量用户分配</option>
                     <option value="staffFollowUp">查询顾问跟进列表</option>
+                    <option value="userEvaluation">用户评价</option>
                 </select>
             </div>
             <!-- 桌面端按钮 -->
@@ -1999,6 +2092,7 @@
                 <button class="tab-button" data-tab="employeeManagement">员工管理</button>
                 <button class="tab-button" data-tab="batchAssign">批量用户分配</button>
                 <button class="tab-button" data-tab="staffFollowUp">查询顾问跟进列表</button>
+                <button class="tab-button" data-tab="userEvaluation">用户评价</button>
             </div>
             
             <!-- 登录Tab -->
@@ -3012,6 +3106,87 @@
                         <tbody></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户评价Tab -->
+    <div id="userEvaluation" class="tab-content">
+        <h2>用户评价</h2>
+
+        <!-- 查询条件 -->
+        <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div class="form-group inline">
+                <label for="ueUserInfo" style="margin-bottom: 5px; display: block;">评价人:</label>
+                <input type="text" id="ueUserInfo" placeholder="用户ID（可空）" style="width: 140px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div class="form-group inline">
+                <label for="ueFollowTalkId" style="margin-bottom: 5px; display: block;">被评人Id:</label>
+                <input type="text" id="ueFollowTalkId" placeholder="员工empID" style="width: 140px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div class="form-group inline">
+                <label for="ueStartDate" style="margin-bottom: 5px; display: block;">评价开始日期:</label>
+                <input type="date" id="ueStartDate" data-default-start style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div class="form-group inline">
+                <label for="ueEndDate" style="margin-bottom: 5px; display: block;">评价结束日期:</label>
+                <input type="date" id="ueEndDate" data-default-end style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div class="form-group inline">
+                <label for="ueUserType" style="margin-bottom: 5px; display: block;">被评人员类型:</label>
+                <select id="ueUserType" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="11" selected>员工</option>
+                    <option value="5">业务员</option>
+                    <option value="3">经销商</option>
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <div class="form-group inline">
+                <label for="ueHandleStatus" style="margin-bottom: 5px; display: block;">处理状态:</label>
+                <select id="ueHandleStatus" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="" selected>全部</option>
+                    <option value="1">待处理</option>
+                    <option value="2">已处理</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="queryUserEvaluationBtn" style="padding: 8px 20px; width: auto;">查询</button>
+                <button type="button" id="exportUserEvaluationExcelBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #17a2b8;">导出Excel</button>
+            </div>
+        </div>
+
+        <!-- 汇总信息 -->
+        <div id="userEvaluationSummary" style="display: none; margin-bottom: 20px; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                <div><strong>总条数:</strong> <span id="ueTotalCount">0</span> 条</div>
+                <div><strong>平均分:</strong> <span id="ueAvgScore">0</span></div>
+            </div>
+        </div>
+
+        <!-- 结果表格 -->
+        <div id="userEvaluationResult" style="display: none;">
+            <div id="userEvaluationStatus" style="margin-bottom: 15px;"></div>
+            <div class="table-container">
+                <table id="userEvaluationTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>评价人</th>
+                            <th>被评人员类型</th>
+                            <th>被评人ID</th>
+                            <th>被评人姓名</th>
+                            <th>评论时间</th>
+                            <th>评论内容</th>
+                            <th>专业程度</th>
+                            <th>回复效率</th>
+                            <th>服务态度</th>
+                            <th>平均分</th>
+                            <th>反馈图片</th>
+                            <th>处理记录</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -11012,6 +11187,261 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '批量查询汇总');
             XLSX.writeFile(wb, `顾问跟进批量查询汇总_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
+
+        // ==================== 用户评价 Tab ====================
+        let userEvaluationData = [];
+
+        // 默认日期：前一周
+        function getDefaultUeDate() {
+            const d = new Date();
+            d.setDate(d.getDate() - 7);
+            return d.toISOString().split('T')[0];
+        }
+        function getTodayUeDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // 初始化日期（页面加载完成后）
+        function initUeDefaults() {
+            const start = document.getElementById('ueStartDate');
+            const end = document.getElementById('ueEndDate');
+            if (start && !start.value) start.value = getDefaultUeDate();
+            if (end && !end.value) end.value = getTodayUeDate();
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initUeDefaults);
+        } else {
+            initUeDefaults();
+        }
+
+        // userType 映射
+        function ueUserTypeText(v) {
+            if (v === '' || v === null || v === undefined) return '全部';
+            const map = { '5': '业务员', '3': '经销商', '11': '员工' };
+            return map[String(v)] || String(v);
+        }
+
+        // 评分星级转换（原接口返回的是数字分，直接展示）
+        function ueScore(val) {
+            if (val === null || val === undefined || val === '') return '-';
+            return val;
+        }
+
+        // 解析 feedbackImg，返回图片 URL 数组
+        function parseFeedbackImg(feedbackImg) {
+            if (!feedbackImg || typeof feedbackImg !== 'string') return [];
+            try {
+                // 先尝试解析，注意可能有奇怪的转义或反引号
+                // 示例数据: "{\"content\":[\"`https://cos...jpg`\"],\"type\":\"image\"}"
+                let jsonStr = feedbackImg;
+                // 如果首尾不是大括号，尝试提取
+                const firstBrace = jsonStr.indexOf('{');
+                const lastBrace = jsonStr.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                    jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+                }
+                const obj = JSON.parse(jsonStr);
+                if (obj && Array.isArray(obj.content)) {
+                    return obj.content.map(url => {
+                        if (!url) return '';
+                        // 去除可能包含的反引号、空格
+                        return String(url).replace(/`/g, '').trim();
+                    }).filter(url => url && /^https?:\/\//i.test(url)); // 过滤有效 URL
+                }
+            } catch (e) {
+                // 解析失败，返回空
+            }
+            return [];
+        }
+
+        // 构建 payload
+        function buildUserEvaluationPayload() {
+            const userInfo = document.getElementById('ueUserInfo').value.trim();
+            const followTalkId = document.getElementById('ueFollowTalkId').value.trim();
+            const createStartTime = document.getElementById('ueStartDate').value;
+            const createEndTime = document.getElementById('ueEndDate').value;
+            const userType = document.getElementById('ueUserType').value;
+            const handleStatus = document.getElementById('ueHandleStatus').value;
+            return {
+                userInfo: userInfo,
+                followTalkId: followTalkId,
+                createStartTime: createStartTime,
+                createEndTime: createEndTime,
+                userType: userType === '' ? '' : Number(userType),
+                handleStatus: handleStatus === '' ? '' : Number(handleStatus),
+                currPage: 0,
+                pageSize: 1000
+            };
+        }
+
+        // 查询接口
+        async function fetchUserEvaluation(token, pageSize) {
+            const payload = buildUserEvaluationPayload();
+            payload.pageSize = pageSize;
+            payload.currPage = 0;
+            const resp = await fetch('https://www.talk915.com/market/adminOperation/queryCommentFeedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/plain, */*',
+                    'token': token
+                },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.resultCode !== 0) {
+                return { success: false, message: data.resultMessage || '未知错误' };
+            }
+            return {
+                success: true,
+                list: data.resultData || [],
+                totalCount: data.totalCount || 0
+            };
+        }
+
+        // 渲染表格
+        function renderUserEvaluationTable(data) {
+            const tbody = document.querySelector('#userEvaluationTable tbody');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#999;padding:20px;">暂无数据</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map((item, index) => {
+                const imgs = parseFeedbackImg(item.feedbackImg);
+                let imgHtml = '';
+                if (imgs.length > 0) {
+                    imgHtml = imgs.map(url => 
+                        `<a href="${url}" target="_blank" rel="noopener noreferrer" title="点击查看">预览</a>`
+                    ).join(' ');
+                }
+                return `
+                <tr>
+                    <td style="text-align:right">${index + 1}</td>
+                    <td>${item.userId != null ? item.userId : ''}</td>
+                    <td>${ueUserTypeText(item.userType)}</td>
+                    <td>${item.followTalkId || ''}</td>
+                    <td>${item.followName || ''}</td>
+                    <td>${item.createTime || ''}</td>
+                    <td title="${(item.commentContent || '').replace(/"/g, '&quot;')}">${item.commentContent || ''}</td>
+                    <td style="text-align:center">${ueScore(item.professionalLevel)}</td>
+                    <td style="text-align:center">${ueScore(item.replyEfficiency)}</td>
+                    <td style="text-align:center">${ueScore(item.serviceAttitude)}</td>
+                    <td style="text-align:center">${ueScore(item.averageScore)}</td>
+                    <td>${imgHtml}</td>
+                    <td>${item.handleContent || ''}</td>
+                </tr>
+            `}).join('');
+        }
+
+        // 导出 Excel（仅保存图片路径）
+        function exportUserEvaluationExcel() {
+            if (!userEvaluationData || userEvaluationData.length === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+            const rows = userEvaluationData.map((item, index) => {
+                const imgs = parseFeedbackImg(item.feedbackImg);
+                const imgStr = imgs.length > 0 ? imgs.join('; ') : '';
+                return {
+                    '序号': index + 1,
+                    '评价人': item.userId != null ? item.userId : '',
+                    '被评人员类型': ueUserTypeText(item.userType),
+                    '被评人ID': item.followTalkId || '',
+                    '被评人姓名': item.followName || '',
+                    '评论时间': item.createTime || '',
+                    '评论内容': item.commentContent || '',
+                    '专业程度': ueScore(item.professionalLevel),
+                    '回复效率': ueScore(item.replyEfficiency),
+                    '服务态度': ueScore(item.serviceAttitude),
+                    '平均分': ueScore(item.averageScore),
+                    '反馈图片': imgStr,
+                    '处理记录': item.handleContent || ''
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(rows, { header: ['序号', '评价人', '被评人员类型', '被评人ID', '被评人姓名', '评论时间', '评论内容', '专业程度', '回复效率', '服务态度', '平均分', '反馈图片', '处理记录'] });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '用户评价');
+            const followId = document.getElementById('ueFollowTalkId').value.trim() || 'all';
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `用户评价_${followId}_${dateStr}.xlsx`);
+        }
+
+        // 查询按钮
+        document.getElementById('queryUserEvaluationBtn').addEventListener('click', async function() {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录获取token');
+                return;
+            }
+            const statusDiv = document.getElementById('userEvaluationStatus');
+            const summaryDiv = document.getElementById('userEvaluationSummary');
+            const resultDiv = document.getElementById('userEvaluationResult');
+            statusDiv.innerHTML = '<div class="success-message">正在查询（第1次探测总量）...</div>';
+            summaryDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+            document.getElementById('exportUserEvaluationExcelBtn').style.display = 'none';
+
+            try {
+                // 第一次 pageSize=1000 查询
+                const firstRes = await fetchUserEvaluation(token, 1000);
+                if (!firstRes.success) {
+                    statusDiv.innerHTML = `<div class="error-message">查询失败: ${firstRes.message}</div>`;
+                    return;
+                }
+                let finalList = firstRes.list;
+                const totalCount = firstRes.totalCount || 0;
+
+                // 如果 totalCount > 1000，再一次以 totalCount 拉全量
+                if (totalCount > 1000) {
+                    statusDiv.innerHTML = `<div class="success-message">共 ${totalCount} 条，正在拉取全量数据...</div>`;
+                    const secondRes = await fetchUserEvaluation(token, totalCount);
+                    if (!secondRes.success) {
+                        statusDiv.innerHTML = `<div class="error-message">全量查询失败: ${secondRes.message}（已展示首1000条）</div>`;
+                        userEvaluationData = finalList;
+                    } else {
+                        finalList = secondRes.list;
+                        userEvaluationData = finalList;
+                    }
+                } else {
+                    userEvaluationData = finalList;
+                }
+
+                renderUserEvaluationTable(userEvaluationData);
+
+                // 汇总
+                if (userEvaluationData.length > 0) {
+                    const avg = userEvaluationData.reduce((s, it) => s + (parseFloat(it.averageScore) || 0), 0) / userEvaluationData.length;
+                    document.getElementById('ueTotalCount').textContent = userEvaluationData.length;
+                    document.getElementById('ueAvgScore').textContent = avg.toFixed(2);
+                    summaryDiv.style.display = 'block';
+                    resultDiv.style.display = 'block';
+                    document.getElementById('exportUserEvaluationExcelBtn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('ueTotalCount').textContent = 0;
+                    document.getElementById('ueAvgScore').textContent = '0';
+                    summaryDiv.style.display = 'block';
+                    resultDiv.style.display = 'block';
+                }
+                statusDiv.innerHTML = '';
+            } catch (err) {
+                console.error('用户评价查询错误:', err);
+                statusDiv.innerHTML = `<div class="error-message">查询异常: ${err.message}</div>`;
+            }
+        });
+
+        // 导出按钮
+        document.getElementById('exportUserEvaluationExcelBtn').addEventListener('click', exportUserEvaluationExcel);
+
+        // 回车触发查询
+        ['ueUserInfo', 'ueFollowTalkId'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') document.getElementById('queryUserEvaluationBtn').click();
+                });
+            }
         });
 
     </script>
