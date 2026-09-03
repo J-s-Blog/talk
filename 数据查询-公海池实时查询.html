@@ -713,7 +713,15 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-        
+
+        /* 时间差计算开关样式 */
+        #calcTimeDiffToggle:checked + .slider-toggle {
+            background-color: #4caf50;
+        }
+        #calcTimeDiffToggle:checked + .slider-toggle span {
+            transform: translateX(20px);
+        }
+
         /* 数据概览区域样式 */
         .overview-container {
             background-color: #f8f9fa;
@@ -1767,6 +1775,31 @@
                 padding: 5px 6px !important;
                 font-size: 12px !important;
             }
+            
+            /* 套餐统计、按日统计表 - 移动端优化 */
+            #productStatsTable,
+            #dailyStatsTableFullTime,
+            #dailyStatsTablePartTime {
+                min-width: 500px !important;
+            }
+            
+            #productStatsTable th,
+            #productStatsTable td,
+            #dailyStatsTableFullTime th,
+            #dailyStatsTableFullTime td,
+            #dailyStatsTablePartTime th,
+            #dailyStatsTablePartTime td {
+                padding: 5px 8px !important;
+                font-size: 12px !important;
+                white-space: nowrap;
+            }
+
+            /* 按日统计标题在手机下的紧凑样式 */
+            #rechargeDailyStats h3 {
+                margin: 10px 0 6px 0 !important;
+                font-size: 14px !important;
+                padding: 0 4px;
+            }
             /* 在手机布局下，未展开时隐藏整个面板避免空边框占位；展开时随 .open 显示 */
             #roAdvancedPanel:not(.open) {
                 display: none;
@@ -2246,6 +2279,17 @@
                         <input type="number" id="refreshInterval" name="refreshInterval" value="30" min="30" max="3600" style="width: 60px;">
                         <span>秒</span>
                     </div>
+                </div>
+
+                <!-- 时间差计算开关 -->
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px 12px; background-color: #f0f4f8; border-radius: 6px; border: 1px solid #d0dae6;">
+                    <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
+                        <input type="checkbox" id="calcTimeDiffToggle" style="opacity: 0; width: 0; height: 0;">
+                        <span class="slider-toggle" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;">
+                            <span style="position: absolute; content: ''; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
+                        </span>
+                    </label>
+                    <label for="calcTimeDiffToggle" style="font-size: 14px; color: #333; cursor: pointer; user-select: none;">计算领取/跟进时间差平均值（默认关闭，开启后刷新和导出速度变慢）</label>
                 </div>
                 
                 <!-- 日期控件 -->
@@ -2830,6 +2874,7 @@
                     <option value="detail">订单明细</option>
                     <option value="consultant">顾问统计</option>
                     <option value="product">套餐统计</option>
+                    <option value="daily">按日统计</option>
                 </select>
             </div>
             <!-- 桌面端按钮 -->
@@ -2837,6 +2882,7 @@
                 <button id="tabDetail" class="tab-btn active" onclick="switchRechargeTab('detail')">订单明细</button>
                 <button id="tabConsultant" class="tab-btn" onclick="switchRechargeTab('consultant')">顾问统计</button>
                 <button id="tabProduct" class="tab-btn" onclick="switchRechargeTab('product')">套餐统计</button>
+                <button id="tabDaily" class="tab-btn" onclick="switchRechargeTab('daily')">按日统计</button>
             </div>
         </div>
         
@@ -2891,6 +2937,37 @@
                         <tr>
                             <th>顾问姓名</th>
                             <!-- 套餐名会动态生成 -->
+                            <th>合计</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 按日统计表格（分全职/兼职顾问两张表） -->
+        <div id="rechargeDailyStats" style="display: none;">
+            <h3 style="margin: 10px 0 8px 0; font-size: 16px; color: #333;">全职顾问 - 按日统计</h3>
+            <div class="table-container">
+                <table id="dailyStatsTableFullTime" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>套餐名</th>
+                            <!-- 日期会动态生成 -->
+                            <th>合计</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">兼职顾问 - 按日统计</h3>
+            <div class="table-container">
+                <table id="dailyStatsTablePartTime" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>套餐名</th>
+                            <!-- 日期会动态生成 -->
                             <th>合计</th>
                         </tr>
                     </thead>
@@ -3657,7 +3734,10 @@
                     overseasUserIds.add(String(u.userId));
                 });
             }
-            
+
+            // 是否计算领取/跟进时间差（开关默认关闭；关闭时跳过耗时的跟进记录查询，加快刷新速度）
+            const calcTimeDiffEnabled = document.getElementById('calcTimeDiffToggle').checked;
+
             // 1. 填充明细表
             const detailTable = document.getElementById('detailTable').querySelector('tbody');
             detailTable.innerHTML = '';
@@ -3714,14 +3794,14 @@
                     
                     return diffMinutes;
                 }
-                
-                const receiveTimeDiff = calculateTimeDiff(item.createTime, item.receiveTime);
+
+                const receiveTimeDiff = calcTimeDiffEnabled ? calculateTimeDiff(item.createTime, item.receiveTime) : '-';
                 let followTimeDiff = '-';
-                
+
                 // 计算跟进时间差（最早一条跟进记录时间 - 领取时间）
                 function calculateFollowTimeDiff(receiveTime, followRecords) {
                     if (!receiveTime || !followRecords || followRecords === '无记录') return '-';
-                    
+
                     // 提取所有跟进记录的时间
                     const timeRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/g;
                     const times = [];
@@ -3729,12 +3809,12 @@
                     while ((match = timeRegex.exec(followRecords)) !== null) {
                         times.push(match[1]);
                     }
-                    
+
                     if (times.length === 0) return '-';
-                    
+
                     // 找到最早的跟进时间
                     const earliestTime = times.sort((a, b) => new Date(a) - new Date(b))[0];
-                    
+
                     // 计算时间差
                     return calculateTimeDiff(receiveTime, earliestTime);
                 }
@@ -3817,24 +3897,36 @@
                     <td>${formatDate(item.createTime)}</td>
                     <td>${formatDate(item.receiveTime)}</td>
                     <td>${receiveTimeDiff}</td>
-                    <td>加载中...</td>
+                    <td>${calcTimeDiffEnabled ? '加载中...' : '-'}</td>
                     <td>${totalHours}</td>
                     <td>${remainingHours}</td>
                     <td>加载中...</td>
                 `;
-                
+
                 // 异步查询跟进记录并更新
-                queryFollowRecord(item.userId).then(followRecord => {
-                    const followTimeDiff = calculateFollowTimeDiff(item.receiveTime, followRecord);
-                    const cells = row.querySelectorAll('td');
-                    cells[9].textContent = followTimeDiff; // 跟进时间差列
-                    cells[12].innerHTML = followRecord; // 跟进记录列，使用innerHTML处理HTML标签
-                    
-                    // 如果跟进记录为"无记录"，设置背景色为浅红色
-                    if (followRecord === '无记录') {
-                        row.style.backgroundColor = '#ffebee'; // 浅红色
-                    }
-                });
+                if (calcTimeDiffEnabled) {
+                    queryFollowRecord(item.userId).then(followRecord => {
+                        const followTimeDiff = calculateFollowTimeDiff(item.receiveTime, followRecord);
+                        const cells = row.querySelectorAll('td');
+                        cells[9].textContent = followTimeDiff; // 跟进时间差列
+                        cells[12].innerHTML = followRecord; // 跟进记录列，使用innerHTML处理HTML标签
+
+                        // 如果跟进记录为"无记录"，设置背景色为浅红色
+                        if (followRecord === '无记录') {
+                            row.style.backgroundColor = '#ffebee'; // 浅红色
+                        }
+                    });
+                } else {
+                    // 开关关闭时，仍异步查询跟进记录用于显示（但不计算时间差）
+                    queryFollowRecord(item.userId).then(followRecord => {
+                        const cells = row.querySelectorAll('td');
+                        cells[12].innerHTML = followRecord; // 跟进记录列
+
+                        if (followRecord === '无记录') {
+                            row.style.backgroundColor = '#ffebee';
+                        }
+                    });
+                }
                 detailTable.appendChild(row);
             });
             
@@ -3892,16 +3984,19 @@
                     return diffMinutes;
                 }
                 
-                const receiveTimeDiff = calculateReceiveTimeDiff(item.createTime, item.receiveTime);
-                if (receiveTimeDiff > 0) {
-                    staffSummary[key].receiveTimeDiffSum += receiveTimeDiff;
-                    staffSummary[key].receiveTimeDiffCount++;
+                // 领取时间差仅在开关开启时累计计算（关闭时平均值显示'-'）
+                if (calcTimeDiffEnabled) {
+                    const receiveTimeDiff = calculateReceiveTimeDiff(item.createTime, item.receiveTime);
+                    if (receiveTimeDiff > 0) {
+                        staffSummary[key].receiveTimeDiffSum += receiveTimeDiff;
+                        staffSummary[key].receiveTimeDiffCount++;
+                    }
                 }
             });
             
-            // 计算跟进时间差和未跟进用户数
+            // 计算跟进时间差和未跟进用户数（开关关闭时跳过耗时的跟进记录查询，不计算跟进时间差平均值，加快刷新/导出速度）
             const token = localStorage.getItem('talk915_token');
-            if (token) {
+            if (token && calcTimeDiffEnabled) {
                 // 并行查询所有用户的跟进记录
                 const followRecordPromises = data.map(async (item) => {
                     const key = item.staffName || '未知';
@@ -4121,7 +4216,7 @@
                     });
                 });
             } else {
-                // 没有token时只显示基本信息
+                // 开关关闭（或无token）时跳过跟进记录查询，只显示基本信息（时间差平均值/未跟进列显示'-'）
                 // 匹配保有量配置数据
                 if (specialHoldData && specialHoldData.length > 0) {
                     Object.values(staffSummary).forEach(item => {
@@ -4145,6 +4240,38 @@
                             } else {
                                 item.todayFootfallCount = stats;
                             }
+                        }
+                    });
+
+                    // 将领取记录中的顾问补充到汇总表中（即使他们当前没有在公海池的用户；开关关闭时同样保留）
+                    const canceledUserList = window.canceledUserData || [];
+                    Object.keys(footfallStats).forEach(staffName => {
+                        if (!staffSummary[staffName]) {
+                            const stats = footfallStats[staffName];
+                            const staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                            let todayUserGetLimit = '-';
+                            if (specialHoldData && specialHoldData.length > 0) {
+                                const holdConfig = specialHoldData.find(h => 
+                                    h.staffTalkId === staffTalkId || h.staffName === staffName
+                                );
+                                if (holdConfig && holdConfig.todayUserGetLimit !== undefined && holdConfig.todayUserGetLimit !== null) {
+                                    todayUserGetLimit = holdConfig.todayUserGetLimit;
+                                }
+                            }
+                            staffSummary[staffName] = {
+                                staffName: staffName,
+                                staffTalkId: staffTalkId,
+                                todayUserGetLimit: todayUserGetLimit,
+                                todayFootfallCount: stats.todayFootfallCount || 0,
+                                canceledUserCount: stats.canceledUserCount || 0,
+                                count: 0,
+                                receiveTimeDiffSum: 0,
+                                receiveTimeDiffCount: 0,
+                                followTimeDiffSum: 0,
+                                followTimeDiffCount: 0,
+                                noFollowCount: 0,
+                                noFollowDetails: []
+                            };
                         }
                     });
                 }
@@ -6951,6 +7078,8 @@
             exportBtn.textContent = '导出中...';
             
             try {
+                // 是否计算领取/跟进时间差（开关默认关闭；关闭时跳过耗时的跟进记录查询，加快导出速度）
+                const calcTimeDiffEnabled = document.getElementById('calcTimeDiffToggle').checked;
                 // 先查询所有用户的跟进记录
                 const recordsWithFollow = await Promise.all(data.map(async (item) => {
                     // 计算总课时和剩余课时
@@ -7186,8 +7315,8 @@
                         userId: item.userId || '-',
                         createTime: formatDate(item.createTime),
                         receiveTime: formatDate(item.receiveTime),
-                        receiveTimeDiff: parseFloat(record.timeDiff) || '-',
-                        followTimeDiff: parseFloat(followTimeDiff) || '-',
+                        receiveTimeDiff: calcTimeDiffEnabled ? (parseFloat(record.timeDiff) || '-') : '-',
+                        followTimeDiff: calcTimeDiffEnabled ? (parseFloat(followTimeDiff) || '-') : '-',
                         totalHours: parseFloat(record.totalHours) || 0,
                         remainingHours: parseFloat(record.remainingHours) || 0,
                         followRecord: record.followRecord
@@ -7264,16 +7393,19 @@
                     return diffMinutes;
                 }
                 
-                const receiveTimeDiff = calculateReceiveTimeDiff(item.createTime, item.receiveTime);
-                if (receiveTimeDiff > 0) {
-                    staffSummary[key].receiveTimeDiffSum += receiveTimeDiff;
-                    staffSummary[key].receiveTimeDiffCount++;
+                // 领取时间差仅在开关开启时累计计算（关闭时平均值显示'-'）
+                if (calcTimeDiffEnabled) {
+                    const receiveTimeDiff = calculateReceiveTimeDiff(item.createTime, item.receiveTime);
+                    if (receiveTimeDiff > 0) {
+                        staffSummary[key].receiveTimeDiffSum += receiveTimeDiff;
+                        staffSummary[key].receiveTimeDiffCount++;
+                    }
                 }
             });
             
-            // 计算跟进时间差和未跟进用户数
+            // 计算跟进时间差和未跟进用户数（开关关闭时跳过耗时的跟进记录查询，不计算跟进时间差平均值，加快刷新/导出速度）
             const token = localStorage.getItem('talk915_token');
-            if (token) {
+            if (token && calcTimeDiffEnabled) {
                 // 并行查询所有用户的跟进记录
                 const followRecordPromises = data.map(async (item) => {
                     const key = item.staffName || '未知';
@@ -7417,14 +7549,18 @@
             
             // 填充顾问汇总表数据
             Object.values(staffSummary).forEach((item, index) => {
-                // 计算平均值
-                const avgReceiveTimeDiff = item.receiveTimeDiffCount > 0 
+                // 计算平均值（开关关闭时不计算，导出为'-'）
+                const avgReceiveTimeDiff = (calcTimeDiffEnabled && item.receiveTimeDiffCount > 0) 
                     ? (item.receiveTimeDiffSum / item.receiveTimeDiffCount).toFixed(2) 
                     : '-';
-                const avgFollowTimeDiff = item.followTimeDiffCount > 0 
+                const avgFollowTimeDiff = (calcTimeDiffEnabled && item.followTimeDiffCount > 0) 
                     ? (item.followTimeDiffSum / item.followTimeDiffCount).toFixed(2) 
                     : '-';
-                const noFollowDetailsText = item.noFollowDetails.length > 0 ? item.noFollowDetails.join('；\n') : '-';
+                // 未跟进统计依赖跟进记录查询，开关关闭时导出为'-'（避免误显示为0）
+                const noFollowCountVal = calcTimeDiffEnabled ? item.noFollowCount : '-';
+                const noFollowDetailsText = calcTimeDiffEnabled
+                    ? (item.noFollowDetails.length > 0 ? item.noFollowDetails.join('；\n') : '-')
+                    : '-';
                 
                 staffSummarySheet.addRow({
                     index: index + 1,
@@ -7436,7 +7572,7 @@
                     count: item.count,
                     avgReceiveTimeDiff: parseFloat(avgReceiveTimeDiff) || '-',
                     avgFollowTimeDiff: parseFloat(avgFollowTimeDiff) || '-',
-                    noFollowCount: item.noFollowCount,
+                    noFollowCount: noFollowCountVal,
                     noFollowDetails: noFollowDetailsText
                 });
             });
@@ -8759,12 +8895,15 @@
                     // 生成并渲染统计表格
                     const consultantStats = generateConsultantStats(data.resultData.resultList);
                     const productStats = generateProductStats(data.resultData.resultList);
+                    const dailyStats = generateDailyStats(data.resultData.resultList);
                     renderConsultantStats(consultantStats);
                     renderProductStats(productStats);
+                    renderDailyStats(dailyStats);
                     
                     // 保存统计数据到全局变量
                     window.rechargeConsultantStats = consultantStats;
                     window.rechargeProductStats = productStats;
+                    window.rechargeDailyStats = dailyStats;
                     
                     // 显示结果
                     resultDiv.style.display = 'block';
@@ -8824,6 +8963,7 @@
             document.getElementById('rechargeOrderResult').style.display = 'none';
             document.getElementById('rechargeConsultantStats').style.display = 'none';
             document.getElementById('rechargeProductStats').style.display = 'none';
+            document.getElementById('rechargeDailyStats').style.display = 'none';
             
             // 移除所有tab按钮的active类
             document.querySelectorAll('#rechargeTabs .tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -8842,6 +8982,16 @@
                     document.getElementById('rechargeProductStats').style.display = 'block';
                     document.getElementById('tabProduct').classList.add('active');
                     break;
+                case 'daily':
+                    document.getElementById('rechargeDailyStats').style.display = 'block';
+                    document.getElementById('tabDaily').classList.add('active');
+                    break;
+            }
+            
+            // 同步子tab下拉框选项
+            const dropdown = document.getElementById('rechargeTabDropdown');
+            if (dropdown) {
+                dropdown.value = tabName;
             }
         }
         
@@ -8903,6 +9053,184 @@
             });
             
             return productStats;
+        }
+        
+        // 生成按日统计套餐销售数量
+        // 排除经销商订单（staffUserName为空），按顾问账号分类：
+        //   staffId 匹配 "emp+数字" 的为全职顾问（如 emp123）
+        //   staffId 匹配 "empxgs+数字" 的为兼职顾问（如 empxgs498）
+        // 返回 { fullTime: {...}, partTime: {...} } 两套统计数据
+        function generateDailyStats(data) {
+            const fullTimeStats = {}; // 全职顾问
+            const partTimeStats = {}; // 兼职顾问
+
+            // 正则判断
+            const empFullTimePattern = /^emp[0-9]+$/i;   // emp+数字
+            const empPartTimePattern = /^empxgs[0-9]+$/i; // empxgs+数字
+
+            data.forEach(item => {
+                // 1. 排除经销商订单（staffUserName为空）
+                if (!item.staffUserName) return;
+
+                const product = item.productName || '未知';
+                const staffId = (item.staffId || '').toString().trim();
+
+                // 2. 按顾问账号分类
+                let targetStats = null;
+                if (empPartTimePattern.test(staffId)) {
+                    targetStats = partTimeStats;
+                } else if (empFullTimePattern.test(staffId)) {
+                    targetStats = fullTimeStats;
+                } else {
+                    // 若不匹配规则（例如 talkId 形式的或空 staffId），判断是否属于经销商已在上一步过滤
+                    // 这里兜底：对非经销商但不匹配规则的账号，默认按全职顾问统计（避免丢失）
+                    targetStats = fullTimeStats;
+                }
+
+                // 3. 提取日期
+                const payTime = item.payTime || item.createTime || '';
+                let dateKey = '';
+                let displayDate = '';
+                if (payTime) {
+                    const datePart = payTime.trim().split(/[ T]/)[0];
+                    const parts = datePart.split(/[-\/]/);
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0]);
+                        const month = parseInt(parts[1]);
+                        const day = parseInt(parts[2]);
+                        dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        displayDate = `${month}.${day}`;
+                    } else {
+                        dateKey = datePart;
+                        displayDate = datePart;
+                    }
+                } else {
+                    dateKey = '未知日期';
+                    displayDate = '未知';
+                }
+
+                if (!targetStats[product]) {
+                    targetStats[product] = {};
+                }
+                if (!targetStats[product][dateKey]) {
+                    targetStats[product][dateKey] = { count: 0, display: displayDate };
+                }
+                targetStats[product][dateKey].count++;
+            });
+
+            return { fullTime: fullTimeStats, partTime: partTimeStats };
+        }
+        
+        // 渲染单张按日统计表（通用辅助函数）
+        function renderSingleDailyStatsTable(tableId, stats) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const thead = table.querySelector('thead tr');
+            const tbody = table.querySelector('tbody');
+
+            // 清空表格
+            thead.innerHTML = '<th>套餐名</th>';
+            tbody.innerHTML = '';
+
+            // 获取所有套餐名和日期
+            const allProducts = new Set();
+            const allDates = new Set();
+            const dateDisplayMap = {};
+
+            Object.entries(stats).forEach(([product, dates]) => {
+                allProducts.add(product);
+                Object.keys(dates).forEach(dateKey => {
+                    allDates.add(dateKey);
+                    dateDisplayMap[dateKey] = dates[dateKey].display;
+                });
+            });
+
+            const sortedProducts = Array.from(allProducts).sort();
+            const sortedDateKeys = Array.from(allDates).sort();
+
+            // 无数据时添加提示行
+            if (sortedProducts.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 2;
+                cell.style.color = '#999';
+                cell.style.textAlign = 'center';
+                cell.textContent = '暂无数据';
+                row.appendChild(cell);
+                tbody.appendChild(row);
+                return;
+            }
+
+            // 生成表头（日期）
+            sortedDateKeys.forEach(dateKey => {
+                const th = document.createElement('th');
+                th.textContent = dateDisplayMap[dateKey] || dateKey;
+                thead.appendChild(th);
+            });
+            // 添加合计列
+            const totalTh = document.createElement('th');
+            totalTh.textContent = '合计';
+            thead.appendChild(totalTh);
+
+            // 生成数据行（按套餐名）
+            const dateTotals = {};
+            sortedDateKeys.forEach(dateKey => dateTotals[dateKey] = 0);
+
+            sortedProducts.forEach(product => {
+                const row = document.createElement('tr');
+
+                // 套餐名
+                const nameCell = document.createElement('td');
+                nameCell.textContent = product;
+                row.appendChild(nameCell);
+
+                // 各日期销量
+                let productTotal = 0;
+                sortedDateKeys.forEach(dateKey => {
+                    const cell = document.createElement('td');
+                    const count = stats[product] && stats[product][dateKey] ? stats[product][dateKey].count : 0;
+                    cell.textContent = count;
+                    row.appendChild(cell);
+                    productTotal += count;
+                    dateTotals[dateKey] += count;
+                });
+
+                // 合计
+                const totalCell = document.createElement('td');
+                totalCell.textContent = productTotal;
+                row.appendChild(totalCell);
+
+                tbody.appendChild(row);
+            });
+
+            // 生成汇总行
+            const totalRow = document.createElement('tr');
+            totalRow.style.fontWeight = 'bold';
+
+            const totalLabelCell = document.createElement('td');
+            totalLabelCell.textContent = '合计';
+            totalRow.appendChild(totalLabelCell);
+
+            let grandTotal = 0;
+            sortedDateKeys.forEach(dateKey => {
+                const cell = document.createElement('td');
+                cell.textContent = dateTotals[dateKey];
+                totalRow.appendChild(cell);
+                grandTotal += dateTotals[dateKey];
+            });
+
+            const grandTotalCell = document.createElement('td');
+            grandTotalCell.textContent = grandTotal;
+            totalRow.appendChild(grandTotalCell);
+
+            tbody.appendChild(totalRow);
+        }
+
+        // 渲染按日统计（分别渲染全职/兼职两张表）
+        function renderDailyStats(statsGroup) {
+            const { fullTime, partTime } = statsGroup || { fullTime: {}, partTime: {} };
+            renderSingleDailyStatsTable('dailyStatsTableFullTime', fullTime || {});
+            renderSingleDailyStatsTable('dailyStatsTablePartTime', partTime || {});
         }
         
         // 渲染顾问统计表格
@@ -9172,6 +9500,59 @@
                 });
                 totalRowData.push(grandTotal);
                 productWorksheet.addRow(totalRowData);
+                
+                // 创建按日统计表（排除经销商订单，分全职/兼职）
+                const dailyStatsGroup = window.rechargeDailyStats || generateDailyStats(data.resultList);
+                const { fullTime: dailyFullTimeStats, partTime: dailyPartTimeStats } = dailyStatsGroup || {};
+
+                // 通用函数：将单套按日统计数据写入一个工作表
+                function writeDailyStatsSheet(sheetName, stats) {
+                    const ws = workbook.addWorksheet(sheetName);
+                    const allProducts = new Set();
+                    const allDates = new Set();
+                    const dateDisplayMap = {};
+                    Object.entries(stats || {}).forEach(([product, dates]) => {
+                        allProducts.add(product);
+                        Object.keys(dates).forEach(dateKey => {
+                            allDates.add(dateKey);
+                            dateDisplayMap[dateKey] = dates[dateKey].display;
+                        });
+                    });
+                    const sortedProducts = Array.from(allProducts).sort();
+                    const sortedDateKeys = Array.from(allDates).sort();
+                    const headerRow = ['套餐名'];
+                    sortedDateKeys.forEach(dateKey => headerRow.push(dateDisplayMap[dateKey] || dateKey));
+                    headerRow.push('合计');
+                    ws.addRow(headerRow);
+
+                    const dateTotals = {};
+                    sortedDateKeys.forEach(dateKey => dateTotals[dateKey] = 0);
+
+                    sortedProducts.forEach(product => {
+                        const rowData = [product];
+                        let productTotal = 0;
+                        sortedDateKeys.forEach(dateKey => {
+                            const count = stats[product] && stats[product][dateKey] ? stats[product][dateKey].count : 0;
+                            rowData.push(count);
+                            productTotal += count;
+                            dateTotals[dateKey] += count;
+                        });
+                        rowData.push(productTotal);
+                        ws.addRow(rowData);
+                    });
+
+                    const totalRow = ['合计'];
+                    let grandTotal = 0;
+                    sortedDateKeys.forEach(dateKey => {
+                        totalRow.push(dateTotals[dateKey]);
+                        grandTotal += dateTotals[dateKey];
+                    });
+                    totalRow.push(grandTotal);
+                    ws.addRow(totalRow);
+                }
+
+                writeDailyStatsSheet('按日统计-全职顾问', dailyFullTimeStats || {});
+                writeDailyStatsSheet('按日统计-兼职顾问', dailyPartTimeStats || {});
                 
                 // 导出文件
                 const now = new Date();
