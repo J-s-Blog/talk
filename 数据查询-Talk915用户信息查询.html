@@ -1443,29 +1443,44 @@
                         </div>
                         <button id="clearQuerySingleBtn" style="width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">查询</button>
                     </div>
-                    
-                    <!-- 批量查询区域 -->
+
+                    <!-- 批量导入区域 -->
                     <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; flex-direction: column;">
-                        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">批量查询</h3>
+                        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">批量导入</h3>
                         <div class="form-group" style="margin-bottom: 8px; flex: 1;">
-                            <label for="clearQueryFileInput" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">导入用户ID文件:</label>
+                            <label for="clearQueryFileInput" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">导入数据文件:</label>
                             <input type="file" id="clearQueryFileInput" accept=".txt,.csv,.xlsx,.xls" style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                            <div class="info-text" style="margin-top: 2px; font-size: 11px;">支持 .txt、.csv 和 Excel 文件，每行一个用户ID</div>
+                            <div id="clearQueryFileName" style="margin-top: 4px; font-size: 11px; color: #28a745; word-break: break-all;"></div>
+                            <div class="info-text" style="margin-top: 2px; font-size: 11px;">支持 .txt、.csv、Excel，可多列；数据存入浏览器本地数据库，避免内存占用过高</div>
+                        </div>
+                    </div>
+
+                    <!-- 查询条件区域 -->
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; flex-direction: column;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">查询条件</h3>
+                        <div class="form-group" style="margin-bottom: 8px; flex: 1;">
+                            <label for="clearQueryUserIdColumn" style="display: block; margin-bottom: 3px; font-weight: bold; color: #555; font-size: 13px;">用户ID所在列:</label>
+                            <select id="clearQueryUserIdColumn" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                                <option value="">请先导入文件</option>
+                            </select>
+                            <div class="info-text" style="margin-top: 2px; font-size: 11px;">选择要查询的ID所在列后点击批量查询</div>
                         </div>
                         <button id="clearQueryBatchBtn" style="width: 100%; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">批量查询</button>
                     </div>
                 </div>
-                
+
                 <!-- 查询结果区域 -->
                 <div id="clearQueryResultSection" style="margin-top: 15px; display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <h3 style="color: #333; margin: 0; font-size: 14px;">查询结果</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                        <h3 style="color: #333; margin: 0; font-size: 14px;">查询结果 <span id="clearQueryResultCount" style="font-weight: normal; color: #666; font-size: 12px;"></span></h3>
                         <div>
                             <button id="clearQueryExportBtn" style="padding: 6px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 6px;">导出CSV</button>
                             <button id="clearQueryClearBtn" style="padding: 6px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 6px;">清空</button>
                         </div>
                     </div>
                     <div id="clearQueryResultContainer" style="max-height: 400px; overflow: auto; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;"></div>
+                    <!-- 分页控件 -->
+                    <div id="clearQueryPagination" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap;"></div>
                 </div>
                 
                 <!-- 状态信息 -->
@@ -11500,14 +11515,202 @@ function exportRegisteredUsers() {
         document.getElementById('courseQueryExportBtn').addEventListener('click', exportCourseQueryResults);
         
         // ========== 课时清零查询功能 ==========
+        // 优化说明：批量导入数据存入浏览器IndexedDB，避免大数据量（上万条）内存占用过高；
+        // 支持多列导入，用户手工选择ID所在列；查询结果分页渲染，并发查询提升速度。
         
-        let courseClearQueryData = []; // [{userId, status, timeDiffCollect, message}]
+        // 全局状态
+        let courseClearDb = null; // IndexedDB数据库实例
+        let courseClearQueryData = []; // 仅用于单独查询（单条结果）
+        let courseClearHeaders = []; // 导入文件表头
+        let courseClearHasHeader = false;
+        let courseClearDelimiter = ',';
+        let courseClearUserIdColumnIndex = -1; // 用户ID所在列索引
+        let courseClearTotalRows = 0; // 导入数据总行数
+        let courseClearCurrentPage = 0; // 当前页码（从0开始）
+        const courseClearPageSize = 50; // 每页显示条数
+        let courseClearIsQuerying = false; // 是否正在批量查询
+        let courseClearQueryMode = 'single'; // 'single' | 'batch'，决定渲染方式
         
-        // 解析用户ID文件
-        function parseClearQueryFile(file) {
+        // HTML转义，防止内容破坏表格结构
+        function escapeClearHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        
+        // 初始化IndexedDB
+        function initCourseClearIndexedDB() {
+            const request = indexedDB.open('Talk915CourseClearDB', 1);
+            request.onerror = function(event) {
+                console.error('CourseClear IndexedDB初始化失败:', event.target.error);
+            };
+            request.onsuccess = function(event) {
+                courseClearDb = event.target.result;
+                console.log('CourseClear IndexedDB初始化成功');
+                // 页面刷新后清理旧数据，不加载历史数据
+                clearCourseClearIndexedDB();
+                resetCourseClearUI();
+            };
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('courseClearData')) {
+                    const objectStore = db.createObjectStore('courseClearData', { keyPath: 'rowId' });
+                    objectStore.createIndex('status', 'status');
+                }
+                if (!db.objectStoreNames.contains('courseClearMeta')) {
+                    db.createObjectStore('courseClearMeta', { keyPath: 'id' });
+                }
+            };
+        }
+        
+        // 重置UI状态
+        function resetCourseClearUI() {
+            courseClearHeaders = [];
+            courseClearHasHeader = false;
+            courseClearDelimiter = ',';
+            courseClearUserIdColumnIndex = -1;
+            courseClearTotalRows = 0;
+            courseClearCurrentPage = 0;
+            courseClearQueryMode = 'single';
+            const colSelect = document.getElementById('clearQueryUserIdColumn');
+            if (colSelect) {
+                colSelect.innerHTML = '<option value="">请先导入文件</option>';
+                colSelect.value = '';
+            }
+            const fileNameEl = document.getElementById('clearQueryFileName');
+            if (fileNameEl) fileNameEl.textContent = '';
+            const section = document.getElementById('clearQueryResultSection');
+            if (section) section.style.display = 'none';
+            const container = document.getElementById('clearQueryResultContainer');
+            if (container) container.innerHTML = '';
+            const pagination = document.getElementById('clearQueryPagination');
+            if (pagination) pagination.innerHTML = '';
+        }
+        
+        // 清空IndexedDB数据
+        function clearCourseClearIndexedDB() {
+            if (!courseClearDb) return Promise.resolve(false);
+            return new Promise((resolve) => {
+                try {
+                    const transaction = courseClearDb.transaction(['courseClearData', 'courseClearMeta'], 'readwrite');
+                    transaction.objectStore('courseClearData').clear();
+                    transaction.objectStore('courseClearMeta').clear();
+                    transaction.oncomplete = () => resolve(true);
+                    transaction.onerror = () => resolve(false);
+                } catch (e) {
+                    console.error('CourseClear IndexedDB清理失败:', e);
+                    resolve(false);
+                }
+            });
+        }
+        
+        // 分批保存数据到IndexedDB（每批1000条，避免单事务过大）
+        async function saveCourseClearDataToIndexedDB(rows, meta) {
+            const CHUNK_SIZE = 1000;
+            await clearCourseClearIndexedDB();
+            
+            for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+                const chunk = rows.slice(i, Math.min(i + CHUNK_SIZE, rows.length));
+                await new Promise((resolve, reject) => {
+                    const transaction = courseClearDb.transaction(['courseClearData'], 'readwrite');
+                    const store = transaction.objectStore('courseClearData');
+                    chunk.forEach(row => store.add(row));
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+            }
+            
+            await new Promise((resolve, reject) => {
+                const transaction = courseClearDb.transaction(['courseClearMeta'], 'readwrite');
+                transaction.objectStore('courseClearMeta').put({ id: 'meta', ...meta });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+            return true;
+        }
+        
+        // 按页读取数据（rowId为顺序整数，使用keyRange高效查询）
+        function getCourseClearPage(page, pageSize) {
+            return new Promise((resolve, reject) => {
+                const lowerBound = page * pageSize;
+                const upperBound = lowerBound + pageSize - 1;
+                const transaction = courseClearDb.transaction(['courseClearData'], 'readonly');
+                const range = IDBKeyRange.bound(lowerBound, upperBound);
+                const request = transaction.objectStore('courseClearData').getAll(range);
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        }
+        
+        // 按rowId批量读取记录
+        function getCourseClearRecordsByIds(rowIds) {
+            return new Promise((resolve, reject) => {
+                const transaction = courseClearDb.transaction(['courseClearData'], 'readonly');
+                const store = transaction.objectStore('courseClearData');
+                const results = new Array(rowIds.length);
+                let pending = rowIds.length;
+                if (pending === 0) { resolve([]); return; }
+                rowIds.forEach((id, idx) => {
+                    const req = store.get(id);
+                    req.onsuccess = () => {
+                        results[idx] = req.result;
+                        if (--pending === 0) resolve(results);
+                    };
+                    req.onerror = () => {
+                        if (--pending === 0) resolve(results);
+                    };
+                });
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+        
+        // 批量更新查询结果到IndexedDB
+        function batchUpdateCourseClearResults(updates) {
+            return new Promise((resolve, reject) => {
+                const transaction = courseClearDb.transaction(['courseClearData'], 'readwrite');
+                const store = transaction.objectStore('courseClearData');
+                updates.forEach(up => {
+                    const getRequest = store.get(up.rowId);
+                    getRequest.onsuccess = () => {
+                        const record = getRequest.result;
+                        if (record) {
+                            record.status = up.status;
+                            record.timeDiffCollect = up.timeDiffCollect;
+                            record.message = up.message;
+                            store.put(record);
+                        }
+                    };
+                });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+        
+        // 通过游标流式读取全部数据（用于导出，避免一次性加载到内存）
+        function streamAllCourseClearData(rowCallback) {
+            return new Promise((resolve, reject) => {
+                const transaction = courseClearDb.transaction(['courseClearData'], 'readonly');
+                const store = transaction.objectStore('courseClearData');
+                const cursorRequest = store.openCursor();
+                cursorRequest.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        rowCallback(cursor.value);
+                        cursor.continue();
+                    }
+                };
+                cursorRequest.onerror = () => reject(cursorRequest.error);
+                transaction.oncomplete = () => resolve();
+            });
+        }
+        
+        // 读取文件：Excel转为Tab分隔文本，文本直接返回，统一走分隔符解析流程
+        function readClearQueryFile(file) {
             return new Promise((resolve, reject) => {
                 const fileName = file.name.toLowerCase();
-                
                 if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
@@ -11516,22 +11719,11 @@ function exportRegisteredUsers() {
                             const workbook = XLSX.read(data, { type: 'array' });
                             const sheetName = workbook.SheetNames[0];
                             const worksheet = workbook.Sheets[sheetName];
-                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                            
-                            const userIds = [];
-                            let startRow = 0;
-                            if (json.length > 0 && typeof json[0][0] === 'string' && isNaN(parseInt(json[0][0]))) {
-                                startRow = 1;
-                            }
-                            
-                            for (let i = startRow; i < json.length; i++) {
-                                const row = json[i];
-                                if (row && row[0]) {
-                                    const id = String(row[0]).trim();
-                                    if (id) userIds.push(id);
-                                }
-                            }
-                            resolve(userIds);
+                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                            const text = json.map(row =>
+                                (row || []).map(cell => String(cell == null ? '' : cell)).join('\t')
+                            ).join('\n');
+                            resolve({ text, defaultDelimiter: '\t', isExcel: true });
                         } catch (err) {
                             reject(new Error('Excel解析失败: ' + err.message));
                         }
@@ -11541,24 +11733,7 @@ function exportRegisteredUsers() {
                 } else {
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        try {
-                            const text = e.target.result;
-                            const lines = text.split(/\r?\n/).filter(line => line.trim());
-                            const userIds = [];
-                            
-                            let startLine = 0;
-                            if (lines.length > 0 && isNaN(parseInt(lines[0].split(/[,\t]/)[0].trim()))) {
-                                startLine = 1;
-                            }
-                            
-                            for (let i = startLine; i < lines.length; i++) {
-                                const id = lines[i].trim();
-                                if (id) userIds.push(id);
-                            }
-                            resolve(userIds);
-                        } catch (err) {
-                            reject(new Error('文件解析失败: ' + err.message));
-                        }
+                        resolve({ text: e.target.result, defaultDelimiter: null, isExcel: false });
                     };
                     reader.onerror = () => reject(new Error('文件读取失败'));
                     reader.readAsText(file, 'UTF-8');
@@ -11566,17 +11741,185 @@ function exportRegisteredUsers() {
             });
         }
         
-        // 渲染查询结果表格
-        function renderClearQueryResults() {
-            const container = document.getElementById('clearQueryResultContainer');
-            const section = document.getElementById('clearQueryResultSection');
+        // 自动检测分隔符
+        function detectClearDelimiter(text) {
+            const firstLine = (text.trim().split('\n')[0] || '');
+            const candidates = {
+                ',': (firstLine.match(/,/g) || []).length,
+                '\t': (firstLine.match(/\t/g) || []).length,
+                ';': (firstLine.match(/;/g) || []).length,
+                '|': (firstLine.match(/\|/g) || []).length
+            };
+            let maxCount = 0;
+            let detected = ',';
+            for (const [d, c] of Object.entries(candidates)) {
+                if (c > maxCount) { maxCount = c; detected = d; }
+            }
+            return detected;
+        }
+        
+        // 显示表头与分隔符确认弹窗
+        function showClearQueryHeaderConfirmation(content, defaultDelimiter, isExcel) {
+            const lines = content.trim().split('\n');
+            const previewLines = lines.slice(0, 3);
+            const detected = defaultDelimiter || detectClearDelimiter(content);
             
-            if (courseClearQueryData.length === 0) {
-                section.style.display = 'none';
+            const modalHTML = `
+                <div id="clearQueryHeaderModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-top: 0;">确认文件表头与分隔符</h3>
+                        <p>请确认文件内容是否包含表头，并选择正确的分隔符：</p>
+                        <div style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; margin: 15px 0; font-family: monospace; overflow-x: auto;">
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                ${previewLines.map((line, index) => `<div style="white-space: pre-wrap;">行${index + 1}: ${escapeClearHtml(line)}</div>`).join('')}
+                            </div>
+                        </div>
+                        <div style="margin: 15px 0;">
+                            <label style="display: block; margin-bottom: 5px;">分隔符选择：</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="clearQueryDelimiterSelect" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1;" ${isExcel ? 'disabled' : ''}>
+                                    <option value=",">逗号 (,)</option>
+                                    <option value="\t">Tab键</option>
+                                    <option value=";">分号 (;)</option>
+                                    <option value="|">竖线 (|)</option>
+                                    <option value="custom">自定义</option>
+                                </select>
+                                <input type="text" id="clearQueryCustomDelimiter" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100px; display: none;" placeholder="输入分隔符">
+                            </div>
+                            ${isExcel ? '<div style="font-size: 12px; color: #666; margin-top: 4px;">Excel文件已按列识别，默认Tab分隔</div>' : ''}
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                            <button id="clearQueryNoHeaderBtn" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">无表头</button>
+                            <button id="clearQueryHasHeaderBtn" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">有表头</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            const delimiterSelect = document.getElementById('clearQueryDelimiterSelect');
+            const customDelimiter = document.getElementById('clearQueryCustomDelimiter');
+            delimiterSelect.value = detected;
+            
+            delimiterSelect.addEventListener('change', function() {
+                customDelimiter.style.display = this.value === 'custom' ? 'block' : 'none';
+            });
+            
+            function getSelectedDelimiter() {
+                if (delimiterSelect.value === 'custom') {
+                    return customDelimiter.value || ',';
+                }
+                return delimiterSelect.value;
+            }
+            
+            document.getElementById('clearQueryHasHeaderBtn').addEventListener('click', function() {
+                const delim = getSelectedDelimiter();
+                document.getElementById('clearQueryHeaderModal').remove();
+                parseClearQueryImportData(content, true, delim);
+            });
+            
+            document.getElementById('clearQueryNoHeaderBtn').addEventListener('click', function() {
+                const delim = getSelectedDelimiter();
+                document.getElementById('clearQueryHeaderModal').remove();
+                parseClearQueryImportData(content, false, delim);
+            });
+        }
+        
+        // 解析导入数据（多列），写入IndexedDB
+        async function parseClearQueryImportData(content, hasHeader, delimiter) {
+            courseClearDelimiter = delimiter;
+            const lines = content.trim().split('\n').filter(line => line.trim() !== '');
+            if (lines.length === 0) {
+                alert('文件内容为空');
                 return;
             }
             
+            const firstParts = lines[0].split(delimiter).map(p => p.trim());
+            courseClearHasHeader = hasHeader;
+            courseClearHeaders = hasHeader ? firstParts : firstParts.map((_, index) => `列${index + 1}`);
+            
+            // 计算最大列数
+            let maxColumns = courseClearHeaders.length;
+            const startIndex = hasHeader ? 1 : 0;
+            for (let i = startIndex; i < lines.length; i++) {
+                const parts = lines[i].split(delimiter);
+                if (parts.length > maxColumns) maxColumns = parts.length;
+            }
+            while (courseClearHeaders.length < maxColumns) {
+                courseClearHeaders.push(`列${courseClearHeaders.length + 1}`);
+            }
+            
+            // 构造行数据
+            const rows = [];
+            for (let i = startIndex; i < lines.length; i++) {
+                const parts = lines[i].split(delimiter).map(p => p.trim());
+                while (parts.length < maxColumns) parts.push('');
+                rows.push({
+                    rowId: rows.length,
+                    originalData: parts,
+                    status: 'pending',
+                    timeDiffCollect: null,
+                    message: ''
+                });
+            }
+            
+            courseClearTotalRows = rows.length;
+            courseClearUserIdColumnIndex = -1;
+            courseClearCurrentPage = 0;
+            courseClearQueryMode = 'batch';
+            
+            setClearQueryStatus(`正在导入 ${rows.length} 行数据到本地数据库...`, false);
+            
+            try {
+                await saveCourseClearDataToIndexedDB(rows, {
+                    headers: courseClearHeaders,
+                    hasHeader: courseClearHasHeader,
+                    delimiter: courseClearDelimiter,
+                    totalRows: courseClearTotalRows
+                });
+            } catch (e) {
+                console.error('保存到IndexedDB失败:', e);
+                alert('数据保存失败：' + e.message);
+                return;
+            }
+            
+            // 填充列选择下拉框
+            const colSelect = document.getElementById('clearQueryUserIdColumn');
+            colSelect.innerHTML = '<option value="">请选择用户ID所在列</option>';
+            courseClearHeaders.forEach((header, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${header} (列${index + 1})`;
+                colSelect.appendChild(option);
+            });
+            // 默认选中第一列
+            if (courseClearHeaders.length > 0) {
+                colSelect.value = '0';
+                courseClearUserIdColumnIndex = 0;
+            }
+            
+            setClearQueryStatus(`导入成功！共 ${courseClearTotalRows} 行、${maxColumns} 列。请选择用户ID所在列后点击批量查询。`, false);
+            await renderClearQueryBatchPage();
+        }
+        
+        // 渲染单独查询结果（单条，无分页）
+        function renderClearQueryResults() {
+            const container = document.getElementById('clearQueryResultContainer');
+            const section = document.getElementById('clearQueryResultSection');
+            const pagination = document.getElementById('clearQueryPagination');
+            const countEl = document.getElementById('clearQueryResultCount');
+            
+            if (courseClearQueryData.length === 0) {
+                section.style.display = 'none';
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            courseClearQueryMode = 'single';
             section.style.display = 'block';
+            pagination.innerHTML = '';
+            countEl.textContent = '';
             
             let html = `
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px;">
@@ -11599,17 +11942,15 @@ function exportRegisteredUsers() {
                 const statusText = item.status === 'success' ? '✓ 查询成功' : 
                                   item.status === 'failed' ? '✗ 查询失败' : 
                                   item.status === 'querying' ? '查询中...' : '待查询';
-                
                 const countColor = item.timeDiffCollect !== null && item.timeDiffCollect < 0 ? '#dc3545' : 
                                    item.timeDiffCollect > 0 ? '#28a745' : '#666';
-                
                 html += `
                     <tr>
                         <td style="padding: 6px 8px; border: 1px solid #ddd;">${index + 1}</td>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd; font-family: monospace;">${item.userId}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; font-family: monospace;">${escapeClearHtml(item.userId)}</td>
                         <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${statusText}</td>
                         <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${countColor}; font-weight: bold;">${item.timeDiffCollect !== null ? item.timeDiffCollect : '-'}</td>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${item.message || '-'}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${escapeClearHtml(item.message || '-')}</td>
                     </tr>
                 `;
             });
@@ -11618,7 +11959,116 @@ function exportRegisteredUsers() {
             container.innerHTML = html;
         }
         
-        // 设置状态信息
+        // 渲染批量查询结果（分页，从IndexedDB读取当前页）
+        async function renderClearQueryBatchPage() {
+            const container = document.getElementById('clearQueryResultContainer');
+            const section = document.getElementById('clearQueryResultSection');
+            const pagination = document.getElementById('clearQueryPagination');
+            const countEl = document.getElementById('clearQueryResultCount');
+            
+            if (courseClearTotalRows === 0) {
+                section.style.display = 'none';
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            courseClearQueryMode = 'batch';
+            section.style.display = 'block';
+            
+            const records = await getCourseClearPage(courseClearCurrentPage, courseClearPageSize);
+            const totalPages = Math.max(1, Math.ceil(courseClearTotalRows / courseClearPageSize));
+            
+            let html = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px;">
+                    <thead style="background-color: #f5f5f5; position: sticky; top: 0;">
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">序号</th>
+            `;
+            courseClearHeaders.forEach(h => {
+                html += `<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeClearHtml(h)}</th>`;
+            });
+            html += `
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">查询状态</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">清零课时</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">返回信息</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            records.forEach(rec => {
+                const statusColor = rec.status === 'success' ? '#28a745' : 
+                                   rec.status === 'failed' ? '#dc3545' : 
+                                   rec.status === 'querying' ? '#ffc107' : '#666';
+                const statusText = rec.status === 'success' ? '✓ 查询成功' : 
+                                  rec.status === 'failed' ? '✗ 查询失败' : 
+                                  rec.status === 'querying' ? '查询中...' : '待查询';
+                const countColor = rec.timeDiffCollect !== null && rec.timeDiffCollect < 0 ? '#dc3545' : 
+                                   rec.timeDiffCollect > 0 ? '#28a745' : '#666';
+                html += `
+                    <tr>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd;">${rec.rowId + 1}</td>
+                `;
+                rec.originalData.forEach(cell => {
+                    html += `<td style="padding: 6px 8px; border: 1px solid #ddd; font-family: monospace;">${escapeClearHtml(cell)}</td>`;
+                });
+                html += `
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${statusText}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${countColor}; font-weight: bold;">${rec.timeDiffCollect !== null ? rec.timeDiffCollect : '-'}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${escapeClearHtml(rec.message || '-')}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            
+            countEl.textContent = `(共 ${courseClearTotalRows} 条，第 ${courseClearCurrentPage + 1}/${totalPages} 页)`;
+            renderClearQueryPagination(totalPages);
+        }
+        
+        // 渲染分页控件
+        function renderClearQueryPagination(totalPages) {
+            const pagination = document.getElementById('clearQueryPagination');
+            const cur = courseClearCurrentPage;
+            const btnStyle = 'padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; cursor: pointer;';
+            const disabledBtnStyle = 'padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5; color: #aaa; cursor: default;';
+            
+            let html = '';
+            html += `<button onclick="courseClearGotoPage(0)" style="${cur === 0 ? disabledBtnStyle : btnStyle}" ${cur === 0 ? 'disabled' : ''}>首页</button>`;
+            html += `<button onclick="courseClearGotoPage(${cur - 1})" style="${cur === 0 ? disabledBtnStyle : btnStyle}" ${cur === 0 ? 'disabled' : ''}>上一页</button>`;
+            
+            const start = Math.max(0, cur - 2);
+            const end = Math.min(totalPages - 1, cur + 2);
+            for (let i = start; i <= end; i++) {
+                const activeStyle = i === cur ? 'padding: 4px 10px; border: 1px solid #007bff; border-radius: 4px; background-color: #007bff; color: white; cursor: pointer;' : btnStyle;
+                html += `<button onclick="courseClearGotoPage(${i})" style="${activeStyle}">${i + 1}</button>`;
+            }
+            
+            html += `<button onclick="courseClearGotoPage(${cur + 1})" style="${cur >= totalPages - 1 ? disabledBtnStyle : btnStyle}" ${cur >= totalPages - 1 ? 'disabled' : ''}>下一页</button>`;
+            html += `<button onclick="courseClearGotoPage(${totalPages - 1})" style="${cur >= totalPages - 1 ? disabledBtnStyle : btnStyle}" ${cur >= totalPages - 1 ? 'disabled' : ''}>尾页</button>`;
+            html += `<span style="font-size: 12px; color: #666;">跳至 <input type="number" id="clearQueryPageInput" min="1" max="${totalPages}" value="${cur + 1}" style="width: 50px; padding: 2px;"> 页 <button onclick="courseClearGotoInputPage()" style="padding: 2px 8px; cursor: pointer;">Go</button></span>`;
+            
+            pagination.innerHTML = html;
+        }
+        
+        // 分页跳转
+        async function courseClearGotoPage(page) {
+            const totalPages = Math.max(1, Math.ceil(courseClearTotalRows / courseClearPageSize));
+            if (page < 0) page = 0;
+            if (page > totalPages - 1) page = totalPages - 1;
+            courseClearCurrentPage = page;
+            await renderClearQueryBatchPage();
+        }
+        
+        async function courseClearGotoInputPage() {
+            const input = document.getElementById('clearQueryPageInput');
+            let page = parseInt(input.value) - 1;
+            if (isNaN(page)) page = 0;
+            await courseClearGotoPage(page);
+        }
+        
+        // 设置状态信息（不再自动隐藏，便于查看查询进度与结果）
         function setClearQueryStatus(text, isError) {
             const statusEl = document.getElementById('clearQueryStatus');
             statusEl.textContent = text;
@@ -11626,30 +12076,10 @@ function exportRegisteredUsers() {
             statusEl.style.color = isError ? '#721c24' : '#155724';
             statusEl.style.border = isError ? '1px solid #f5c6cb' : '1px solid #c3e6cb';
             statusEl.style.display = 'block';
-            
-            setTimeout(() => {
-                statusEl.style.display = 'none';
-            }, 5000);
         }
         
-        // 单次查询
-        async function singleClearQuery() {
-            const userId = document.getElementById('clearQuerySingleUserId').value.trim();
-            
-            if (!userId) {
-                alert('请输入用户ID');
-                return;
-            }
-            
-            const token = localStorage.getItem('talk915_token');
-            if (!token) {
-                alert('请先登录');
-                return;
-            }
-            
-            courseClearQueryData = [{ userId, status: 'querying', timeDiffCollect: null, message: '' }];
-            renderClearQueryResults();
-            
+        // 单条查询API（供单独查询与批量查询复用）
+        async function queryClearSingleApi(userId, token) {
             try {
                 const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryConsumeDetailsDiffCollect', {
                     method: 'POST',
@@ -11677,18 +12107,48 @@ function exportRegisteredUsers() {
                     }),
                     credentials: 'include'
                 });
-                
                 const data = await response.json();
-                
                 if (response.ok && data.resultCode === 0) {
-                    courseClearQueryData[0].status = 'success';
-                    courseClearQueryData[0].timeDiffCollect = data.resultData?.timeDiffCollect ?? null;
-                    courseClearQueryData[0].message = data.resultMessage || '操作成功';
-                    setClearQueryStatus(`查询成功！用户 ${userId} 清零课时：${data.resultData?.timeDiffCollect ?? 0}`, false);
+                    return {
+                        status: 'success',
+                        timeDiffCollect: data.resultData?.timeDiffCollect ?? null,
+                        message: data.resultMessage || '操作成功'
+                    };
                 } else {
-                    courseClearQueryData[0].status = 'failed';
-                    courseClearQueryData[0].message = data.resultMessage || '查询失败';
-                    setClearQueryStatus(`查询失败：${data.resultMessage || '未知错误'}`, true);
+                    return { status: 'failed', timeDiffCollect: null, message: data.resultMessage || '查询失败' };
+                }
+            } catch (error) {
+                return { status: 'failed', timeDiffCollect: null, message: error.message || '请求异常' };
+            }
+        }
+        
+        // 单次查询
+        async function singleClearQuery() {
+            const userId = document.getElementById('clearQuerySingleUserId').value.trim();
+            
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+            
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            courseClearQueryData = [{ userId, status: 'querying', timeDiffCollect: null, message: '' }];
+            renderClearQueryResults();
+            
+            try {
+                const result = await queryClearSingleApi(userId, token);
+                courseClearQueryData[0].status = result.status;
+                courseClearQueryData[0].timeDiffCollect = result.timeDiffCollect;
+                courseClearQueryData[0].message = result.message;
+                if (result.status === 'success') {
+                    setClearQueryStatus(`查询成功！用户 ${userId} 清零课时：${result.timeDiffCollect ?? 0}`, false);
+                } else {
+                    setClearQueryStatus(`查询失败：${result.message}`, true);
                 }
             } catch (error) {
                 courseClearQueryData[0].status = 'failed';
@@ -11699,135 +12159,199 @@ function exportRegisteredUsers() {
             renderClearQueryResults();
         }
         
-        // 批量查询
+        // 批量查询：从IndexedDB分批读取，并发查询，结果写回IndexedDB，分页渲染
+        // 优化点：1)数据不全部驻留内存 2)并发查询(5路) 3)分页渲染避免O(n²)重绘 4)动态间隔调整
         async function batchClearQuery() {
-            const fileInput = document.getElementById('clearQueryFileInput');
+            const colSelect = document.getElementById('clearQueryUserIdColumn');
+            const token = localStorage.getItem('talk915_token');
             
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('请先选择用户ID文件');
+            if (courseClearTotalRows === 0) {
+                alert('请先导入数据文件');
                 return;
             }
-            
-            const token = localStorage.getItem('talk915_token');
+            if (colSelect.value === '') {
+                alert('请选择用户ID所在列');
+                return;
+            }
+            courseClearUserIdColumnIndex = parseInt(colSelect.value);
+            if (isNaN(courseClearUserIdColumnIndex)) {
+                alert('请选择用户ID所在列');
+                return;
+            }
             if (!token) {
                 alert('请先登录');
                 return;
             }
+            if (courseClearIsQuerying) {
+                alert('正在查询中，请稍候...');
+                return;
+            }
+            
+            courseClearIsQuerying = true;
+            const batchBtn = document.getElementById('clearQueryBatchBtn');
+            batchBtn.disabled = true;
+            batchBtn.textContent = '查询中...';
+            
+            const BATCH_SIZE = 5; // 并发查询数
+            const total = courseClearTotalRows;
+            let processed = 0;
+            let successCount = 0;
+            let failCount = 0;
+            
+            // 动态间隔调整
+            let currentDelay = 300;
+            const minDelay = 100;
+            const maxDelay = 3000;
+            let consecutiveSuccess = 0;
+            let consecutiveFailures = 0;
+            
+            setClearQueryStatus(`开始批量查询，共 ${total} 条数据，并发数 ${BATCH_SIZE}...`, false);
+            courseClearCurrentPage = 0;
+            await renderClearQueryBatchPage();
             
             try {
-                const userIds = await parseClearQueryFile(fileInput.files[0]);
-                if (userIds.length === 0) {
-                    alert('文件为空或格式不正确');
-                    return;
-                }
-                
-                courseClearQueryData = userIds.map(id => ({
-                    userId: id,
-                    status: 'querying',
-                    timeDiffCollect: null,
-                    message: ''
-                }));
-                renderClearQueryResults();
-                
-                let successCount = 0;
-                let failCount = 0;
-                
-                for (let i = 0; i < courseClearQueryData.length; i++) {
-                    const item = courseClearQueryData[i];
+                for (let start = 0; start < total; start += BATCH_SIZE) {
+                    const rowIds = [];
+                    for (let i = start; i < Math.min(start + BATCH_SIZE, total); i++) rowIds.push(i);
                     
-                    try {
-                        const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryConsumeDetailsDiffCollect', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json;charset=UTF-8',
-                                'Accept': 'application/json, text/plain, */*',
-                                'User-Agent': navigator.userAgent,
-                                'Referer': 'https://www.talk915.com/admin/operationRecord/expensesRecord',
-                                'Origin': 'https://www.talk915.com',
-                                'Sec-Fetch-Dest': 'empty',
-                                'Sec-Fetch-Mode': 'cors',
-                                'Sec-Fetch-Site': 'same-origin',
-                                'token': token
-                            },
-                            body: JSON.stringify({
-                                userMsg: '',
-                                createStartTime: '',
-                                createEndTime: '',
-                                mealNo: '',
-                                userId: item.userId,
-                                consumptionType: 25,
-                                status: 0,
-                                currPage: 0,
-                                pageSize: 10
-                            }),
-                            credentials: 'include'
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (response.ok && data.resultCode === 0) {
-                            item.status = 'success';
-                            item.timeDiffCollect = data.resultData?.timeDiffCollect ?? null;
-                            item.message = data.resultMessage || '操作成功';
-                            successCount++;
-                        } else {
-                            item.status = 'failed';
-                            item.message = data.resultMessage || '查询失败';
-                            failCount++;
+                    const records = await getCourseClearRecordsByIds(rowIds);
+                    
+                    // 标记本批为查询中
+                    await batchUpdateCourseClearResults(records.map(r => ({
+                        rowId: r.rowId, status: 'querying', timeDiffCollect: null, message: '查询中...'
+                    })));
+                    await renderClearQueryBatchPage();
+                    
+                    // 并发查询
+                    const results = await Promise.all(records.map(rec => {
+                        const userId = (rec.originalData[courseClearUserIdColumnIndex] || '').toString().trim();
+                        if (!userId) {
+                            return Promise.resolve({ status: 'failed', timeDiffCollect: null, message: 'ID为空' });
                         }
-                    } catch (error) {
-                        item.status = 'failed';
-                        item.message = error.message || '请求异常';
-                        failCount++;
+                        return queryClearSingleApi(userId, token);
+                    }));
+                    
+                    // 统计 + 收集更新
+                    const updates = [];
+                    for (let j = 0; j < records.length; j++) {
+                        const r = results[j];
+                        if (r.status === 'success') {
+                            successCount++;
+                            consecutiveSuccess++;
+                            consecutiveFailures = 0;
+                        } else {
+                            failCount++;
+                            consecutiveFailures++;
+                            consecutiveSuccess = 0;
+                        }
+                        updates.push({
+                            rowId: records[j].rowId,
+                            status: r.status,
+                            timeDiffCollect: r.timeDiffCollect,
+                            message: r.message
+                        });
                     }
                     
-                    renderClearQueryResults();
+                    await batchUpdateCourseClearResults(updates);
+                    processed += records.length;
+                    
+                    // 动态调整间隔
+                    if (consecutiveSuccess >= 10) {
+                        currentDelay = Math.max(minDelay, currentDelay - 50);
+                        consecutiveSuccess = 0;
+                    }
+                    if (consecutiveFailures >= 3) {
+                        currentDelay = Math.min(maxDelay, currentDelay + 200);
+                        consecutiveFailures = 0;
+                    }
+                    
+                    // 刷新当前页显示
+                    await renderClearQueryBatchPage();
+                    setClearQueryStatus(`正在查询 ${processed}/${total}，成功 ${successCount}，失败 ${failCount}，当前间隔 ${currentDelay}ms`, failCount > 0);
+                    
+                    // 批次间隔（最后一批不需要）
+                    if (currentDelay > 0 && start + BATCH_SIZE < total) {
+                        await new Promise(r => setTimeout(r, currentDelay));
+                    }
                 }
                 
-                setClearQueryStatus(`批量查询完成！共 ${courseClearQueryData.length} 条，成功 ${successCount} 条，失败 ${failCount} 条`, failCount > 0);
-                fileInput.value = '';
+                await renderClearQueryBatchPage();
+                setClearQueryStatus(`批量查询完成！共 ${total} 条，成功 ${successCount} 条，失败 ${failCount} 条`, failCount > 0);
             } catch (error) {
-                alert('导入失败: ' + error.message);
+                console.error('批量查询错误:', error);
+                setClearQueryStatus(`批量查询出错: ${error.message}`, true);
+            } finally {
+                courseClearIsQuerying = false;
+                batchBtn.disabled = false;
+                batchBtn.textContent = '批量查询';
             }
         }
         
-        // 导出CSV
-        function exportClearQueryCSV() {
-            if (courseClearQueryData.length === 0) {
+        // 导出CSV（批量模式从IndexedDB流式读取，保留原始所有列，无需用户手动合并文件）
+        async function exportClearQueryCSV() {
+            if (courseClearTotalRows === 0 && courseClearQueryData.length === 0) {
                 alert('没有数据可导出');
                 return;
             }
             
-            const completedData = courseClearQueryData.filter(item => 
-                item.status === 'success' || item.status === 'failed'
-            );
-            
-            if (completedData.length === 0) {
-                alert('没有已完成的查询结果可导出');
+            // 单独查询模式
+            if (courseClearQueryMode === 'single' && courseClearQueryData.length > 0) {
+                const completedData = courseClearQueryData.filter(item => item.status === 'success' || item.status === 'failed');
+                if (completedData.length === 0) {
+                    alert('没有已完成的查询结果可导出');
+                    return;
+                }
+                const headers = ['序号', '用户ID', '查询状态', '清零课时', '返回信息'];
+                const csvRows = [headers.map(h => `"${h}"`).join(',')];
+                completedData.forEach((item, index) => {
+                    const statusText = item.status === 'success' ? '查询成功' : '查询失败';
+                    const row = [
+                        index + 1,
+                        `"${String(item.userId).replace(/"/g, '""')}"`,
+                        `"${statusText}"`,
+                        item.timeDiffCollect !== null ? item.timeDiffCollect : '',
+                        `"${(item.message || '').replace(/"/g, '""')}"`
+                    ];
+                    csvRows.push(row.join(','));
+                });
+                downloadClearQueryCSV(csvRows);
+                setClearQueryStatus(`导出成功！共导出 ${completedData.length} 条数据`, false);
                 return;
             }
             
+            // 批量模式
+            if (courseClearTotalRows === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+            
+            const headerRow = ['序号', ...courseClearHeaders, '查询状态', '清零课时', '返回信息'];
+            const csvRows = [headerRow.map(h => `"${String(h).replace(/"/g, '""')}"`).join(',')];
+            
+            let exportedCount = 0;
+            await streamAllCourseClearData(rec => {
+                const statusText = rec.status === 'success' ? '查询成功' : rec.status === 'failed' ? '查询失败' : '未查询';
+                const row = [
+                    rec.rowId + 1,
+                    ...rec.originalData.map(c => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`),
+                    `"${statusText}"`,
+                    rec.timeDiffCollect !== null ? rec.timeDiffCollect : '',
+                    `"${(rec.message || '').replace(/"/g, '""')}"`
+                ];
+                csvRows.push(row.join(','));
+                exportedCount++;
+            });
+            
+            downloadClearQueryCSV(csvRows);
+            setClearQueryStatus(`导出成功！共导出 ${exportedCount} 条数据`, false);
+        }
+        
+        // 下载CSV
+        function downloadClearQueryCSV(csvRows) {
             const now = new Date();
             const dateTimeStr = now.toISOString().replace(/[-:]/g, '').split('.')[0];
             const fileName = `课时清零查询结果_${dateTimeStr}.csv`;
-            
-            // 构建CSV内容
-            const headers = ['序号', '用户ID', '查询状态', '清零课时', '返回信息'];
-            const csvRows = [headers.join(',')];
-            
-            completedData.forEach((item, index) => {
-                const statusText = item.status === 'success' ? '查询成功' : '查询失败';
-                const row = [
-                    index + 1,
-                    item.userId,
-                    statusText,
-                    item.timeDiffCollect !== null ? item.timeDiffCollect : '',
-                    (item.message || '').replace(/,/g, '，')
-                ];
-                csvRows.push(row.join(','));
-            });
-            
-            const csvContent = '\ufeff' + csvRows.join('\n'); // 添加BOM支持中文
+            const csvContent = '\ufeff' + csvRows.join('\n'); // BOM支持中文
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -11837,24 +12361,55 @@ function exportRegisteredUsers() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            setClearQueryStatus(`导出成功！共导出 ${completedData.length} 条数据`, false);
+            URL.revokeObjectURL(url);
         }
         
         // 清空结果
-        function clearClearQueryResults() {
-            if (courseClearQueryData.length === 0) return;
-            if (!confirm('确定要清空所有查询结果吗？')) return;
+        async function clearClearQueryResults() {
+            if (courseClearTotalRows === 0 && courseClearQueryData.length === 0) {
+                return;
+            }
+            if (!confirm('确定要清空所有导入数据和查询结果吗？')) return;
+            
+            await clearCourseClearIndexedDB();
             courseClearQueryData = [];
-            renderClearQueryResults();
+            resetCourseClearUI();
             document.getElementById('clearQueryStatus').style.display = 'none';
+            document.getElementById('clearQueryFileInput').value = '';
         }
+        
+        // 列选择变更事件
+        document.getElementById('clearQueryUserIdColumn').addEventListener('change', function() {
+            courseClearUserIdColumnIndex = this.value !== '' ? parseInt(this.value) : -1;
+        });
+        
+        // 文件导入事件：选择文件后即解析并写入IndexedDB
+        document.getElementById('clearQueryFileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('clearQueryFileName').textContent = file.name;
+            setClearQueryStatus('正在解析文件...', false);
+            
+            try {
+                const { text, defaultDelimiter, isExcel } = await readClearQueryFile(file);
+                showClearQueryHeaderConfirmation(text, defaultDelimiter, isExcel);
+                document.getElementById('clearQueryStatus').style.display = 'none';
+            } catch (error) {
+                alert('导入失败: ' + error.message);
+                document.getElementById('clearQueryFileName').textContent = '';
+                document.getElementById('clearQueryStatus').style.display = 'none';
+            }
+        });
         
         // 绑定事件
         document.getElementById('clearQuerySingleBtn').addEventListener('click', singleClearQuery);
         document.getElementById('clearQueryBatchBtn').addEventListener('click', batchClearQuery);
         document.getElementById('clearQueryExportBtn').addEventListener('click', exportClearQueryCSV);
         document.getElementById('clearQueryClearBtn').addEventListener('click', clearClearQueryResults);
+        
+        // 初始化IndexedDB
+        initCourseClearIndexedDB();
         
         // ========== 注销用户查询功能 ==========
         
