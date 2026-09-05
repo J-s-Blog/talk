@@ -254,8 +254,73 @@
             .tab-content {
                 padding-bottom: 150px !important;
             }
-        }
-    </style>
+            /* 课时清零分页样式 */
+            .cc-pagination {
+                display: block;
+                margin-top: 6px;
+                font-size: 13px;
+                color: #333;
+                line-height: 1.8;
+                text-align: center;
+            }
+            .cc-pagination .cc-page-link {
+                padding: 0 4px;
+                color: #007bff;
+                text-decoration: none;
+                cursor: pointer;
+            }
+            .cc-pagination .cc-page-link:hover {
+                text-decoration: underline;
+                color: #0056b3;
+            }
+            .cc-pagination .cc-page-link.cc-disabled {
+                color: #bbb;
+                cursor: default;
+                pointer-events: none;
+            }
+            .cc-pagination .cc-page-link.cc-current {
+                color: #fff;
+                background: #007bff;
+                border-radius: 3px;
+                padding: 0 5px;
+                cursor: default;
+                pointer-events: none;
+                text-decoration: none;
+            }
+            .cc-pagination .cc-ellipsis {
+                padding: 0 3px;
+                color: #999;
+                user-select: none;
+            }
+            .cc-pagination .cc-input-group {
+                font-size: 12px;
+                color: #666;
+                margin-left: 6px;
+            }
+            .cc-pagination .cc-input-group input {
+                width: 44px;
+                padding: 1px 3px;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+                font-size: 12px;
+                text-align: center;
+            }
+            .cc-pagination .cc-input-group button {
+                width: auto;
+                padding: 1px 6px;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+                background: #fff;
+                cursor: pointer;
+                font-size: 12px;
+                color: #333;
+            }
+            .cc-pagination .cc-input-group button:hover {
+                background: #e9f0ff;
+                border-color: #007bff;
+                color: #007bff;
+            }
+        </style>
 </head>
 <body>
     <div class="container">
@@ -1480,7 +1545,7 @@
                     </div>
                     <div id="clearQueryResultContainer" style="max-height: 400px; overflow: auto; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;"></div>
                     <!-- 分页控件 -->
-                    <div id="clearQueryPagination" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap;"></div>
+                    <div id="clearQueryPagination" class="cc-pagination"></div>
                 </div>
                 
                 <!-- 状态信息 -->
@@ -12027,28 +12092,54 @@ function exportRegisteredUsers() {
             renderClearQueryPagination(totalPages);
         }
         
-        // 渲染分页控件
+        // 渲染分页控件（紧凑省略号模式，所有控件显示在一行）
         function renderClearQueryPagination(totalPages) {
             const pagination = document.getElementById('clearQueryPagination');
             const cur = courseClearCurrentPage;
-            const btnStyle = 'padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; cursor: pointer;';
-            const disabledBtnStyle = 'padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5; color: #aaa; cursor: default;';
-            
-            let html = '';
-            html += `<button onclick="courseClearGotoPage(0)" style="${cur === 0 ? disabledBtnStyle : btnStyle}" ${cur === 0 ? 'disabled' : ''}>首页</button>`;
-            html += `<button onclick="courseClearGotoPage(${cur - 1})" style="${cur === 0 ? disabledBtnStyle : btnStyle}" ${cur === 0 ? 'disabled' : ''}>上一页</button>`;
-            
-            const start = Math.max(0, cur - 2);
-            const end = Math.min(totalPages - 1, cur + 2);
-            for (let i = start; i <= end; i++) {
-                const activeStyle = i === cur ? 'padding: 4px 10px; border: 1px solid #007bff; border-radius: 4px; background-color: #007bff; color: white; cursor: pointer;' : btnStyle;
-                html += `<button onclick="courseClearGotoPage(${i})" style="${activeStyle}">${i + 1}</button>`;
+            if (totalPages <= 1) { pagination.innerHTML = ''; return; }
+
+            const link = (page, label, isDisabled) =>
+                isDisabled
+                    ? `<span class="cc-page-link cc-disabled">${label}</span>`
+                    : `<a class="cc-page-link" onclick="courseClearGotoPage(${page})">${label}</a>`;
+
+            let html = '<span>';
+            html += link(0, '«', cur === 0);
+            html += ' ';
+            html += link(cur - 1, '‹', cur === 0);
+            html += ' ';
+
+            // 页码区间：始终围绕当前页显示约5个，两端各补1个
+            const showRange = 2;
+            let pages = [];
+            for (let i = Math.max(0, cur - showRange); i <= Math.min(totalPages - 1, cur + showRange); i++) {
+                pages.push(i);
             }
-            
-            html += `<button onclick="courseClearGotoPage(${cur + 1})" style="${cur >= totalPages - 1 ? disabledBtnStyle : btnStyle}" ${cur >= totalPages - 1 ? 'disabled' : ''}>下一页</button>`;
-            html += `<button onclick="courseClearGotoPage(${totalPages - 1})" style="${cur >= totalPages - 1 ? disabledBtnStyle : btnStyle}" ${cur >= totalPages - 1 ? 'disabled' : ''}>尾页</button>`;
-            html += `<span style="font-size: 12px; color: #666;">跳至 <input type="number" id="clearQueryPageInput" min="1" max="${totalPages}" value="${cur + 1}" style="width: 50px; padding: 2px;"> 页 <button onclick="courseClearGotoInputPage()" style="padding: 2px 8px; cursor: pointer;">Go</button></span>`;
-            
+            if (pages[0] > 0) pages.unshift(0);
+            if (pages[pages.length - 1] < totalPages - 1) pages.push(totalPages - 1);
+            pages = [...new Set(pages)].sort((a, b) => a - b);
+
+            for (let i = 0; i < pages.length; i++) {
+                if (i > 0 && pages[i] - pages[i - 1] > 1) {
+                    html += `<span class="cc-ellipsis"> … </span>`;
+                }
+                const p = pages[i];
+                html += p === cur
+                    ? `<a class="cc-page-link cc-current">${p + 1}</a>`
+                    : `<a class="cc-page-link" onclick="courseClearGotoPage(${p})">${p + 1}</a>`;
+                html += ' ';
+            }
+
+            html += link(cur + 1, '›', cur >= totalPages - 1);
+            html += ' ';
+            html += link(totalPages - 1, '»', cur >= totalPages - 1);
+
+            html += `<span class="cc-input-group">
+                跳至 <input type="number" id="clearQueryPageInput" min="1" max="${totalPages}" value="${cur + 1}"> 页
+                <button onclick="courseClearGotoInputPage()" style="width:auto;padding:1px 6px;border:1px solid #ddd;border-radius:3px;background:#fff;color:#333;font-size:12px;cursor:pointer;">Go</button>
+            </span>`;
+            html += '</span>';
+
             pagination.innerHTML = html;
         }
         
