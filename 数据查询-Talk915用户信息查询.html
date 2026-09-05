@@ -282,10 +282,12 @@
                 color: #fff;
                 background: #007bff;
                 border-radius: 3px;
-                padding: 0 5px;
+                padding: 0 6px;
                 cursor: default;
                 pointer-events: none;
                 text-decoration: none;
+                font-weight: bold;
+                box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
             }
             .cc-pagination .cc-ellipsis {
                 padding: 0 3px;
@@ -1543,9 +1545,9 @@
                             <button id="clearQueryClearBtn" style="padding: 6px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 6px;">清空</button>
                         </div>
                     </div>
-                    <div id="clearQueryResultContainer" style="max-height: 400px; overflow: auto; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;"></div>
-                    <!-- 分页控件 -->
                     <div id="clearQueryPagination" class="cc-pagination"></div>
+                    <div style="height: 6px;"></div>
+                    <div id="clearQueryResultContainer" style="max-height: 400px; overflow: auto; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;"></div>
                 </div>
                 
                 <!-- 状态信息 -->
@@ -12125,7 +12127,7 @@ function exportRegisteredUsers() {
                 }
                 const p = pages[i];
                 html += p === cur
-                    ? `<a class="cc-page-link cc-current">${p + 1}</a>`
+                    ? `<span class="cc-page-link cc-current">${p + 1}</span>`
                     : `<a class="cc-page-link" onclick="courseClearGotoPage(${p})">${p + 1}</a>`;
                 html += ' ';
             }
