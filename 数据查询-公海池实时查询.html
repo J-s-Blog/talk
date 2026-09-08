@@ -4178,7 +4178,7 @@
                     });
                     const statsElement = document.getElementById('staffSummaryStats');
                     if (statsElement) {
-                        statsElement.innerHTML = `<strong>统计：</strong>单日领取新用户上限大于2的顾问中，已有 <span style="color: red; font-weight: bold;">${overLimitCount}</span> 人达到领取上限。`;
+                        statsElement.innerHTML = buildStaffSummaryStatsHtml(staffSummary, overLimitCount, specialHoldData, footfallStats);
                     }
                     
                     Object.values(staffSummary).forEach((item, index) => {
@@ -4289,7 +4289,7 @@
                 });
                 const statsElement = document.getElementById('staffSummaryStats');
                 if (statsElement) {
-                    statsElement.innerHTML = `<strong>统计：</strong>单日领取新用户上限大于2的顾问中，已有 <span style="color: red; font-weight: bold;">${overLimitCount}</span> 人达到领取上限。`;
+                    statsElement.innerHTML = buildStaffSummaryStatsHtml(staffSummary, overLimitCount, specialHoldData, footfallStats);
                 }
                 
                 Object.values(staffSummary).forEach((item, index) => {
@@ -7935,6 +7935,52 @@
             }
         }
         
+        // 生成顾问公海数据汇总的统计文案
+        // 1) 单日领取上限>2且已达上限的顾问数；2) 当日未领取用户的全职顾问（emp+数字，不含兼职empxgs+数字）；3) 注销用户总数
+        // 全量顾问名单以保有量配置查询（querySpecialHold）返回的 specialHoldData 为准（包含 emp 和 empxgs 两类账号），
+        // 再用当日领取记录 footfallStats 判断每人今天是否在公海池领取过用户。
+        function buildStaffSummaryStatsHtml(staffSummary, overLimitCount, specialHoldData, footfallStats) {
+            // 全职顾问：staffTalkId 为 emp+数字 结构（empxgs+数字 为兼职，正则天然排除）；当日领取数为0即当日未领取
+            const stats = (footfallStats && typeof footfallStats === 'object') ? footfallStats : {};
+            const holdList = Array.isArray(specialHoldData) ? specialHoldData : [];
+            let noReceiveList;
+            if (holdList.length > 0) {
+                // 以保有量配置名单为准（全量顾问），按 staffTalkId 去重
+                const seen = new Set();
+                noReceiveList = [];
+                holdList.forEach(item => {
+                    const talkId = (item.staffTalkId || '').toString().trim().toLowerCase();
+                    if (!/^emp\d+$/.test(talkId) || seen.has(talkId)) return;
+                    seen.add(talkId);
+                    const received = (stats[item.staffName] && stats[item.staffName].todayFootfallCount) || 0;
+                    if (!(received > 0)) {
+                        noReceiveList.push({ staffName: item.staffName || '未知', staffTalkId: item.staffTalkId });
+                    }
+                });
+            } else {
+                // 兜底：保有量配置未查到时，退回使用汇总表中的顾问
+                noReceiveList = Object.values(staffSummary)
+                    .filter(item => /^emp\d+$/.test((item.staffTalkId || '').toString().trim().toLowerCase()))
+                    .filter(item => !(item.todayFootfallCount > 0))
+                    .map(item => ({ staffName: item.staffName, staffTalkId: item.staffTalkId }));
+            }
+            noReceiveList.sort((a, b) => {
+                const na = parseInt(String(a.staffTalkId).replace(/\D/g, ''), 10) || 0;
+                const nb = parseInt(String(b.staffTalkId).replace(/\D/g, ''), 10) || 0;
+                return na - nb;
+            });
+            const noReceiveText = noReceiveList.length > 0
+                ? noReceiveList.map(item => `${item.staffName}（${item.staffTalkId}）`).join('、')
+                : '无';
+            // 注销用户总数（与注销用户列表口径一致）
+            const canceledTotal = Object.values(staffSummary)
+                .reduce((sum, item) => sum + (parseInt(item.canceledUserCount) || 0), 0);
+
+            return `<strong>统计：</strong>单日领取新用户上限大于2的顾问中，已有 <span style="color: red; font-weight: bold;">${overLimitCount}</span> 人达到领取上限。<br>`
+                + `当日未领取用户的全职顾问共 <span style="color: red; font-weight: bold;">${noReceiveList.length}</span> 人：${noReceiveText}<br>`
+                + `注销用户总数：<span style="color: red; font-weight: bold;">${canceledTotal}</span> 人。`;
+        }
+
         // 填充保有量配置表格
         function populateSpecialHoldTable(data) {
             const table = document.getElementById('specialHoldTable').querySelector('tbody');
