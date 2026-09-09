@@ -4178,7 +4178,7 @@
                     });
                     const statsElement = document.getElementById('staffSummaryStats');
                     if (statsElement) {
-                        statsElement.innerHTML = buildStaffSummaryStatsHtml(staffSummary, overLimitCount, specialHoldData, footfallStats);
+                        statsElement.innerHTML = buildStaffSummaryStatsHtml(staffSummary, specialHoldData, footfallStats);
                     }
                     
                     Object.values(staffSummary).forEach((item, index) => {
@@ -4289,7 +4289,7 @@
                 });
                 const statsElement = document.getElementById('staffSummaryStats');
                 if (statsElement) {
-                    statsElement.innerHTML = buildStaffSummaryStatsHtml(staffSummary, overLimitCount, specialHoldData, footfallStats);
+                    statsElement.innerHTML = buildStaffSummaryStatsHtml(staffSummary, specialHoldData, footfallStats);
                 }
                 
                 Object.values(staffSummary).forEach((item, index) => {
@@ -7936,49 +7936,82 @@
         }
         
         // 生成顾问公海数据汇总的统计文案
-        // 1) 单日领取上限>2且已达上限的顾问数；2) 当日未领取用户的全职顾问（emp+数字，不含兼职empxgs+数字）；3) 注销用户总数
-        // 全量顾问名单以保有量配置查询（querySpecialHold）返回的 specialHoldData 为准（包含 emp 和 empxgs 两类账号），
-        // 再用当日领取记录 footfallStats 判断每人今天是否在公海池领取过用户。
-        function buildStaffSummaryStatsHtml(staffSummary, overLimitCount, specialHoldData, footfallStats) {
-            // 全职顾问：staffTalkId 为 emp+数字 结构（empxgs+数字 为兼职，正则天然排除）；当日领取数为0即当日未领取
+        // 全量顾问名单以保有量配置查询（querySpecialHold）返回的 specialHoldData 为准（包含 emp 全职和 empxgs 兼职两类账号），
+        // 用当日领取记录 footfallStats 判断每人今天是否在公海池领取过用户。
+        // 两类账号（emp+数字 全职 / empxgs+数字 兼职）分别按相同维度统计：
+        //   系统总账号数、今日活跃账号数（当日领取用户数>0）、已达领取上限账号数（当日领取数>=单日领取上限）、当日未领取名单。
+        // 另统计注销用户总数（与"注销用户列表"口径一致）。
+        function buildStaffSummaryStatsHtml(staffSummary, specialHoldData, footfallStats) {
             const stats = (footfallStats && typeof footfallStats === 'object') ? footfallStats : {};
             const holdList = Array.isArray(specialHoldData) ? specialHoldData : [];
-            let noReceiveList;
-            if (holdList.length > 0) {
-                // 以保有量配置名单为准（全量顾问），按 staffTalkId 去重
+            const num = v => parseInt(String(v).replace(/\D/g, ''), 10) || 0;
+            const red = v => `<span style="color: red; font-weight: bold;">${v}</span>`;
+
+            // 按账号正则聚合一个类别的统计
+            function buildCategory(regex) {
                 const seen = new Set();
-                noReceiveList = [];
-                holdList.forEach(item => {
-                    const talkId = (item.staffTalkId || '').toString().trim().toLowerCase();
-                    if (!/^emp\d+$/.test(talkId) || seen.has(talkId)) return;
-                    seen.add(talkId);
-                    const received = (stats[item.staffName] && stats[item.staffName].todayFootfallCount) || 0;
-                    if (!(received > 0)) {
-                        noReceiveList.push({ staffName: item.staffName || '未知', staffTalkId: item.staffTalkId });
-                    }
-                });
-            } else {
-                // 兜底：保有量配置未查到时，退回使用汇总表中的顾问
-                noReceiveList = Object.values(staffSummary)
-                    .filter(item => /^emp\d+$/.test((item.staffTalkId || '').toString().trim().toLowerCase()))
-                    .filter(item => !(item.todayFootfallCount > 0))
-                    .map(item => ({ staffName: item.staffName, staffTalkId: item.staffTalkId }));
+                const accounts = [];
+                if (holdList.length > 0) {
+                    // 以保有量配置名单为准（全量顾问），按 staffTalkId 去重
+                    holdList.forEach(item => {
+                        const talkId = (item.staffTalkId || '').toString().trim().toLowerCase();
+                        if (!regex.test(talkId) || seen.has(talkId)) return;
+                        seen.add(talkId);
+                        const received = (stats[item.staffName] && stats[item.staffName].todayFootfallCount) || 0;
+                        const limit = parseInt(item.todayUserGetLimit, 10);
+                        accounts.push({
+                            staffName: item.staffName || '未知',
+                            staffTalkId: item.staffTalkId,
+                            received: received,
+                            limit: limit
+                        });
+                    });
+                } else {
+                    // 兜底：保有量配置未查到时，退回使用汇总表中的顾问
+                    Object.values(staffSummary).forEach(item => {
+                        const talkId = (item.staffTalkId || '').toString().trim().toLowerCase();
+                        if (!regex.test(talkId) || seen.has(talkId)) return;
+                        seen.add(talkId);
+                        accounts.push({
+                            staffName: item.staffName,
+                            staffTalkId: item.staffTalkId,
+                            received: parseInt(item.todayFootfallCount, 10) || 0,
+                            limit: parseInt(item.todayUserGetLimit, 10)
+                        });
+                    });
+                }
+                accounts.sort((a, b) => num(a.staffTalkId) - num(b.staffTalkId));
+                const total = accounts.length;
+                const activeList = accounts.filter(a => a.received > 0);
+                // 已达上限：配置了有效单日领取上限（>0）且当日实际领取数达到上限
+                const reachedList = accounts.filter(a => !isNaN(a.limit) && a.limit > 0 && a.received >= a.limit);
+                const inactiveList = accounts.filter(a => !(a.received > 0));
+                return { total, activeList, reachedList, inactiveList };
             }
-            noReceiveList.sort((a, b) => {
-                const na = parseInt(String(a.staffTalkId).replace(/\D/g, ''), 10) || 0;
-                const nb = parseInt(String(b.staffTalkId).replace(/\D/g, ''), 10) || 0;
-                return na - nb;
-            });
-            const noReceiveText = noReceiveList.length > 0
-                ? noReceiveList.map(item => `${item.staffName}（${item.staffTalkId}）`).join('、')
+
+            const empCat = buildCategory(/^emp\d+$/);        // 全职顾问
+            const xgsCat = buildCategory(/^empxgs\d+$/);     // 兼职顾问
+
+            const nameText = list => list.length > 0
+                ? list.map(a => `${a.staffName}（${a.staffTalkId}）`).join('、')
                 : '无';
+
             // 注销用户总数（与注销用户列表口径一致）
             const canceledTotal = Object.values(staffSummary)
-                .reduce((sum, item) => sum + (parseInt(item.canceledUserCount) || 0), 0);
+                .reduce((sum, item) => sum + (parseInt(item.canceledUserCount, 10) || 0), 0);
 
-            return `<strong>统计：</strong>单日领取新用户上限大于2的顾问中，已有 <span style="color: red; font-weight: bold;">${overLimitCount}</span> 人达到领取上限。<br>`
-                + `当日未领取用户的全职顾问共 <span style="color: red; font-weight: bold;">${noReceiveList.length}</span> 人：${noReceiveText}<br>`
-                + `注销用户总数：<span style="color: red; font-weight: bold;">${canceledTotal}</span> 人。`;
+            let html = `<strong>统计：</strong>`;
+            // 全职顾问
+            html += `<br>全职顾问：系统共 ${red(empCat.total)} 个账号，`
+                + `今日活跃 ${red(empCat.activeList.length)} 个，已达领取上限 ${red(empCat.reachedList.length)} 个；`
+                + `当日未领取 ${red(empCat.inactiveList.length)} 人：${nameText(empCat.inactiveList)}<br>`;
+            // 兼职顾问（当日未领取名单过长，不展示明细，仅显示人数）
+            html += `兼职顾问：系统共 ${red(xgsCat.total)} 个账号，`
+                + `今日活跃 ${red(xgsCat.activeList.length)} 个，已达领取上限 ${red(xgsCat.reachedList.length)} 个，`
+                + `当日未领取 ${red(xgsCat.inactiveList.length)} 人。<br>`;
+            // 注销用户
+            html += `注销用户总数：${red(canceledTotal)} 人。`;
+            return html;
         }
 
         // 填充保有量配置表格
