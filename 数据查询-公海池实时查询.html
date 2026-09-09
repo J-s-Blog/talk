@@ -8002,15 +8002,15 @@
 
             let html = `<strong>统计：</strong>`;
             // 全职顾问
-            html += `<br>全职顾问：系统共 ${red(empCat.total)} 个账号，`
-                + `今日活跃 ${red(empCat.activeList.length)} 个，已达领取上限 ${red(empCat.reachedList.length)} 个；`
-                + `当日未领取 ${red(empCat.inactiveList.length)} 人：${nameText(empCat.inactiveList)}<br>`;
+            html += `<br>全职顾问：共 ${red(empCat.total)} 个，`
+                + `活跃 ${red(empCat.activeList.length)} 个，已达上限 ${red(empCat.reachedList.length)} 个；`
+                + `未领取 ${red(empCat.inactiveList.length)} 人：${nameText(empCat.inactiveList)}<br>`;
             // 兼职顾问（当日未领取名单过长，不展示明细，仅显示人数）
-            html += `兼职顾问：系统共 ${red(xgsCat.total)} 个账号，`
-                + `今日活跃 ${red(xgsCat.activeList.length)} 个，已达领取上限 ${red(xgsCat.reachedList.length)} 个，`
-                + `当日未领取 ${red(xgsCat.inactiveList.length)} 人。<br>`;
+            html += `兼职顾问：共 ${red(xgsCat.total)} 个，`
+                + `活跃 ${red(xgsCat.activeList.length)} 个，已达上限 ${red(xgsCat.reachedList.length)} 个，`
+                + `未领取 ${red(xgsCat.inactiveList.length)} 人。<br>`;
             // 注销用户
-            html += `注销用户总数：${red(canceledTotal)} 人。`;
+            html += `注销用户数：${red(canceledTotal)} 人。`;
             return html;
         }
 
