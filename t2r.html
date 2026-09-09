@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Touch2Read · 绘本英文点读工具</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-soft: #1e293b;
+    --panel: #1e293b;
+    --panel-2: #243049;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --primary: #38bdf8;
+    --primary-2: #0ea5e9;
+    --accent: #f472b6;
+    --word: #34d399;
+    --sentence: #fbbf24;
+    --danger: #f87171;
+    --ok: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 70% -10%, #1b2a4a 0%, var(--bg) 55%);
+    color: var(--text);
+    overflow: hidden;
+  }
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+    background: rgba(15, 23, 42, .6); backdrop-filter: blur(8px);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: grid; place-items: center; font-size: 18px; color: #0b1220; font-weight: 800;
+  }
+  .brand h1 { font-size: 16px; margin: 0; letter-spacing: .3px; }
+  .brand .sub { font-size: 12px; color: var(--text-dim); }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    appearance: none; border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text); padding: 8px 14px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn.primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); border-color: transparent; color: #06223a; font-weight: 700; }
+  .btn.primary:hover { filter: brightness(1.08); color: #06223a; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: transparent; }
+
+  /* Main */
+  main { flex: 1; display: flex; min-height: 0; }
+  .stage {
+    flex: 1; position: relative; overflow: auto; padding: 18px;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .dropzone {
+    position: relative; display: inline-block; max-width: 100%;
+    border-radius: 14px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  }
+  .dropzone.empty {
+    width: min(640px, 80vw); height: min(420px, 70vh);
+    border: 2px dashed var(--border); background: rgba(30,41,59,.5);
+    display: grid; place-items: center; text-align: center; color: var(--text-dim);
+    cursor: pointer;
+  }
+  .dropzone.empty:hover { border-color: var(--primary); color: var(--primary); }
+  .dz-inner { padding: 24px; }
+  .dz-inner .big { font-size: 40px; margin-bottom: 8px; }
+  .dropzone img { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+  .overlay {
+    position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  }
+  .overlay rect.box { pointer-events: all; cursor: pointer; transition: opacity .15s, stroke .15s; }
+  .overlay rect.box:hover { opacity: .28; }
+  .overlay rect.box.active { opacity: .4; }
+  .overlay rect.box.word { fill: var(--word); fill-opacity: .14; stroke: var(--word); stroke-width: 2; }
+  .overlay rect.box.sentence { fill: var(--sentence); fill-opacity: .12; stroke: var(--sentence); stroke-width: 3; }
+
+  /* Side panel */
+  aside {
+    width: 360px; flex-shrink: 0; border-left: 1px solid var(--border);
+    background: var(--panel); display: flex; flex-direction: column; min-height: 0;
+  }
+  .controls { padding: 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    border: 0; background: transparent; color: var(--text-dim);
+    padding: 7px 12px; cursor: pointer; font-size: 13px;
+  }
+  .seg button.on { background: var(--primary); color: #06223a; font-weight: 700; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
+  .field input[type=range] { width: 100%; accent-color: var(--primary); }
+  .field select { width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 6px; }
+  .label { font-size: 12px; color: var(--text-dim); margin-right: 6px; }
+
+  .results { flex: 1; overflow: auto; padding: 10px; }
+  .results h3 { font-size: 12px; color: var(--text-dim); margin: 4px 4px 8px; text-transform: uppercase; letter-spacing: .6px; }
+  .item {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 8px; cursor: pointer; transition: all .15s; font-size: 14px; line-height: 1.5;
+    background: var(--panel-2);
+  }
+  .item:hover { border-color: var(--primary); }
+  .item.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(244,114,182,.25); }
+  .item .idx { font-size: 11px; color: var(--text-dim); margin-right: 6px; }
+  .item .txt { color: var(--text); }
+  .empty-state { color: var(--text-dim); font-size: 13px; text-align: center; padding: 30px 10px; }
+
+  /* Status */
+  footer {
+    border-top: 1px solid var(--border); background: rgba(15,23,42,.6);
+    padding: 8px 16px; font-size: 12px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .progress { flex: 1; height: 6px; background: var(--bg-soft); border-radius: 4px; overflow: hidden; }
+  .progress > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width .2s; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+  .dot.ok { background: var(--ok); } .dot.busy { background: var(--sentence); animation: pulse 1s infinite; } .dot.err { background: var(--danger); }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  .tip { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+  kbd { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 11px; }
+  .toast {
+    position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .25s, transform .25s;
+    pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--primary);
+    border-radius: 50%; animation: spin .8s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+<link rel="icon" href="data:,">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">T2R</div>
+      <div>
+        <h1>Touch2Read · 绘本英文点读</h1>
+        <div class="sub">导入绘本图片 → 自动识别英文 → 点击区域朗读</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input type="file" id="fileInput" accept="image/*" hidden />
+      <button class="btn primary" id="btnImport">📁 导入图片</button>
+      <button class="btn" id="btnRecognize" disabled>✨ 开始识别</button>
+      <button class="btn ghost" id="btnClear" disabled>🗑 清空</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage">
+      <div class="dropzone empty" id="dropzone">
+        <div class="dz-inner" id="dzEmpty">
+          <div class="big">🖼️</div>
+          <div><b>点击此处或拖拽绘本图片到此处</b></div>
+          <div style="margin-top:6px;">支持 JPG / PNG / WEBP，建议文字清晰、对比度高</div>
+        </div>
+        <img id="image" alt="" hidden />
+        <svg class="overlay" id="overlay" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </section>
+
+    <aside>
+      <div class="controls">
+        <div class="row">
+          <span class="label">点击模式</span>
+          <div class="seg" id="modeSeg">
+            <button data-mode="word">单词</button>
+            <button data-mode="sentence" class="on">整句</button>
+          </div>
+          <span class="tip" style="margin-left:auto;">点击图片区域或下方列表均可朗读</span>
+        </div>
+        <div class="field">
+          <label>朗读语速 <span id="rateVal" style="float:right;color:var(--text)">1.0×</span></label>
+          <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" />
+        </div>
+        <div class="field">
+          <label>朗读音色</label>
+          <select id="voice"></select>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnStop" style="flex:1;">⏹ 停止朗读</button>
+          <button class="btn" id="btnToggleBoxes" style="flex:1;">👁 切换框线</button>
+        </div>
+      </div>
+      <div class="results" id="results">
+        <div class="empty-state" id="resultsEmpty">识别后此处显示英文内容列表</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">就绪。请导入绘本图片。</span>
+    <div class="progress"><i id="progressBar"></i></div>
+    <span id="statCount"></span>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { PaddleOCR } from 'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm';
+
+// 全局拖拽阻止（防止拖文件打开新页面）
+document.addEventListener("dragover", (e) => { e.preventDefault(); }, false);
+document.addEventListener("drop", (e) => { e.preventDefault(); }, false);
+
+// 全局错误捕获
+window.addEventListener("error", (e) => {
+  console.error("🔴 全局错误:", e.message, e.filename, e.lineno);
+});
+
+(async () => {
+  "use strict";
+
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const dropzone = $("dropzone");
+  const dzEmpty = $("dzEmpty");
+  const image = $("image");
+  const overlay = $("overlay");
+  const fileInput = $("fileInput");
+  const btnImport = $("btnImport");
+  const btnRecognize = $("btnRecognize");
+  const btnClear = $("btnClear");
+  const btnStop = $("btnStop");
+  const btnToggleBoxes = $("btnToggleBoxes");
+  const modeSeg = $("modeSeg");
+  const rate = $("rate");
+  const rateVal = $("rateVal");
+  const voiceSel = $("voice");
+  const results = $("results");
+  const resultsEmpty = $("resultsEmpty");
+  const statusDot = $("statusDot");
+  const statusText = $("statusText");
+  const progressBar = $("progressBar");
+  const statCount = $("statCount");
+  const toastEl = $("toast");
+
+  // ---------- State ----------
+  const state = {
+    mode: "sentence",      // word | sentence
+    boxes: [],             // [{type, text, bbox, words?}]
+    activeId: null,
+    showBoxes: true,
+    ocr: null,
+    naturalW: 0,
+    naturalH: 0,
+  };
+
+  // ---------- Helpers ----------
+  function toast(msg, ms = 2200) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.remove("show"), ms);
+  }
+  function setStatus(text, kind = "") {
+    statusText.textContent = text;
+    statusDot.className = "dot " + kind;
+  }
+  function setProgress(p) { progressBar.style.width = (p * 100) + "%"; }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  function mergeBboxes(bboxes) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const b of bboxes) {
+      if (!b) continue;
+      x0 = Math.min(x0, b.x0); y0 = Math.min(y0, b.y0);
+      x1 = Math.max(x1, b.x1); y1 = Math.max(y1, b.y1);
+    }
+    if (!isFinite(x0)) return null;
+    return { x0, y0, x1, y1 };
+  }
+
+  // 句子结束标点（含引号收尾）
+  const END_RE = /[.!?]["'’”)]*$/;
+  // 跨字断词：行尾的 "xxx-" 形式
+  const HYPHEN_RE = /[A-Za-z\u00C0-\u017F]-$/;
+  // 词性标记检测 —— 字符串包含法（最可靠，避免正则转义坑）
+  // 只要行里有 "(adj" "(n." "(adv" 这种模式就算词性标记行
+  // 不会误匹配 "(of" 因为 of 不在列表里
+  // 标题/短语行（全大写 或 极短且无标点）
+  const TITLE_RE = /^[A-Z\s&\-]+$/;
+
+  // ---------- Image loading ----------
+  function loadImageFile(file) {
+    if (!file || !file.type.startsWith("image/")) {
+      toast("请选择图片文件");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    loadImage(url, file.name);
+  }
+
+  function loadImage(src, name = "") {
+    setStatus("正在加载图片…");
+    image.onload = () => {
+      state.naturalW = image.naturalWidth;
+      state.naturalH = image.naturalHeight;
+      image.hidden = false;
+      dzEmpty && (dzEmpty.style.display = "none");
+      dropzone.classList.remove("empty");
+      overlay.setAttribute("viewBox", `0 0 ${state.naturalW} ${state.naturalH}`);
+      overlay.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      clearBoxes();
+      btnRecognize.disabled = false;
+      btnClear.disabled = false;
+      setStatus(`图片已加载 ${state.naturalW}×${state.naturalH}${name ? " · " + name : ""}。点击「开始识别」。`);
+      toast("图片已加载，点击「开始识别」");
+    };
+    image.onerror = () => {
+      setStatus("图片加载失败", "err");
+      toast("图片加载失败");
+    };
+    image.src = src;
+  }
+
+  // ---------- OCR ----------
+  async function ensureOCR() {
+    if (state.ocr) return state.ocr;
+    setStatus("初始化 PaddleOCR（首次需下载模型，约 15MB）…", "busy");
+    const ocr = await PaddleOCR.create({
+      lang: "en",
+      ocrVersion: "PP-OCRv5",
+      ortOptions: { backend: "wasm" },
+    });
+    state.ocr = ocr;
+    return ocr;
+  }
+
+  // ---------- 识别管道（PaddleOCR） ----------
+  // PaddleOCR 的 DBNet++ 像素级检测 + PP-OCRv5 识别
+  // 自然过滤插画噪声（根本不会把音乐符号、闪电当成文字）
+  // 返回的 items 已经是按阅读顺序的，带 poly 四个角坐标 + score 置信度
+
+  // 过滤器正则
+  const CJK_RE = /[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/;
+  const PAGE_FRAC_RE = /\d+\s*[\/\-]\s*\d+/;
+  const ONLY_NUM_RE = /^\s*\d+\s*$/;
+
+  // 判断是否是词性标记行
+  function isPosLine(t) {
+    return /^(adj\.|adv\.|n\.|v\.|prep\.|conj\.|pron\.|interj\.|aux\.|art\.|num\.|det\.|mod\.|vi\.|vt\.)$/i.test((t || "").trim()) ||
+      /\((adj|adv|n|v|prep|conj|pron|interj|aux|art|num|det|mod|vi|vt)\.\)/i.test((t || "").trim());
+  }
+
+  // 课程元信息关键词（短行且以关键词开头时过滤）
+  const META_KEYWORDS = [
+    "teaching points", "warm up", "warm-up", "pre-starter",
+    "unit", "lesson", "page", "notes",
+    "phonics", "speaking", "listening", "reading", "writing",
+    "let's learn", "lets learn", "let's talk", "lets talk",
+  ];
+
+  // 判断 item 是否在页面边缘区域（角标、页码、课程标题位置）
+  function isEdgeRegion(bbox, imgW, imgH) {
+    if (!bbox || !imgW || !imgH) return false;
+    // 顶部 12% 区域（课程标题、角标）
+    if (bbox.y0 < imgH * 0.12) return true;
+    // 底部 15% 区域（Teaching points、页码）
+    if (bbox.y1 > imgH * 0.85) return true;
+    // 右边 20% 区域（页码、课程元信息）
+    if (bbox.x0 > imgW * 0.80) return true;
+    return false;
+  }
+
+  function isMetaLine(text) {
+    const t = (text || "").trim().toLowerCase();
+    if (!t) return false;
+    if (CJK_RE.test(t)) return true;
+    // 关键词开头就过滤（不管多长）
+    for (const kw of META_KEYWORDS) {
+      if (t === kw || t.startsWith(kw + " ") || t.startsWith(kw + ":") || t.startsWith(kw)) return true;
+    }
+    if (PAGE_FRAC_RE.test(t) && !/[.!?]/.test(t)) return true;
+    if (ONLY_NUM_RE.test(t)) return true;
+    // Teaching points 残片检测：
+    // 1. 包含 mins/minutes 的任何内容（Teaching points 结尾标志）
+    if (/mins?\b|minutes?\b/.test(t)) return true;
+    // 2. 以 and 开头 + 引号内容（Teaching points 列表续行）
+    if (/^and[,\s"\"]/.test(t)) return true;
+    // 3. T/S 缩写模式（教学模板）
+    if (/\bt\s+guides\b|\bt\s+plays\b|\bt\s+leads\b|\bt\s+asks\b|\bt\s+introduces\b/.test(t)) return true;
+    if (/\bs\s+to\s+|\bs\s+repeat\b/.test(t)) return true;
+    // 4. 全大写短词（衣服标签、装饰字如 MONKEY）
+    if (/^[A-Z]{3,}$/.test(t)) return true;
+    // 5. 标题式短语（全大写或每个词首字母大写 + 极短）
+    if (t.length < 20 && /^[A-Z][a-z]+(\s+[A-Z][a-z]+)*[.!?]?$/.test(t) && !/[.!?]$/.test(t)) return true;
+    return false;
+  }
+
+  // PaddleOCR 返回的 poly 是四个角 [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+  // 转成 {x0,y0,x1,y1}
+  function polygonToBbox(region) {
+    if (!region || !Array.isArray(region) || region.length === 0) {
+      return { x0: 0, y0: 0, x1: 0, y1: 0 };
+    }
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const pt of region) {
+      if (!Array.isArray(pt) || pt.length < 2) continue;
+      x0 = Math.min(x0, pt[0]); y0 = Math.min(y0, pt[1]);
+      x1 = Math.max(x1, pt[0]); y1 = Math.max(y1, pt[1]);
+    }
+    if (!isFinite(x0)) return { x0: 0, y0: 0, x1: 0, y1: 0 };
+    return { x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1) };
+  }
+
+  // 用等宽字体测量每个字符的相对宽度，按比例分配行内空间
+  const _wordCtx = document.createElement("canvas").getContext("2d");
+  _wordCtx.font = "16px sans-serif";  // 用常见字体测相对宽度
+  function sentenceToWordBoxes(sentenceText, sentenceBbox) {
+    const words = sentenceText.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [];
+
+    const rowW = sentenceBbox.x1 - sentenceBbox.x0;
+    const rowH = sentenceBbox.y1 - sentenceBbox.y0;
+    console.log(`[sentenceToWordBoxes] text=${JSON.stringify(sentenceText)} rowW=${rowW} rowH=${rowH} words=${words.length}`);
+
+    // 测整个句子的总宽度（一次性测整句比逐字符加更准）
+    const totalMeasured = _wordCtx.measureText(sentenceText).width || 1;
+
+    // 计算每个单词的起点 x0 和终点 x1（相对于行起点，0~rowW）
+    let cursor = 0;  // 当前扫描位置
+    return words.map((w) => {
+      // 找到 w 在 sentenceText 中的位置（从 cursor 开始找，避免重复词错位）
+      let startIdx = sentenceText.indexOf(w, cursor);
+      if (startIdx === -1) startIdx = cursor;
+      cursor = startIdx + w.length;
+
+      // 测 startIdx 之前所有字符的宽度（相对值）
+      const beforeText = sentenceText.slice(0, startIdx);
+      const beforeW = _wordCtx.measureText(beforeText).width || 0;
+      const wordFull = _wordCtx.measureText(sentenceText.slice(0, cursor)).width || 0;
+      const wordRelW = wordFull - beforeW;  // 这个单词的相对宽度
+
+      // 把相对宽度映射到实际像素
+      const x0 = sentenceBbox.x0 + (beforeW / totalMeasured) * rowW;
+      const x1 = sentenceBbox.x0 + ((beforeW + wordRelW) / totalMeasured) * rowW;
+
+      const result = {
+        text: w,
+        bbox: {
+          x0: Math.round(x0),
+          y0: sentenceBbox.y0,
+          x1: Math.round(x1),
+          y1: sentenceBbox.y1,
+        },
+      };
+      console.log(`  word "${w}" → bbox [${result.bbox.x0},${result.bbox.y0},${result.bbox.x1},${result.bbox.y1}] w=${result.bbox.x1 - result.bbox.x0}`);
+      return result;
+    });
+  }
+
+  async function recognize() {
+    if (!image.src) return;
+    btnRecognize.disabled = true;
+    setProgress(0);
+    setStatus("准备识别…", "busy");
+    try {
+      const ocr = await ensureOCR();
+
+      // PaddleOCR 需要 Blob 作为输入
+      setStatus("全图识别中（PaddleOCR DBNet++ + PP-OCRv5）…", "busy");
+      const blob = await fetch(image.src).then(r => r.blob());
+      setProgress(0.3);
+
+      const [result] = await ocr.predict(blob, {
+        textDetLimitSideLen: 960,
+        textDetThresh: 0.3,
+        textDetBoxThresh: 0.5,
+      });
+      setProgress(0.8);
+
+      // 打印原始结构诊断
+      console.log('=== PaddleOCR 原始 result ===');
+      console.log('result:', result);
+      // PaddleOCR.js 0.4.2 返回: { items: [{ poly, text, score }] }
+      const items = result.items || [];
+      console.log('items count:', items.length);
+      if (items[0]) {
+        console.log('items[0]:', items[0]);
+        console.log('items[0] keys:', Object.keys(items[0]));
+      }
+      console.log(`PaddleOCR 返回 ${items.length} 个文字区域:`);
+      items.forEach((it, i) => {
+        const bb = polygonToBbox(it.poly || it.text_region);
+        console.log(`  [${i}] score=${(it.score || it.confidence || 0).toFixed(2)} bbox=`, bb, `text=`, JSON.stringify(it.text));
+      });
+
+      if (items.length === 0) {
+        setStatus("未识别到文字", "err");
+        toast("未识别到文字，请尝试更清晰的图片");
+        btnRecognize.disabled = false;
+        return;
+      }
+
+      // 1. 转成标准 items + 置信度过滤 + meta 过滤
+      const validItems = items
+        .map((it) => ({
+          text: (it.text || "").trim(),
+          confidence: it.score != null ? it.score : (it.confidence || 0),
+          bbox: polygonToBbox(it.poly || it.text_region),
+        }))
+        .map((it) => {
+          // PaddleOCR 可能把正文 + Teaching points 合并成一个 item
+          // 多种模式检测 meta 内容并切割
+          const text = it.text;
+          const lower = text.toLowerCase();
+          let cutIdx = -1;
+          let cutReason = "";
+
+          // 1. 显式关键词（teaching points, warm up 等）
+          for (const kw of META_KEYWORDS) {
+            const idx = lower.indexOf(kw);
+            if (idx > 0 && (cutIdx === -1 || idx < cutIdx)) { cutIdx = idx; cutReason = `kw:${kw}`; }
+          }
+
+          // 2. 时间标记 (X mins) — 教学备注的典型特征
+          const timeMatch = lower.search(/\(\d+\s*mins?\)/);
+          if (timeMatch > 0 && (cutIdx === -1 || timeMatch < cutIdx)) { cutIdx = timeMatch; cutReason = `time`; }
+
+          // 3. 教学模板模式 — T guides S, T plays, T leads 等
+          const teachMatch = lower.search(/\b[tT]\s+(guides|plays|leads|asks|invites|says|points|shows|reads|writes|introduces)\b/);
+          if (teachMatch > 0 && (cutIdx === -1 || teachMatch < cutIdx)) { cutIdx = teachMatch; cutReason = `teach`; }
+
+          // 4. 句中出现孤立的大写 T/S（教学模板缩写）
+          const tsMatch = text.search(/[.,;]\s+[TS]\s/);
+          if (tsMatch > 0 && (cutIdx === -1 || tsMatch < cutIdx)) { cutIdx = tsMatch; cutReason = `ts`; }
+
+          console.log(`  清洗诊断: len=${text.length} cutIdx=${cutIdx} reason=${cutReason} text="${text.slice(0, 70)}..."`);
+
+          if (cutIdx > 0) {
+            const cleaned = text.slice(0, cutIdx).trim();
+            // 同时截断 bbox — 按文本比例估算切割点对应的 Y 坐标
+            const rowH = it.bbox.y1 - it.bbox.y0;
+            const newY1 = it.bbox.y0 + Math.round(rowH * (cutIdx / text.length));
+            const newBbox = { ...it.bbox, y1: Math.max(newY1, it.bbox.y0 + 10) };
+            console.log(`    ↳ 切: "${text.slice(cutIdx).slice(0, 50)}" → 保留 "${cleaned.slice(0, 50)}" | bbox y1:${it.bbox.y1}→${newBbox.y1}`);
+            if (cleaned.length >= 2) {
+              return { ...it, text: cleaned, bbox: newBbox };
+            }
+          }
+          return it;
+        })
+        .filter((it) => {
+          if (!it.text || it.text.length < 2) return false;
+          if (!/[A-Za-z]/.test(it.text)) return false;
+          if (it.confidence < 0.5) return false;  // 置信度过滤（PaddleOCR 是 0-1）
+          if (isMetaLine(it.text)) return false;
+          // 边缘区域过滤：顶部标题、底部 Teaching points、右边角标
+          if (isEdgeRegion(it.bbox, state.naturalW, state.naturalH)) {
+            console.log(`  边缘区域过滤: "${it.text.slice(0, 40)}" bbox=[${it.bbox.x0},${it.bbox.y0},${it.bbox.x1},${it.bbox.y1}] img=${state.naturalW}x${state.naturalH}`);
+            return false;
+          }
+          return true;
+        });
+
+      console.log(`过滤后 ${validItems.length} 项`);
+
+      if (validItems.length === 0) {
+        setStatus("未识别到有效英文", "err");
+        toast("未识别到有效英文，请尝试更清晰的图片");
+        btnRecognize.disabled = false;
+        return;
+      }
+
+      // 2. PaddleOCR 已经按阅读顺序返回，直接用 items 作为"行"
+      //    但需要检查：连续 items 是否属于同一句（词性标记行独立、大 gap 切分）
+      const heights = validItems.map((it) => it.bbox.y1 - it.bbox.y0).filter((h) => h > 0);
+      const medH = heights.length ? heights.sort((a, b) => a - b)[Math.floor(heights.length / 2)] : 20;
+
+      // 按 Y 坐标微调和合并（PaddleOCR 的阅读顺序通常已经正确）
+      validItems.sort((a, b) => {
+        const dy = a.bbox.y0 - b.bbox.y0;
+        if (Math.abs(dy) < medH * 0.5) return a.bbox.x0 - b.bbox.x0;
+        return dy;
+      });
+
+      // 3. 切分 sentences
+      // PaddleOCR 的 DBNet++ 已经做了行分割，每个 item 就是一行文字
+      // 需要合并的情况：
+      //   a) 词性标记 + 例句（dramatic(adj.) + (of a change...)）
+      //   b) 同一句的换行续接（gap 极小 + x 范围重叠 + 不以句号结尾）
+      // 不合并的情况：
+      //   a) 行间距大（gap > medH * 0.3）
+      //   b) 两行属于不同对话气泡（x 范围不重叠）
+      //   c) 上一行以句号/感叹号/问号结尾（独立句子）
+
+      const sentences = [];
+
+      // 检测文本中是否包含 meta 尾部（Teaching points 变体）
+      function hasMetaTail(text) {
+        const lower = text.toLowerCase();
+        for (const kw of META_KEYWORDS) {
+          if (lower.includes(kw)) return kw;
+        }
+        if (/\(\d+\s*mins?\)/.test(lower)) return "(N mins)";
+        if (/\b[tT]\s+(guides|plays|leads|asks|invites|says|points|shows|reads|writes|introduces)\b/.test(lower)) return "T+verb";
+        if (/[.,;]\s+[TS]\s/.test(text)) return "T/S";
+        return null;
+      }
+
+      // 合并判断：是否应该把 prev 和 cur 合并成一句
+      function shouldMerge(prev, cur) {
+        // cur 本身包含 meta 尾部 → 不合并（后面会拆）
+        if (hasMetaTail(cur.text)) return false;
+        if (hasMetaTail(prev.text)) return false;
+
+        // meta 行（Teaching points 等）不合并
+        if (isMetaLine(prev.text) || isMetaLine(cur.text)) return false;
+
+        // 词性标记 + 例句 → 合并
+        if (isPosLine(prev.text) && !isPosLine(cur.text)) return true;
+
+        const gap = cur.bbox.y0 - prev.bbox.y1;
+        // 行距太大 → 不合并
+        if (gap > medH * 0.3) return false;
+        // 行距为负（重叠）→ 不合并（说明是不同列的文字）
+        if (gap < -medH * 0.3) return false;
+
+        // x 范围重叠度检查：如果两行的 x 范围重叠不到 30%，属于不同区域
+        const overlapX = Math.min(prev.bbox.x1, cur.bbox.x1) - Math.max(prev.bbox.x0, cur.bbox.x0);
+        const minW = Math.min(prev.bbox.x1 - prev.bbox.x0, cur.bbox.x1 - cur.bbox.x0);
+        if (minW > 0 && overlapX / minW < 0.3) return false;
+
+        // 上一行以句子结尾标点结束 → 不合并（是独立句子）
+        if (/[.!?]\s*$/.test(prev.text.trim())) return false;
+
+        return true;
+      }
+
+      let i = 0;
+      while (i < validItems.length) {
+        let cur = validItems[i];
+        // 尝试向后合并
+        while (i + 1 < validItems.length && shouldMerge(cur, validItems[i + 1])) {
+          const next = validItems[++i];
+          cur = {
+            text: `${cur.text} ${next.text}`,
+            bbox: {
+              x0: Math.min(cur.bbox.x0, next.bbox.x0),
+              y0: Math.min(cur.bbox.y0, next.bbox.y0),
+              x1: Math.max(cur.bbox.x1, next.bbox.x1),
+              y1: Math.max(cur.bbox.y1, next.bbox.y1),
+            },
+          };
+        }
+        // 对 cur 本身做 meta 尾部拆分
+        const metaTail = hasMetaTail(cur.text);
+        if (metaTail) {
+          // 找到 meta 尾部的起始位置并切掉
+          const lower = cur.text.toLowerCase();
+          let cutIdx = -1;
+          for (const kw of META_KEYWORDS) {
+            const idx = lower.indexOf(kw);
+            if (idx > 0 && (cutIdx === -1 || idx < cutIdx)) cutIdx = idx;
+          }
+          if (cutIdx === -1) {
+            const timeIdx = lower.search(/\(\d+\s*mins?\)/);
+            if (timeIdx > 0) cutIdx = timeIdx;
+          }
+          if (cutIdx === -1) {
+            const teachIdx = lower.search(/\b[tT]\s+(guides|plays|leads|asks|invites|says|points|shows|reads|writes|introduces)\b/);
+            if (teachIdx > 0) cutIdx = teachIdx;
+          }
+          if (cutIdx > 0) {
+            const cleaned = cur.text.slice(0, cutIdx).trim();
+            if (cleaned.length >= 2) {
+              console.log(`  句内拆 meta: 切去 "${cur.text.slice(cutIdx, cutIdx + 30)}..." 保留 "${cleaned.slice(0, 40)}"`);
+              cur = { text: cleaned, bbox: cur.bbox };
+            }
+          }
+        }
+        sentences.push({ text: cur.text, bbox: cur.bbox });
+        i++;
+      }
+
+      console.log(`sentences: ${sentences.length} 句`);
+      sentences.forEach((s, i) => console.log(`  sent[${i}]: ${JSON.stringify(s.text)}`));
+
+      // 4. 构建句子盒子
+      const sentenceBoxes = sentences.map((s, i) => {
+        // 生成伪 word 盒子
+        const wordBoxes = sentenceToWordBoxes(s.text, s.bbox);
+        return {
+          id: "s" + i, type: "sentence",
+          text: s.text, bbox: s.bbox,
+          words: wordBoxes,
+        };
+      });
+
+      // 收集所有伪 word 盒子（用于单词模式）
+      const wordBoxes = [];
+      for (const sb of sentenceBoxes) {
+        for (const w of sb.words) {
+          wordBoxes.push({
+            id: "w" + wordBoxes.length, type: "word",
+            text: w.text, bbox: w.bbox,
+          });
+        }
+      }
+
+      state.boxes = [...sentenceBoxes, ...wordBoxes];
+      drawBoxes();
+      renderResults();
+
+      setProgress(1);
+      setStatus(`识别完成：${sentenceBoxes.length} 句，${wordBoxes.length} 词`, "ok");
+      statCount.textContent = `句 ${sentenceBoxes.length} · 词 ${wordBoxes.length}`;
+      toast(sentenceBoxes.length || wordBoxes.length ? "识别完成，点击区域即可朗读" : "未识别到英文，请尝试更清晰的图片");
+    } catch (e) {
+      console.error(e);
+      setStatus("识别失败：" + (e && e.message || e), "err");
+      toast("识别失败，请检查网络（首次需下载模型）");
+    } finally {
+      btnRecognize.disabled = false;
+    }
+  }
+
+  // ---------- Drawing ----------
+  function clearBoxes() {
+    while (overlay.firstChild) overlay.removeChild(overlay.firstChild);
+    state.boxes = [];
+    renderResults();
+    statCount.textContent = "";
+  }
+
+  function drawBoxes() {
+    while (overlay.firstChild) overlay.removeChild(overlay.firstChild);
+    // 只画当前 mode 对应的类型，避免叠加导致点击错误
+    for (const box of state.boxes) {
+      if (!box.bbox) continue;
+      if (box.type !== state.mode) continue;  // 关键：只画当前模式的框
+      const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      r.setAttribute("class", `box ${box.type}`);
+      r.dataset.id = box.id;
+      r.dataset.type = box.type;
+      r.setAttribute("x", box.bbox.x0);
+      r.setAttribute("y", box.bbox.y0);
+      r.setAttribute("width", box.bbox.x1 - box.bbox.x0);
+      r.setAttribute("height", box.bbox.y1 - box.bbox.y0);
+      if (state.activeId === box.id) r.classList.add("active");
+      r.style.display = state.showBoxes ? "" : "none";
+      overlay.appendChild(r);
+    }
+  }
+
+  function renderResults() {
+    results.innerHTML = "";
+    if (!state.boxes.length) {
+      results.appendChild(resultsEmpty);
+      return;
+    }
+    const mode = state.mode;
+    const items = state.boxes.filter((b) => b.type === mode);
+    const title = document.createElement("h3");
+    title.textContent = mode === "word" ? `单词（${items.length}）` : `句子（${items.length}）`;
+    results.appendChild(title);
+    items.forEach((box, i) => {
+      const el = document.createElement("div");
+      el.className = "item";
+      if (state.activeId === box.id) el.classList.add("active");
+      el.dataset.id = box.id;
+      el.innerHTML = `<span class="idx">${i + 1}.</span><span class="txt">${escapeHtml(box.text).replace(/\n/g, " ")}</span>`;
+      el.addEventListener("click", () => speakBox(box));
+      results.appendChild(el);
+    });
+  }
+
+  function speakBox(box) {
+    window.speechSynthesis.cancel();
+    state.activeId = box.id;
+    drawBoxes();
+    renderResults();
+    const u = new SpeechSynthesisUtterance(box.text);
+    u.lang = "en-US";
+    u.rate = parseFloat(rate.value);
+    const v = voiceSel.value;
+    const voices = window.speechSynthesis.getVoices();
+    if (v) {
+      const found = voices.find((x) => x.name === v);
+      if (found) u.voice = found;
+    }
+    u.onend = () => { state.activeId = null; drawBoxes(); renderResults(); };
+    window.speechSynthesis.speak(u);
+  }
+
+  // ---------- Events ----------
+  btnImport.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) loadImageFile(f);
+  });
+  btnRecognize.addEventListener("click", recognize);
+  btnClear.addEventListener("click", () => {
+    window.speechSynthesis.cancel();
+    image.removeAttribute("src");
+    image.hidden = true;
+    dzEmpty.style.display = "";
+    dropzone.classList.add("empty");
+    clearBoxes();
+    btnRecognize.disabled = true;
+    btnClear.disabled = true;
+    setStatus("已清空。请重新导入图片。");
+  });
+  btnStop.addEventListener("click", () => window.speechSynthesis.cancel());
+  btnToggleBoxes.addEventListener("click", () => {
+    state.showBoxes = !state.showBoxes;
+    drawBoxes();
+    btnToggleBoxes.textContent = state.showBoxes ? "👁 切换框线" : "🚫 框线已隐藏";
+  });
+
+  modeSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    state.mode = btn.dataset.mode;
+    for (const b of modeSeg.querySelectorAll("button")) b.classList.toggle("on", b === btn);
+    drawBoxes();       // 重画 SVG overlay（只画当前 mode 的框）
+    renderResults();   // 重画侧边栏列表
+  });
+
+  rate.addEventListener("input", () => {
+    rateVal.textContent = parseFloat(rate.value).toFixed(1) + "×";
+  });
+
+  overlay.addEventListener("click", (e) => {
+    const rect = e.target.closest("rect.box");
+    if (!rect) return;
+    const id = rect.dataset.id;
+    const box = state.boxes.find((b) => b.id === id);
+    if (box) speakBox(box);
+  });
+
+  // Drag & drop
+  // 只有空状态（没图片）才弹出文件选择框
+  // 有图片时点击 dropzone 上的内容（图片、SVG 框）不应该触发文件选择
+  dropzone.addEventListener("click", (e) => {
+    if (!dropzone.classList.contains("empty")) return;  // 有图片时不处理
+    // 如果点击的是 overlay 里的 rect 或 image，也不处理（虽然空状态不会有）
+    if (e.target.closest(".overlay, img")) return;
+    fileInput.click();
+  });
+  dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.style.borderColor = "var(--primary)"; });
+  dropzone.addEventListener("dragleave", () => { dropzone.style.borderColor = ""; });
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = "";
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadImageFile(f);
+  });
+
+  // Voice list
+  function populateVoices() {
+    const voices = window.speechSynthesis.getVoices().filter((v) => /en/i.test(v.lang));
+    voiceSel.innerHTML = "";
+    if (!voices.length) {
+      voiceSel.innerHTML = '<option value="">（暂无语音）</option>';
+      return;
+    }
+    voices.forEach((v) => {
+      const opt = document.createElement("option");
+      opt.value = v.name;
+      opt.textContent = `${v.name} (${v.lang})`;
+      voiceSel.appendChild(opt);
+    });
+    // 优先选 Microsoft David 或 Google US English
+    const prefs = ["David", "Google US English", "Samantha", "Victoria"];
+    for (const p of prefs) {
+      const found = voices.find((v) => v.name.includes(p));
+      if (found) { voiceSel.value = found.name; break; }
+    }
+  }
+  if (window.speechSynthesis) {
+    populateVoices();
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+  }
+
+  // Init
+  setStatus("就绪。请导入绘本图片。");
+})();
+</script>
+</body>
+</html>
