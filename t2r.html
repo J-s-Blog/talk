@@ -429,47 +429,63 @@ window.addEventListener("error", (e) => {
   // 用等宽字体测量每个字符的相对宽度，按比例分配行内空间
   const _wordCtx = document.createElement("canvas").getContext("2d");
   _wordCtx.font = "16px sans-serif";  // 用常见字体测相对宽度
-  function sentenceToWordBoxes(sentenceText, sentenceBbox) {
-    const words = sentenceText.trim().split(/\s+/).filter(Boolean);
+
+  // 从一个 item（单行）里提取 word boxes
+  function itemToWordBoxes(item) {
+    const text = item.text.trim();
+    const bbox = item.bbox;
+    const words = text.split(/\s+/).filter(Boolean);
     if (words.length === 0) return [];
 
-    const rowW = sentenceBbox.x1 - sentenceBbox.x0;
-    const rowH = sentenceBbox.y1 - sentenceBbox.y0;
-    console.log(`[sentenceToWordBoxes] text=${JSON.stringify(sentenceText)} rowW=${rowW} rowH=${rowH} words=${words.length}`);
+    const rowW = bbox.x1 - bbox.x0;
+    const rowH = bbox.y1 - bbox.y0;
 
     // 测整个句子的总宽度（一次性测整句比逐字符加更准）
-    const totalMeasured = _wordCtx.measureText(sentenceText).width || 1;
+    const totalMeasured = _wordCtx.measureText(text).width || 1;
 
-    // 计算每个单词的起点 x0 和终点 x1（相对于行起点，0~rowW）
-    let cursor = 0;  // 当前扫描位置
+    let cursor = 0;
     return words.map((w) => {
-      // 找到 w 在 sentenceText 中的位置（从 cursor 开始找，避免重复词错位）
-      let startIdx = sentenceText.indexOf(w, cursor);
+      let startIdx = text.indexOf(w, cursor);
       if (startIdx === -1) startIdx = cursor;
       cursor = startIdx + w.length;
 
-      // 测 startIdx 之前所有字符的宽度（相对值）
-      const beforeText = sentenceText.slice(0, startIdx);
+      const beforeText = text.slice(0, startIdx);
       const beforeW = _wordCtx.measureText(beforeText).width || 0;
-      const wordFull = _wordCtx.measureText(sentenceText.slice(0, cursor)).width || 0;
-      const wordRelW = wordFull - beforeW;  // 这个单词的相对宽度
+      const wordFull = _wordCtx.measureText(text.slice(0, cursor)).width || 0;
+      const wordRelW = wordFull - beforeW;
 
-      // 把相对宽度映射到实际像素
-      const x0 = sentenceBbox.x0 + (beforeW / totalMeasured) * rowW;
-      const x1 = sentenceBbox.x0 + ((beforeW + wordRelW) / totalMeasured) * rowW;
+      const x0 = bbox.x0 + (beforeW / totalMeasured) * rowW;
+      const x1 = bbox.x0 + ((beforeW + wordRelW) / totalMeasured) * rowW;
 
-      const result = {
+      return {
         text: w,
         bbox: {
           x0: Math.round(x0),
-          y0: sentenceBbox.y0,
+          y0: bbox.y0,
           x1: Math.round(x1),
-          y1: sentenceBbox.y1,
+          y1: bbox.y1,
         },
       };
-      console.log(`  word "${w}" → bbox [${result.bbox.x0},${result.bbox.y0},${result.bbox.x1},${result.bbox.y1}] w=${result.bbox.x1 - result.bbox.x0}`);
-      return result;
     });
+  }
+
+  // 从 sentence 提取 word boxes——遍历每个原始 item，用各自的 bbox
+  function sentenceToWordBoxes(sentence) {
+    // 如果 sentence 有 _items，用每个 item 各自的 bbox
+    if (sentence._items && sentence._items.length > 0) {
+      const allWords = [];
+      for (const it of sentence._items) {
+        const ws = itemToWordBoxes(it);
+        console.log(`[sentenceToWordBoxes] item="${it.text.slice(0, 30)}" bbox=[${it.bbox.x0},${it.bbox.y0},${it.bbox.x1},${it.bbox.y1}] rowW=${it.bbox.x1 - it.bbox.x0} rowH=${it.bbox.y1 - it.bbox.y0} words=${ws.length}`);
+        for (const w of ws) {
+          console.log(`  word "${w.text}" → bbox [${w.bbox.x0},${w.bbox.y0},${w.bbox.x1},${w.bbox.y1}] w=${w.bbox.x1 - w.bbox.x0}`);
+        }
+        allWords.push(...ws);
+      }
+      return allWords;
+    }
+    // 兜底：没有 _items（旧数据），用整个 sentence bbox
+    return itemToWordBoxes({ text: sentence.text, bbox: sentence.bbox });
   }
 
   async function recognize() {
@@ -653,9 +669,12 @@ window.addEventListener("error", (e) => {
       let i = 0;
       while (i < validItems.length) {
         let cur = validItems[i];
+        // 保留原始 item 列表，用于后续 sentenceToWordBoxes 按行计算 word
+        let curItems = [cur];
         // 尝试向后合并
         while (i + 1 < validItems.length && shouldMerge(cur, validItems[i + 1])) {
           const next = validItems[++i];
+          curItems.push(next);
           cur = {
             text: `${cur.text} ${next.text}`,
             bbox: {
@@ -689,10 +708,12 @@ window.addEventListener("error", (e) => {
             if (cleaned.length >= 2) {
               console.log(`  句内拆 meta: 切去 "${cur.text.slice(cutIdx, cutIdx + 30)}..." 保留 "${cleaned.slice(0, 40)}"`);
               cur = { text: cleaned, bbox: cur.bbox };
+              // curItems 也要截断：只保留贡献了正文的 item
+              // 简化处理：截断 meta 后 curItems 保留全部，sentenceToWordBoxes 会用每个 item 的 bbox
             }
           }
         }
-        sentences.push({ text: cur.text, bbox: cur.bbox });
+        sentences.push({ text: cur.text, bbox: cur.bbox, _items: curItems });
         i++;
       }
 
@@ -702,7 +723,7 @@ window.addEventListener("error", (e) => {
       // 4. 构建句子盒子
       const sentenceBoxes = sentences.map((s, i) => {
         // 生成伪 word 盒子
-        const wordBoxes = sentenceToWordBoxes(s.text, s.bbox);
+        const wordBoxes = sentenceToWordBoxes(s);
         return {
           id: "s" + i, type: "sentence",
           text: s.text, bbox: s.bbox,
