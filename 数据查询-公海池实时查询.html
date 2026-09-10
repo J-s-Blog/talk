@@ -630,11 +630,11 @@
         /* 数据看板头部 */
         .dashboard-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             margin-bottom: 15px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px 20px;
             min-height: 40px;
         }
         
@@ -643,7 +643,23 @@
             flex-shrink: 0;
         }
         
-        /* 日期容器 */
+        /* header 内左侧组：标题 + 时间差开关 + 刷新频率 —— 整体不换行 */
+        .header-left-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .toggle-time-diff {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        /* 日期容器默认（旧独立一行状态） */
         .date-refresh-container {
             display: flex;
             justify-content: flex-start;
@@ -655,6 +671,15 @@
             min-height: 60px;
         }
         
+        /* 日期容器被挪进 header 后：改为紧凑 inline */
+        .dashboard-header .date-refresh-container {
+            margin: 0;
+            min-height: auto;
+            gap: 12px;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+        
         .date-controls {
             display: flex;
             gap: 15px;
@@ -662,11 +687,41 @@
             width: 100%;
         }
         
+        /* header 内 date-controls：一行两个日期，不换行 */
+        .dashboard-header .date-controls {
+            gap: 12px;
+            width: auto;
+            flex-wrap: nowrap;
+        }
+        
         .form-group.inline {
             margin-bottom: 0;
             min-height: 55px;
             display: flex;
             flex-direction: column;
+        }
+        
+        /* header 内 form-group.inline：标签和输入框横向紧凑排列 */
+        .dashboard-header .form-group.inline {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            min-height: 0;
+        }
+        
+        .dashboard-header .form-group.inline label {
+            font-size: 12px;
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        .dashboard-header .form-group.inline input[type="date"] {
+            width: 130px;
+        }
+        
+        /* header 内隐藏提示文案 */
+        .dashboard-header .form-group.inline .info-text {
+            display: none;
         }
         
         .form-group.inline label {
@@ -697,11 +752,12 @@
             border: 1px solid #ddd;
         }
         
-        /* 刷新控件在header中时，去掉背景边框 */
+        /* 刷新控件在 header 中时，去掉背景边框 */
         .dashboard-header .refresh-control {
             padding: 4px 8px;
             background-color: transparent;
             border: none;
+            flex-shrink: 0;
         }
         
         .refresh-control input[type="checkbox"] {
@@ -1007,10 +1063,11 @@
             
             /* 数据看板头部 - 紧凑布局 */
             .dashboard-header {
-                gap: 8px;
+                gap: 8px 12px;
                 margin-bottom: 10px;
                 min-height: auto;
-                flex-wrap: nowrap;
+                flex-wrap: wrap;      /* 允许换行：左侧组一行，日期整体换到下一行 */
+                justify-content: flex-start;
             }
             
             .dashboard-header h2 {
@@ -1020,7 +1077,70 @@
                 min-width: 0;
             }
             
-            /* 刷新频率在标题旁 - 紧凑 */
+            /* 左侧组在手机上不换行（标题+开关+刷新频率保持一行） */
+            .header-left-group {
+                gap: 8px;
+                flex-wrap: nowrap;
+                width: 100%;
+                overflow: hidden;
+            }
+            
+            .toggle-time-diff {
+                gap: 5px;
+                font-size: 12px;
+                flex-shrink: 0;
+            }
+            
+            .toggle-time-diff label[for="calcTimeDiffToggle"] {
+                font-size: 12px;
+            }
+            
+            /* 日期控件 - 在 header 内手机端单独一行 */
+            .dashboard-header .date-refresh-container {
+                margin: 0;
+                min-height: auto;
+                gap: 8px;
+                width: 100%;
+                flex-wrap: nowrap;
+                display: flex;
+                align-items: stretch;
+            }
+            
+            .dashboard-header .date-controls {
+                gap: 12px;
+                width: 100%;
+                flex-wrap: nowrap;
+            }
+            
+            .dashboard-header .form-group.inline {
+                flex: 1;
+                min-width: 0;
+                flex-direction: column;   /* 恢复纵向：标签在上，输入框在下 */
+                gap: 3px;
+                min-height: auto;
+            }
+            
+            .dashboard-header .form-group.inline label {
+                font-size: 11px;
+                margin: 0;
+                white-space: nowrap;
+            }
+            
+            .dashboard-header .form-group.inline input[type="date"] {
+                width: 100%;
+                padding: 4px 6px;
+                font-size: 11px;
+                max-width: none;
+                height: 30px;
+                min-height: 30px;
+                box-sizing: border-box;
+            }
+            
+            .dashboard-header .form-group.inline .info-text {
+                display: none;
+            }
+            
+            /* 刷新频率在左侧组内 - 紧凑 */
             .dashboard-header .refresh-control {
                 gap: 5px;
                 padding: 0;
@@ -1041,56 +1161,6 @@
             .dashboard-header .refresh-control span {
                 font-size: 12px;
                 white-space: nowrap;
-            }
-            
-            /* 日期控件 - 紧凑并排，缩短长度 */
-            .date-refresh-container {
-                gap: 8px;
-                margin-bottom: 10px;
-                margin-top: 8px;
-                min-height: auto;
-            }
-            
-            .date-controls {
-                flex-direction: row;
-                gap: 12px;
-                width: 100%;
-                flex-wrap: nowrap;
-            }
-            
-            .form-group.inline {
-                flex: 1;
-                min-width: 0;
-                width: auto;
-                min-height: 48px;
-            }
-            
-            .form-group.inline label {
-                font-size: 11px;
-                margin-bottom: 3px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            
-            .form-group.inline input[type="date"] {
-                width: 100%;
-                padding: 4px 6px;
-                font-size: 11px;
-                max-width: none;
-                height: 30px;
-                min-height: 30px;
-                box-sizing: border-box;
-            }
-            
-            .form-group.inline .info-text {
-                display: none;
-            }
-            
-            .refresh-control input[type="number"] {
-                width: 50px !important;
-                padding: 4px;
-                font-size: 13px;
             }
             
             /* 表格容器 - 允许横向滚动 */
@@ -2272,38 +2342,38 @@
             <!-- 公海池数据看板Tab -->
             <div id="seaPool" class="tab-content">
                 <div class="dashboard-header">
-                    <div style="display: flex; align-items: center; gap: 16px;">
+                    <!-- 左侧组：标题 + 时间差开关 + 刷新频率（整体 nowrap，不内部换行） -->
+                    <div class="header-left-group">
                         <h2 style="margin: 0;">公海池数据看板</h2>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="toggle-time-diff">
                             <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; margin: 0;">
                                 <input type="checkbox" id="calcTimeDiffToggle" style="opacity: 0; width: 0; height: 0;">
                                 <span class="slider-toggle" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;">
                                     <span style="position: absolute; content: ''; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
                                 </span>
                             </label>
-                            <label for="calcTimeDiffToggle" style="font-size: 13px; color: #555; cursor: pointer; user-select: none; white-space: nowrap;">计算领取/跟进时间差</label>
+                            <label for="calcTimeDiffToggle" style="font-size: 13px; color: #555; cursor: pointer; user-select: none; white-space: nowrap;">计算时间差</label>
+                        </div>
+                        <div class="refresh-control">
+                            <input type="checkbox" id="autoRefresh" name="autoRefresh">
+                            <label for="autoRefresh">刷新:</label>
+                            <input type="number" id="refreshInterval" name="refreshInterval" value="30" min="30" max="3600" style="width: 60px;">
+                            <span>秒</span>
                         </div>
                     </div>
-                    <div class="refresh-control">
-                        <input type="checkbox" id="autoRefresh" name="autoRefresh">
-                        <label for="autoRefresh">刷新频率:</label>
-                        <input type="number" id="refreshInterval" name="refreshInterval" value="30" min="30" max="3600" style="width: 60px;">
-                        <span>秒</span>
-                    </div>
-                </div>
-                
-                <!-- 日期控件 -->
-                <div class="date-refresh-container">
-                    <div class="date-controls">
-                        <div class="form-group inline">
-                            <label for="createStartTime">开始时间:</label>
-                            <input type="date" id="createStartTime" name="createStartTime">
-                            <div class="info-text">留空表示不限制开始时间</div>
-                        </div>
-                        <div class="form-group inline">
-                            <label for="createEndTime">结束时间:</label>
-                            <input type="date" id="createEndTime" name="createEndTime">
-                            <div class="info-text">留空表示不限制结束时间</div>
+                    <!-- 日期控件（PC 上同一行，手机上单独一行） -->
+                    <div class="date-refresh-container">
+                        <div class="date-controls">
+                            <div class="form-group inline">
+                                <label for="createStartTime">开始日期:</label>
+                                <input type="date" id="createStartTime" name="createStartTime">
+                                <div class="info-text">留空表示不限制开始日期</div>
+                            </div>
+                            <div class="form-group inline">
+                                <label for="createEndTime">结束日期:</label>
+                                <input type="date" id="createEndTime" name="createEndTime">
+                                <div class="info-text">留空表示不限制结束日期</div>
+                            </div>
                         </div>
                     </div>
                 </div>
