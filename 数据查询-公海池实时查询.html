@@ -183,22 +183,69 @@
             margin-top: 10px;
         }
         
-        /* 按日统计表 - 列宽由JS统一固定，CSS只做基础保障 */
-        .daily-stats-table {
+        /* 按日统计/顾问统计表 - 列宽由JS统一固定，CSS只做基础保障 */
+        .daily-stats-table,
+        .consultant-stats-table {
             table-layout: fixed !important;
             width: auto !important;
             min-width: auto !important;
         }
         .daily-stats-table th,
-        .daily-stats-table td {
+        .daily-stats-table td,
+        .consultant-stats-table th,
+        .consultant-stats-table td {
             white-space: nowrap;
             padding: 5px 10px;
             box-sizing: border-box;
             overflow: hidden;
         }
+        /* 数字列右对齐靠边 */
         .daily-stats-table th:not(:first-child),
-        .daily-stats-table td:not(:first-child) {
+        .daily-stats-table td:not(:first-child),
+        .consultant-stats-table th:nth-child(n+3),
+        .consultant-stats-table td:nth-child(n+3) {
+            text-align: right;
+        }
+        /* 顾问统计排名列居中 */
+        .consultant-stats-table th:first-child,
+        .consultant-stats-table td:first-child {
             text-align: center;
+        }
+        /* 单元格分割线：黑色 */
+        .daily-stats-table th,
+        .daily-stats-table td,
+        .consultant-stats-table th,
+        .consultant-stats-table td {
+            border: 1px solid #000;
+        }
+        .daily-stats-table thead th,
+        .consultant-stats-table thead th {
+            border-bottom: 2px solid #000;
+            background-color: #eef1f5;
+        }
+        /* 斑马纹 + 悬停高亮，防止看差行 */
+        .daily-stats-table tbody tr:nth-child(even),
+        .consultant-stats-table tbody tr:nth-child(even) {
+            background-color: #f4f6f8;
+        }
+        .daily-stats-table tbody tr:hover,
+        .consultant-stats-table tbody tr:hover {
+            background-color: #e3edfb;
+        }
+        /* 悬停时整行高亮（覆盖日期列的交替底色） */
+        .daily-stats-table tbody tr:hover td,
+        .consultant-stats-table tbody tr:hover td {
+            background-color: #e3edfb !important;
+        }
+        /* 覆盖全局 .data-table 的 nth-child 列宽限制（顾问统计表列数少于全局规则设计时的列数） */
+        .consultant-stats-table th:nth-child(n),
+        .consultant-stats-table td:nth-child(n) {
+            min-width: auto;
+            width: auto;
+        }
+        .consultant-stats-table th:nth-child(2),
+        .consultant-stats-table td:nth-child(2) {
+            min-width: 70px;
         }
         
         /* 推荐码汇总表 */
@@ -1893,22 +1940,39 @@
                 white-space: nowrap;
             }
             
-            /* 按日统计表 - 手机端：覆盖全局 nth-child 列宽限制，列宽由 JS 统一固定 */
-            .daily-stats-table {
+            /* 按日统计/顾问统计表 - 手机端：覆盖全局 nth-child 列宽限制，列宽由 JS 统一固定 */
+            .daily-stats-table,
+            .consultant-stats-table {
                 table-layout: fixed !important;
                 width: auto !important;
                 min-width: auto !important;
             }
-            .daily-stats-table th {
+            .daily-stats-table th,
+            .consultant-stats-table th {
                 white-space: nowrap !important;
             }
             .daily-stats-table th:nth-child(n),
-            .daily-stats-table td:nth-child(n) {
+            .daily-stats-table td:nth-child(n),
+            .consultant-stats-table th:nth-child(n),
+            .consultant-stats-table td:nth-child(n) {
                 min-width: auto !important;
             }
             .daily-stats-table th:not(:first-child),
-            .daily-stats-table td:not(:first-child) {
-                text-align: center !important;
+            .daily-stats-table td:not(:first-child),
+            .consultant-stats-table th:nth-child(n+3),
+            .consultant-stats-table td:nth-child(n+3) {
+                text-align: right !important;
+            }
+            /* 分割线更明显 + 斑马纹（手机端） */
+            .daily-stats-table th,
+            .daily-stats-table td,
+            .consultant-stats-table th,
+            .consultant-stats-table td {
+                border: 1px solid #000 !important;
+            }
+            .daily-stats-table tbody tr:nth-child(even),
+            .consultant-stats-table tbody tr:nth-child(even) {
+                background-color: #f4f6f8;
             }
 
             /* 按日统计标题在手机下的紧凑样式 */
@@ -3028,10 +3092,62 @@
             </div>
         </div>
         
-        <!-- 顾问统计表格 -->
+        <!-- 顾问统计表格（汇总 + 全职/兼职/武汉顾问四张表） -->
         <div id="rechargeConsultantStats" style="display: none;">
+            <div id="consultantStatsPeriodNote" style="display: none; margin: 4px 0 8px 0; padding: 6px 10px; color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; font-size: 13px;">
+                查询周期超过一个月，已省略按天业绩列，仅显示汇总数据。
+            </div>
+            <h3 style="margin: 10px 0 8px 0; font-size: 16px; color: #333;">汇总 - 顾问统计</h3>
             <div class="table-container">
-                <table id="consultantStatsTable" class="data-table">
+                <table id="consultantStatsTableSummary" class="data-table consultant-stats-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>顾问姓名</th>
+                            <th>用户数</th>
+                            <th>订单数</th>
+                            <th>支付金额(元)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">全职顾问 - 顾问统计</h3>
+            <div class="table-container">
+                <table id="consultantStatsTableFullTime" class="data-table consultant-stats-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>顾问姓名</th>
+                            <th>用户数</th>
+                            <th>订单数</th>
+                            <th>支付金额(元)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">兼职学管师 - 顾问统计</h3>
+            <div class="table-container">
+                <table id="consultantStatsTablePartTime" class="data-table consultant-stats-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>顾问姓名</th>
+                            <th>用户数</th>
+                            <th>订单数</th>
+                            <th>支付金额(元)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">武汉顾问 - 顾问统计</h3>
+            <div class="table-container">
+                <table id="consultantStatsTableWuhan" class="data-table consultant-stats-table">
                     <thead>
                         <tr>
                             <th>排名</th>
@@ -9119,15 +9235,14 @@
                     // 渲染订单明细表格
                     renderRechargeOrderTable(data.resultData.resultList);
                     
-                    // 生成并渲染统计表格
-                    const consultantStats = generateConsultantStats(data.resultData.resultList);
-                    const productStats = generateProductStats(data.resultData.resultList);
-                    // 按日统计需要系统顾问清单来分类，若 window.specialHoldData 不存在则先查询
+                    // 生成并渲染统计表格（顾问统计/按日统计都需要系统顾问清单来分类）
                     let specialHoldDataForDaily = window.specialHoldData;
                     if (!specialHoldDataForDaily) {
                         specialHoldDataForDaily = await fetchSpecialHoldData();
                         window.specialHoldData = specialHoldDataForDaily;
                     }
+                    const consultantStats = generateConsultantStats(data.resultData.resultList, specialHoldDataForDaily);
+                    const productStats = generateProductStats(data.resultData.resultList);
                     const dailyStats = generateDailyStats(data.resultData.resultList, specialHoldDataForDaily);
                     renderConsultantStats(consultantStats);
                     renderProductStats(productStats);
@@ -9228,84 +9343,11 @@
             }
         }
         
-        // 生成顾问统计数据
-        function generateConsultantStats(data) {
-            const consultantStats = {};
-            const userMap = {};
-            
-            data.forEach(item => {
-                const consultant = item.staffUserName || '经销商订单';
-                const userId = item.userId;
-                
-                if (!consultantStats[consultant]) {
-                    consultantStats[consultant] = {
-                        userCount: 0,
-                        orderCount: 0,
-                        totalMoney: 0
-                    };
-                    userMap[consultant] = new Set();
-                }
-                
-                // 用户数（去重）
-                if (userId) {
-                    userMap[consultant].add(userId);
-                }
-                
-                // 订单数
-                consultantStats[consultant].orderCount++;
-                
-                // 支付金额
-                consultantStats[consultant].totalMoney += parseFloat(item.payMoney) || 0;
-            });
-            
-            // 更新用户数
-            Object.keys(consultantStats).forEach(consultant => {
-                consultantStats[consultant].userCount = userMap[consultant].size;
-            });
-            
-            return consultantStats;
-        }
-        
-        // 生成套餐统计数据
-        function generateProductStats(data) {
-            const productStats = {};
-            
-            data.forEach(item => {
-                const consultant = item.staffUserName || '经销商订单';
-                const product = item.productName || '未知';
-                
-                if (!productStats[consultant]) {
-                    productStats[consultant] = {};
-                }
-                
-                if (!productStats[consultant][product]) {
-                    productStats[consultant][product] = 0;
-                }
-                
-                productStats[consultant][product]++;
-            });
-            
-            return productStats;
-        }
-        
-        // 生成按日统计套餐销售数量
-        // 排除经销商订单（staffUserName为空），按顾问分类：
-        //   1. 武汉顾问特例：订单 staffId 为 1462402/1462404（优先级最高）
-        //   2. 兼职学管师：系统清单中 staffTalkId 匹配 ^empxgs\d+
-        //   3. 全职顾问：系统清单中 staffTalkId 匹配 ^emp\d+
-        //   4. 兜底归兼职：顾问姓名不在系统清单中
-        // 返回 { summary: {...}, fullTime: {...}, partTime: {...}, wuhan: {...} } 四套统计数据
-        function generateDailyStats(data, specialHoldData) {
-            const summaryStats = {};   // 汇总（所有非经销商订单）
-            const fullTimeStats = {}; // 全职顾问
-            const partTimeStats = {}; // 兼职学管师
-            const wuhanStats = {};    // 武汉顾问
-
-            // 武汉顾问特例 staffId 集合
-            const WUHAN_STAFF_IDS = new Set(['1462402', '1462404']);
-
-            // 第1步：从系统顾问清单（保有量配置查询）建立 姓名→角色 映射
-            const roleMap = {}; // staffName -> "full" / "part"
+        // 构建顾问 姓名→角色 映射（顾问统计/按日统计共用）
+        // 分类规则：武汉特例 staffId(1462402/1462404) 优先 → 系统清单 empxgs+数字=兼职 → emp+数字=全职 → 兜底归兼职
+        // 返回 { roleMap: {姓名: 'full'|'part'|'wuhan'}, getRole: (staffName, staffId) => role }
+        function buildStaffRoleMap(specialHoldData) {
+            const roleMap = {};
             const holdList = Array.isArray(specialHoldData) ? specialHoldData :
                              (Array.isArray(window.specialHoldData) ? window.specialHoldData : []);
             holdList.forEach(account => {
@@ -9318,27 +9360,144 @@
                     roleMap[name] = 'full';
                 }
             });
+            const WUHAN_STAFF_IDS = new Set(['1462402', '1462404']);
+            const getRole = function(staffName, staffId) {
+                const name = (staffName || '').toString().trim();
+                const sid = (staffId || '').toString().trim();
+                if (WUHAN_STAFF_IDS.has(sid)) {
+                    roleMap[name] = 'wuhan';        // 武汉特例，优先级最高，覆盖映射
+                    return 'wuhan';
+                }
+                if (roleMap[name]) return roleMap[name];
+                roleMap[name] = 'part';             // 兜底归兼职
+                return 'part';
+            };
+            return { roleMap, getRole };
+        }
+        
+        // 生成顾问统计数据
+        // 排除经销商订单（staffUserName为空），按顾问分类：全职顾问/兼职学管师/武汉顾问 + 汇总
+        // 每位顾问额外统计 dailyMoney（按天的支付金额业绩），并返回全局日期列表 allDates
+        // 返回 { summary, fullTime, partTime, wuhan, allDates: [{key, display}] }
+        function generateConsultantStats(data, specialHoldData) {
+            const summaryStats = {};
+            const fullTimeStats = {};
+            const partTimeStats = {};
+            const wuhanStats = {};
+            const summaryUserMap = {};
+            const fullTimeUserMap = {};
+            const partTimeUserMap = {};
+            const wuhanUserMap = {};
+            const allDatesMap = {}; // dateKey -> display
 
-            // 第2步：遍历订单，叠加武汉特例与兜底，同时统计
+            const { getRole } = buildStaffRoleMap(specialHoldData);
+
+            data.forEach(item => {
+                // 排除经销商订单（staffUserName为空）
+                if (!item.staffUserName) return;
+
+                const consultant = item.staffUserName.toString().trim();
+                const userId = item.userId;
+                const role = getRole(consultant, item.staffId);
+                const payMoney = parseFloat(item.payMoney) || 0;
+
+                // 提取支付日期（与按日统计同规则）
+                const payTime = item.payTime || item.createTime || '';
+                let dateKey = '';
+                let displayDate = '';
+                if (payTime) {
+                    const datePart = payTime.trim().split(/[ T]/)[0];
+                    const parts = datePart.split(/[-\/]/);
+                    if (parts.length === 3) {
+                        dateKey = `${parts[0]}-${String(parseInt(parts[1])).padStart(2,'0')}-${String(parseInt(parts[2])).padStart(2,'0')}`;
+                        displayDate = `${parseInt(parts[1])}.${parseInt(parts[2])}`;
+                    } else {
+                        dateKey = datePart;
+                        displayDate = datePart;
+                    }
+                }
+
+                const targetStatsMap = {
+                    full: { stats: fullTimeStats, userMap: fullTimeUserMap },
+                    part: { stats: partTimeStats, userMap: partTimeUserMap },
+                    wuhan: { stats: wuhanStats, userMap: wuhanUserMap }
+                };
+                const target = targetStatsMap[role];
+
+                for (const entry of [ { stats: summaryStats, userMap: summaryUserMap }, target ]) {
+                    if (!entry.stats[consultant]) {
+                        entry.stats[consultant] = { userCount: 0, orderCount: 0, totalMoney: 0, dailyMoney: {} };
+                        entry.userMap[consultant] = new Set();
+                    }
+                    if (userId) entry.userMap[consultant].add(userId);
+                    entry.stats[consultant].orderCount++;
+                    entry.stats[consultant].totalMoney += payMoney;
+                    if (dateKey) {
+                        entry.stats[consultant].dailyMoney[dateKey] = (entry.stats[consultant].dailyMoney[dateKey] || 0) + payMoney;
+                        allDatesMap[dateKey] = displayDate;
+                    }
+                }
+            });
+
+            // 更新用户数
+            [ [summaryStats, summaryUserMap], [fullTimeStats, fullTimeUserMap],
+              [partTimeStats, partTimeUserMap], [wuhanStats, wuhanUserMap] ].forEach(([stats, userMap]) => {
+                Object.keys(stats).forEach(consultant => {
+                    stats[consultant].userCount = userMap[consultant].size;
+                });
+            });
+
+            // 全局日期列表（按日期升序），四张表共用同一组日期列
+            const allDates = Object.keys(allDatesMap).sort().map(key => ({ key, display: allDatesMap[key] }));
+
+            return { summary: summaryStats, fullTime: fullTimeStats, partTime: partTimeStats, wuhan: wuhanStats, allDates };
+        }
+        
+        // 生成套餐统计数据
+        // 排除经销商订单（staffUserName为空），不纳入统计结果
+        function generateProductStats(data) {
+            const productStats = {};
+
+            data.forEach(item => {
+                // 排除经销商订单（staffUserName为空）
+                if (!item.staffUserName) return;
+
+                const consultant = item.staffUserName.toString().trim();
+                const product = item.productName || '未知';
+
+                if (!productStats[consultant]) {
+                    productStats[consultant] = {};
+                }
+
+                if (!productStats[consultant][product]) {
+                    productStats[consultant][product] = 0;
+                }
+
+                productStats[consultant][product]++;
+            });
+
+            return productStats;
+        }
+        
+        // 生成按日统计套餐销售数量
+        // 排除经销商订单（staffUserName为空），按顾问分类（规则同顾问统计，见 buildStaffRoleMap）：
+        //   武汉顾问特例 → 兼职学管师 → 全职顾问 → 兜底归兼职
+        // 返回 { summary: {...}, fullTime: {...}, partTime: {...}, wuhan: {...} } 四套统计数据
+        function generateDailyStats(data, specialHoldData) {
+            const summaryStats = {};   // 汇总（所有非经销商订单）
+            const fullTimeStats = {}; // 全职顾问
+            const partTimeStats = {}; // 兼职学管师
+            const wuhanStats = {};    // 武汉顾问
+
+            const { getRole } = buildStaffRoleMap(specialHoldData);
+
             data.forEach(item => {
                 // 1. 排除经销商订单（staffUserName为空）
                 if (!item.staffUserName) return;
 
                 const product = item.productName || '未知';
                 const staffName = item.staffUserName.toString().trim();
-                const staffId = (item.staffId || '').toString().trim();
-
-                // 2. 确定角色
-                let role;
-                if (WUHAN_STAFF_IDS.has(staffId)) {
-                    role = 'wuhan';                          // 武汉特例，优先级最高
-                    roleMap[staffName] = 'wuhan';            // 覆盖映射
-                } else if (roleMap[staffName]) {
-                    role = roleMap[staffName];               // 系统清单已分类
-                } else {
-                    roleMap[staffName] = 'part';             // 兜底归兼职
-                    role = 'part';
-                }
+                const role = getRole(staffName, item.staffId);
 
                 // 3. 提取日期
                 const payTime = item.payTime || item.createTime || '';
@@ -9380,6 +9539,14 @@
             return { summary: summaryStats, fullTime: fullTimeStats, partTime: partTimeStats, wuhan: wuhanStats };
         }
         
+        // 数字格式化：整数加千分位；金额两位小数+千分位
+        function fmtThousand(n) {
+            return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        function fmtMoney2(v) {
+            return fmtThousand(v.toFixed(2));
+        }
+
         // 渲染单张按日统计表（通用辅助函数）
         function renderSingleDailyStatsTable(tableId, stats) {
             const table = document.getElementById(tableId);
@@ -9435,6 +9602,14 @@
             const dateTotals = {};
             sortedDateKeys.forEach(dateKey => dateTotals[dateKey] = 0);
 
+            // 日期列交替底色，避免相邻日期列颜色相同、看差列
+            const altColBg = ['#ffffff', '#eef3fa']; // 交替两种浅色调
+            // 表头日期列同步交替底色
+            sortedDateKeys.forEach((dateKey, i) => {
+                const th = thead.querySelectorAll('th')[i + 1];
+                if (th) th.style.backgroundColor = altColBg[i % 2];
+            });
+
             sortedProducts.forEach(product => {
                 const row = document.createElement('tr');
 
@@ -9445,10 +9620,11 @@
 
                 // 各日期销量
                 let productTotal = 0;
-                sortedDateKeys.forEach(dateKey => {
+                sortedDateKeys.forEach((dateKey, i) => {
                     const cell = document.createElement('td');
                     const count = stats[product] && stats[product][dateKey] ? stats[product][dateKey].count : 0;
-                    cell.textContent = count;
+                    cell.textContent = fmtThousand(count);
+                    cell.style.backgroundColor = altColBg[i % 2];
                     row.appendChild(cell);
                     productTotal += count;
                     dateTotals[dateKey] += count;
@@ -9456,7 +9632,7 @@
 
                 // 合计
                 const totalCell = document.createElement('td');
-                totalCell.textContent = productTotal;
+                totalCell.textContent = fmtThousand(productTotal);
                 row.appendChild(totalCell);
 
                 tbody.appendChild(row);
@@ -9465,21 +9641,23 @@
             // 生成汇总行
             const totalRow = document.createElement('tr');
             totalRow.style.fontWeight = 'bold';
+            totalRow.style.backgroundColor = '#e8ebf0';
 
             const totalLabelCell = document.createElement('td');
             totalLabelCell.textContent = '合计';
             totalRow.appendChild(totalLabelCell);
 
             let grandTotal = 0;
-            sortedDateKeys.forEach(dateKey => {
+            sortedDateKeys.forEach((dateKey, i) => {
                 const cell = document.createElement('td');
-                cell.textContent = dateTotals[dateKey];
+                cell.textContent = fmtThousand(dateTotals[dateKey]);
+                cell.style.backgroundColor = altColBg[i % 2];
                 totalRow.appendChild(cell);
                 grandTotal += dateTotals[dateKey];
             });
 
             const grandTotalCell = document.createElement('td');
-            grandTotalCell.textContent = grandTotal;
+            grandTotalCell.textContent = fmtThousand(grandTotal);
             totalRow.appendChild(grandTotalCell);
 
             tbody.appendChild(totalRow);
@@ -9522,24 +9700,160 @@
             renderSingleDailyStatsTable('dailyStatsTableWuhan', wuhan || {});
         }
         
-        // 渲染顾问统计表格
-        function renderConsultantStats(stats) {
-            const tableBody = document.getElementById('consultantStatsTable').querySelector('tbody');
+        // 渲染单张顾问统计表（通用辅助函数）
+        // allDates: [{key, display}] 全局日期列表，在支付金额列后按天增加业绩列
+        function renderSingleConsultantStatsTable(tableId, stats, allDates) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const headRow = table.querySelector('thead tr');
+            const tableBody = table.querySelector('tbody');
+            allDates = allDates || [];
+            // 日期列交替底色（日期列从第6列即索引5开始），避免相邻日期列颜色相同、看差列
+            const altColBg = ['#ffffff', '#eef3fa'];
+
+            // 重建表头：基础5列 + 按天业绩列
+            headRow.innerHTML = '<th>排名</th><th>顾问姓名</th><th>用户数</th><th>订单数</th><th>支付金额(元)</th>';
+            allDates.forEach((d, i) => {
+                const th = document.createElement('th');
+                th.textContent = d.display;
+                th.style.backgroundColor = altColBg[i % 2];
+                headRow.appendChild(th);
+            });
+
             tableBody.innerHTML = '';
-            
+
             const sortedConsultants = Object.keys(stats).sort((a, b) => stats[b].totalMoney - stats[a].totalMoney);
-            
+
+            // 无数据时添加提示行
+            if (sortedConsultants.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 5 + allDates.length;
+                cell.style.color = '#999';
+                cell.style.textAlign = 'center';
+                cell.textContent = '暂无数据';
+                row.appendChild(cell);
+                tableBody.appendChild(row);
+                return;
+            }
+
+            // 合计累计（最后一行汇总数据行使用）
+            const sum = { userCount: 0, orderCount: 0, totalMoney: 0, daily: {} };
+
             sortedConsultants.forEach((consultant, index) => {
+                const c = stats[consultant];
+                sum.userCount += c.userCount;
+                sum.orderCount += c.orderCount;
+                sum.totalMoney += c.totalMoney;
+
+                const dailyCells = allDates.map((d, i) => {
+                    const v = c.dailyMoney && c.dailyMoney[d.key] ? c.dailyMoney[d.key] : 0;
+                    sum.daily[d.key] = (sum.daily[d.key] || 0) + v;
+                    return `<td style="background-color:${altColBg[i % 2]}" title="${fmtMoney2(v)}">${fmtMoney2(v)}</td>`;
+                }).join('');
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${consultant}</td>
-                    <td>${stats[consultant].userCount}</td>
-                    <td>${stats[consultant].orderCount}</td>
-                    <td>${stats[consultant].totalMoney.toFixed(2)}</td>
+                    <td>${fmtThousand(c.userCount)}</td>
+                    <td>${fmtThousand(c.orderCount)}</td>
+                    <td>${fmtMoney2(c.totalMoney)}</td>
+                    ${dailyCells}
                 `;
                 tableBody.appendChild(row);
             });
+
+            // 最后一行：汇总数据行
+            const totalRow = document.createElement('tr');
+            totalRow.style.fontWeight = 'bold';
+            totalRow.style.backgroundColor = '#e8ebf0';
+            const dailyTotalCells = allDates.map((d, i) => `<td style="background-color:${altColBg[i % 2]}" title="${fmtMoney2(sum.daily[d.key] || 0)}">${fmtMoney2(sum.daily[d.key] || 0)}</td>`).join('');
+            totalRow.innerHTML = `
+                <td></td>
+                <td>合计</td>
+                <td>${fmtThousand(sum.userCount)}</td>
+                <td>${fmtThousand(sum.orderCount)}</td>
+                <td>${fmtMoney2(sum.totalMoney)}</td>
+                ${dailyTotalCells}
+            `;
+            tableBody.appendChild(totalRow);
+
+            // 列宽固定：按各列最大内容宽度设置（顾问姓名列自适应除外）
+            const measureSpan = document.createElement('span');
+            measureSpan.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:13px;';
+            document.body.appendChild(measureSpan);
+            const measure = (text, bold) => {
+                measureSpan.style.fontWeight = bold ? 'bold' : 'normal';
+                measureSpan.textContent = text == null ? '' : text;
+                return Math.ceil(measureSpan.getBoundingClientRect().width);
+            };
+            const widths = new Array(5 + allDates.length).fill(0);
+            headRow.querySelectorAll('th').forEach((th, idx) => {
+                if (idx === 1) return; // 顾问姓名列自适应
+                widths[idx] = Math.max(widths[idx], measure(th.textContent, true));
+            });
+            tableBody.querySelectorAll('tr').forEach(tr => {
+                const bold = tr.style.fontWeight === 'bold';
+                tr.querySelectorAll('td').forEach((td, idx) => {
+                    if (idx === 1) return;
+                    widths[idx] = Math.max(widths[idx], measure(td.textContent, bold));
+                });
+            });
+            const pad = 21; // 左右padding(10+10)+边框1
+            // 日期列宽度上限：按十万级别"999,999.99"测量（加粗），避免合计行大数字把整列撑宽浪费空间
+            // 超过该宽度的极少数大数会被轻微裁剪（overflow:hidden），正常业务数据（6位数以内）完全显示
+            const dailyCap = measure('999,999.99', true);
+            const finalWidths = new Array(widths.length).fill(null);
+            headRow.querySelectorAll('th').forEach((th, idx) => {
+                if (idx === 1 || !widths[idx]) return;
+                let w = widths[idx];
+                if (idx >= 5) w = Math.min(w, dailyCap); // 日期列限宽
+                w += pad;
+                finalWidths[idx] = w;
+                th.style.width = w + 'px';
+                th.style.minWidth = w + 'px';
+                th.style.maxWidth = w + 'px';
+            });
+            // 同步应用到该列所有 td（内联样式覆盖全局 .data-table td:nth-child(7/8/13) 的 min-width 规则，
+            // 否则第13列会被全局 min-width:150px 撑宽、第7/8列被 min-width:70px 撑宽）
+            tableBody.querySelectorAll('tr').forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                finalWidths.forEach((w, idx) => {
+                    if (w === null || !tds[idx]) return;
+                    tds[idx].style.width = w + 'px';
+                    tds[idx].style.minWidth = w + 'px';
+                    tds[idx].style.maxWidth = w + 'px';
+                });
+            });
+            document.body.removeChild(measureSpan);
+        }
+
+        // 判断日期跨度是否超过一个月（首尾日期相差超过31天）
+        function isSpanOverOneMonth(allDates) {
+            if (!allDates || allDates.length < 2) return false;
+            const s = new Date(allDates[0].key);
+            const e = new Date(allDates[allDates.length - 1].key);
+            if (isNaN(s.getTime()) || isNaN(e.getTime())) return false;
+            return (e - s) / 86400000 > 31;
+        }
+
+        // 渲染顾问统计（分别渲染汇总/全职/兼职/武汉四张表）
+        // 查询周期超过一个月时省略按天业绩列，仅显示汇总，避免天数过多列数爆炸
+        function renderConsultantStats(statsGroup) {
+            const group = statsGroup || { summary: {}, fullTime: {}, partTime: {}, wuhan: {}, allDates: [] };
+            const allDates = group.allDates || [];
+            const overOneMonth = isSpanOverOneMonth(allDates);
+            const datesForTable = overOneMonth ? [] : allDates;
+
+            // 周期超一个月的提示
+            const noteDiv = document.getElementById('consultantStatsPeriodNote');
+            if (noteDiv) noteDiv.style.display = overOneMonth ? 'block' : 'none';
+
+            renderSingleConsultantStatsTable('consultantStatsTableSummary', group.summary || {}, datesForTable);
+            renderSingleConsultantStatsTable('consultantStatsTableFullTime', group.fullTime || {}, datesForTable);
+            renderSingleConsultantStatsTable('consultantStatsTablePartTime', group.partTime || {}, datesForTable);
+            renderSingleConsultantStatsTable('consultantStatsTableWuhan', group.wuhan || {}, datesForTable);
         }
         
         // 渲染套餐统计表格（矩阵形式）- 行列交换版
@@ -9591,15 +9905,15 @@
                 sortedConsultants.forEach(consultant => {
                     const cell = document.createElement('td');
                     const count = stats[consultant] && stats[consultant][product] ? stats[consultant][product] : 0;
-                    cell.textContent = count;
+                    cell.textContent = fmtThousand(count);
                     row.appendChild(cell);
                     productTotal += count;
                     consultantTotals[consultant] += count;
                 });
-                
+
                 // 合计
                 const totalCell = document.createElement('td');
-                totalCell.textContent = productTotal;
+                totalCell.textContent = fmtThousand(productTotal);
                 row.appendChild(totalCell);
                 
                 tbody.appendChild(row);
@@ -9608,6 +9922,7 @@
             // 生成汇总行
             const totalRow = document.createElement('tr');
             totalRow.style.fontWeight = 'bold';
+            totalRow.style.backgroundColor = '#e8ebf0';
             
             const totalLabelCell = document.createElement('td');
             totalLabelCell.textContent = '合计';
@@ -9616,13 +9931,13 @@
             let grandTotal = 0;
             sortedConsultants.forEach(consultant => {
                 const cell = document.createElement('td');
-                cell.textContent = consultantTotals[consultant];
+                cell.textContent = fmtThousand(consultantTotals[consultant]);
                 totalRow.appendChild(cell);
                 grandTotal += consultantTotals[consultant];
             });
-            
+
             const grandTotalCell = document.createElement('td');
-            grandTotalCell.textContent = grandTotal;
+            grandTotalCell.textContent = fmtThousand(grandTotal);
             totalRow.appendChild(grandTotalCell);
             
             tbody.appendChild(totalRow);
@@ -9726,21 +10041,48 @@
                 summaryWorksheet.addRow(['服务费', parseFloat((data.serverFee || 0).toFixed(2))]);
                 summaryWorksheet.addRow(['总记录数', data.total || 0]);
                 
-                // 创建顾问统计表
-                const consultantStats = window.rechargeConsultantStats || generateConsultantStats(data.resultList);
-                const consultantWorksheet = workbook.addWorksheet('顾问统计');
-                consultantWorksheet.addRow(['排名', '顾问姓名', '用户数', '订单数', '支付金额(元)']);
-                
-                const sortedConsultants = Object.keys(consultantStats).sort((a, b) => consultantStats[b].totalMoney - consultantStats[a].totalMoney);
-                sortedConsultants.forEach((consultant, index) => {
-                    consultantWorksheet.addRow([
-                        index + 1,
-                        consultant,
-                        consultantStats[consultant].userCount,
-                        consultantStats[consultant].orderCount,
-                        parseFloat(consultantStats[consultant].totalMoney.toFixed(2))
-                    ]);
-                });
+                // 创建顾问统计表（排除经销商订单，分汇总/全职/兼职/武汉四张表；支付金额后按天增加业绩列+末尾合计行）
+                const consultantStatsGroup = window.rechargeConsultantStats || generateConsultantStats(data.resultList, window.specialHoldData);
+                const cAllDates = consultantStatsGroup.allDates || [];
+                const writeConsultantStatsSheet = (sheetName, stats) => {
+                    const worksheet = workbook.addWorksheet(sheetName);
+                    worksheet.addRow(['排名', '顾问姓名', '用户数', '订单数', '支付金额(元)', ...cAllDates.map(d => d.display)]);
+                    const sorted = Object.keys(stats || {}).sort((a, b) => stats[b].totalMoney - stats[a].totalMoney);
+                    const sum = { userCount: 0, orderCount: 0, totalMoney: 0, daily: {} };
+                    sorted.forEach((consultant, index) => {
+                        const c = stats[consultant];
+                        sum.userCount += c.userCount;
+                        sum.orderCount += c.orderCount;
+                        sum.totalMoney += c.totalMoney;
+                        const dailyVals = cAllDates.map(d => {
+                            const v = c.dailyMoney && c.dailyMoney[d.key] ? c.dailyMoney[d.key] : 0;
+                            sum.daily[d.key] = (sum.daily[d.key] || 0) + v;
+                            return parseFloat(v.toFixed(2));
+                        });
+                        worksheet.addRow([
+                            index + 1,
+                            consultant,
+                            c.userCount,
+                            c.orderCount,
+                            parseFloat(c.totalMoney.toFixed(2)),
+                            ...dailyVals
+                        ]);
+                    });
+                    if (sorted.length > 0) {
+                        worksheet.addRow([
+                            '',
+                            '合计',
+                            sum.userCount,
+                            sum.orderCount,
+                            parseFloat(sum.totalMoney.toFixed(2)),
+                            ...cAllDates.map(d => parseFloat((sum.daily[d.key] || 0).toFixed(2)))
+                        ]);
+                    }
+                };
+                writeConsultantStatsSheet('顾问统计-汇总', consultantStatsGroup.summary || {});
+                writeConsultantStatsSheet('顾问统计-全职顾问', consultantStatsGroup.fullTime || {});
+                writeConsultantStatsSheet('顾问统计-兼职学管师', consultantStatsGroup.partTime || {});
+                writeConsultantStatsSheet('顾问统计-武汉顾问', consultantStatsGroup.wuhan || {});
                 
                 // 创建套餐统计表（矩阵形式）- 行列交换版
                 const productStats = window.rechargeProductStats || generateProductStats(data.resultList);
