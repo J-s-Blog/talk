@@ -183,6 +183,24 @@
             margin-top: 10px;
         }
         
+        /* 按日统计表 - 列宽由JS统一固定，CSS只做基础保障 */
+        .daily-stats-table {
+            table-layout: fixed !important;
+            width: auto !important;
+            min-width: auto !important;
+        }
+        .daily-stats-table th,
+        .daily-stats-table td {
+            white-space: nowrap;
+            padding: 5px 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .daily-stats-table th:not(:first-child),
+        .daily-stats-table td:not(:first-child) {
+            text-align: center;
+        }
+        
         /* 推荐码汇总表 */
         #courseSummaryTable {
             min-width: auto;
@@ -1846,22 +1864,51 @@
                 font-size: 12px !important;
             }
             
-            /* 套餐统计、按日统计表 - 移动端优化 */
-            #productStatsTable,
-            #dailyStatsTableFullTime,
-            #dailyStatsTablePartTime {
+            /* 套餐统计、按日统计表 - 移动端优化（按日统计表列宽自适应，不设min-width） */
+            #productStatsTable {
                 min-width: 500px !important;
+            }
+            
+            #dailyStatsTableSummary,
+            #dailyStatsTableFullTime,
+            #dailyStatsTablePartTime,
+            #dailyStatsTableWuhan {
+                min-width: auto !important;
+                width: auto !important;
+                table-layout: auto !important;
             }
             
             #productStatsTable th,
             #productStatsTable td,
+            #dailyStatsTableSummary th,
+            #dailyStatsTableSummary td,
             #dailyStatsTableFullTime th,
             #dailyStatsTableFullTime td,
             #dailyStatsTablePartTime th,
-            #dailyStatsTablePartTime td {
+            #dailyStatsTablePartTime td,
+            #dailyStatsTableWuhan th,
+            #dailyStatsTableWuhan td {
                 padding: 5px 8px !important;
                 font-size: 12px !important;
                 white-space: nowrap;
+            }
+            
+            /* 按日统计表 - 手机端：覆盖全局 nth-child 列宽限制，列宽由 JS 统一固定 */
+            .daily-stats-table {
+                table-layout: fixed !important;
+                width: auto !important;
+                min-width: auto !important;
+            }
+            .daily-stats-table th {
+                white-space: nowrap !important;
+            }
+            .daily-stats-table th:nth-child(n),
+            .daily-stats-table td:nth-child(n) {
+                min-width: auto !important;
+            }
+            .daily-stats-table th:not(:first-child),
+            .daily-stats-table td:not(:first-child) {
+                text-align: center !important;
             }
 
             /* 按日统计标题在手机下的紧凑样式 */
@@ -3015,11 +3062,11 @@
             </div>
         </div>
         
-        <!-- 按日统计表格（分全职/兼职顾问两张表） -->
+        <!-- 按日统计表格（汇总 + 全职/兼职/武汉顾问四张表） -->
         <div id="rechargeDailyStats" style="display: none;">
-            <h3 style="margin: 10px 0 8px 0; font-size: 16px; color: #333;">全职顾问 - 按日统计</h3>
+            <h3 style="margin: 10px 0 8px 0; font-size: 16px; color: #333;">汇总 - 按日统计</h3>
             <div class="table-container">
-                <table id="dailyStatsTableFullTime" class="data-table">
+                <table id="dailyStatsTableSummary" class="data-table daily-stats-table">
                     <thead>
                         <tr>
                             <th>套餐名</th>
@@ -3031,9 +3078,37 @@
                 </table>
             </div>
 
-            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">兼职顾问 - 按日统计</h3>
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">全职顾问 - 按日统计</h3>
             <div class="table-container">
-                <table id="dailyStatsTablePartTime" class="data-table">
+                <table id="dailyStatsTableFullTime" class="data-table daily-stats-table">
+                    <thead>
+                        <tr>
+                            <th>套餐名</th>
+                            <!-- 日期会动态生成 -->
+                            <th>合计</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">兼职学管师 - 按日统计</h3>
+            <div class="table-container">
+                <table id="dailyStatsTablePartTime" class="data-table daily-stats-table">
+                    <thead>
+                        <tr>
+                            <th>套餐名</th>
+                            <!-- 日期会动态生成 -->
+                            <th>合计</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 25px 0 8px 0; font-size: 16px; color: #333;">武汉顾问 - 按日统计</h3>
+            <div class="table-container">
+                <table id="dailyStatsTableWuhan" class="data-table daily-stats-table">
                     <thead>
                         <tr>
                             <th>套餐名</th>
@@ -3738,6 +3813,9 @@
                     document.querySelector('[data-tab="seaPool"]').classList.add('active');
                     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
                     document.getElementById('seaPool').classList.add('active');
+                    // 同步手机端主Tab下拉框选中项
+                    const mainTabDropdownAfterLogin = document.getElementById('mainTabDropdown');
+                    if (mainTabDropdownAfterLogin) mainTabDropdownAfterLogin.value = 'seaPool';
                     
                     // 登录成功后不自动更新公海池数据概览，等待用户点击查询按钮
                 } else {
@@ -9044,7 +9122,13 @@
                     // 生成并渲染统计表格
                     const consultantStats = generateConsultantStats(data.resultData.resultList);
                     const productStats = generateProductStats(data.resultData.resultList);
-                    const dailyStats = generateDailyStats(data.resultData.resultList);
+                    // 按日统计需要系统顾问清单来分类，若 window.specialHoldData 不存在则先查询
+                    let specialHoldDataForDaily = window.specialHoldData;
+                    if (!specialHoldDataForDaily) {
+                        specialHoldDataForDaily = await fetchSpecialHoldData();
+                        window.specialHoldData = specialHoldDataForDaily;
+                    }
+                    const dailyStats = generateDailyStats(data.resultData.resultList, specialHoldDataForDaily);
                     renderConsultantStats(consultantStats);
                     renderProductStats(productStats);
                     renderDailyStats(dailyStats);
@@ -9205,35 +9289,55 @@
         }
         
         // 生成按日统计套餐销售数量
-        // 排除经销商订单（staffUserName为空），按顾问账号分类：
-        //   staffId 匹配 "emp+数字" 的为全职顾问（如 emp123）
-        //   staffId 匹配 "empxgs+数字" 的为兼职顾问（如 empxgs498）
-        // 返回 { fullTime: {...}, partTime: {...} } 两套统计数据
-        function generateDailyStats(data) {
+        // 排除经销商订单（staffUserName为空），按顾问分类：
+        //   1. 武汉顾问特例：订单 staffId 为 1462402/1462404（优先级最高）
+        //   2. 兼职学管师：系统清单中 staffTalkId 匹配 ^empxgs\d+
+        //   3. 全职顾问：系统清单中 staffTalkId 匹配 ^emp\d+
+        //   4. 兜底归兼职：顾问姓名不在系统清单中
+        // 返回 { summary: {...}, fullTime: {...}, partTime: {...}, wuhan: {...} } 四套统计数据
+        function generateDailyStats(data, specialHoldData) {
+            const summaryStats = {};   // 汇总（所有非经销商订单）
             const fullTimeStats = {}; // 全职顾问
-            const partTimeStats = {}; // 兼职顾问
+            const partTimeStats = {}; // 兼职学管师
+            const wuhanStats = {};    // 武汉顾问
 
-            // 正则判断
-            const empFullTimePattern = /^emp[0-9]+$/i;   // emp+数字
-            const empPartTimePattern = /^empxgs[0-9]+$/i; // empxgs+数字
+            // 武汉顾问特例 staffId 集合
+            const WUHAN_STAFF_IDS = new Set(['1462402', '1462404']);
 
+            // 第1步：从系统顾问清单（保有量配置查询）建立 姓名→角色 映射
+            const roleMap = {}; // staffName -> "full" / "part"
+            const holdList = Array.isArray(specialHoldData) ? specialHoldData :
+                             (Array.isArray(window.specialHoldData) ? window.specialHoldData : []);
+            holdList.forEach(account => {
+                const name = (account.staffName || '').toString().trim();
+                const talkId = (account.staffTalkId || '').toString().trim();
+                if (!name || !talkId) return;
+                if (/^empxgs[0-9]+$/i.test(talkId)) {
+                    roleMap[name] = 'part';
+                } else if (/^emp[0-9]+$/i.test(talkId)) {
+                    roleMap[name] = 'full';
+                }
+            });
+
+            // 第2步：遍历订单，叠加武汉特例与兜底，同时统计
             data.forEach(item => {
                 // 1. 排除经销商订单（staffUserName为空）
                 if (!item.staffUserName) return;
 
                 const product = item.productName || '未知';
+                const staffName = item.staffUserName.toString().trim();
                 const staffId = (item.staffId || '').toString().trim();
 
-                // 2. 按顾问账号分类
-                let targetStats = null;
-                if (empPartTimePattern.test(staffId)) {
-                    targetStats = partTimeStats;
-                } else if (empFullTimePattern.test(staffId)) {
-                    targetStats = fullTimeStats;
+                // 2. 确定角色
+                let role;
+                if (WUHAN_STAFF_IDS.has(staffId)) {
+                    role = 'wuhan';                          // 武汉特例，优先级最高
+                    roleMap[staffName] = 'wuhan';            // 覆盖映射
+                } else if (roleMap[staffName]) {
+                    role = roleMap[staffName];               // 系统清单已分类
                 } else {
-                    // 若不匹配规则（例如 talkId 形式的或空 staffId），判断是否属于经销商已在上一步过滤
-                    // 这里兜底：对非经销商但不匹配规则的账号，默认按全职顾问统计（避免丢失）
-                    targetStats = fullTimeStats;
+                    roleMap[staffName] = 'part';             // 兜底归兼职
+                    role = 'part';
                 }
 
                 // 3. 提取日期
@@ -9258,16 +9362,22 @@
                     displayDate = '未知';
                 }
 
-                if (!targetStats[product]) {
-                    targetStats[product] = {};
+                // 4. 写入对应分类的统计 + 汇总
+                const targetStatsMap = {
+                    full: fullTimeStats,
+                    part: partTimeStats,
+                    wuhan: wuhanStats
+                };
+                const targetStats = targetStatsMap[role];
+
+                for (const stats of [summaryStats, targetStats]) {
+                    if (!stats[product]) stats[product] = {};
+                    if (!stats[product][dateKey]) stats[product][dateKey] = { count: 0, display: displayDate };
+                    stats[product][dateKey].count++;
                 }
-                if (!targetStats[product][dateKey]) {
-                    targetStats[product][dateKey] = { count: 0, display: displayDate };
-                }
-                targetStats[product][dateKey].count++;
             });
 
-            return { fullTime: fullTimeStats, partTime: partTimeStats };
+            return { summary: summaryStats, fullTime: fullTimeStats, partTime: partTimeStats, wuhan: wuhanStats };
         }
         
         // 渲染单张按日统计表（通用辅助函数）
@@ -9373,13 +9483,43 @@
             totalRow.appendChild(grandTotalCell);
 
             tbody.appendChild(totalRow);
+
+            // 列宽统一：所有数据列（日期列+合计列）固定为表头文字宽度，避免某些列被撑宽
+            // 用一个隐藏的测量元素计算表头文字像素宽度
+            const measureSpan = document.createElement('span');
+            measureSpan.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:bold;font-size:13px;';
+            document.body.appendChild(measureSpan);
+            const thWidths = [];
+            const ths = thead.querySelectorAll('th');
+            ths.forEach((th, idx) => {
+                if (idx === 0) { thWidths.push(null); return; } // 套餐名列自适应
+                measureSpan.textContent = th.textContent;
+                const w = Math.ceil(measureSpan.getBoundingClientRect().width) + 21; // 文字宽 + 左右padding(10+10)+边框1
+                thWidths.push(w);
+                th.style.width = w + 'px';
+                th.style.minWidth = w + 'px';
+                th.style.maxWidth = w + 'px';
+            });
+            // 同步应用到该列所有单元格
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                thWidths.forEach((w, idx) => {
+                    if (w === null || !tds[idx]) return;
+                    tds[idx].style.width = w + 'px';
+                    tds[idx].style.minWidth = w + 'px';
+                    tds[idx].style.maxWidth = w + 'px';
+                });
+            });
+            document.body.removeChild(measureSpan);
         }
 
-        // 渲染按日统计（分别渲染全职/兼职两张表）
+        // 渲染按日统计（分别渲染汇总/全职/兼职/武汉四张表）
         function renderDailyStats(statsGroup) {
-            const { fullTime, partTime } = statsGroup || { fullTime: {}, partTime: {} };
+            const { summary, fullTime, partTime, wuhan } = statsGroup || { summary: {}, fullTime: {}, partTime: {}, wuhan: {} };
+            renderSingleDailyStatsTable('dailyStatsTableSummary', summary || {});
             renderSingleDailyStatsTable('dailyStatsTableFullTime', fullTime || {});
             renderSingleDailyStatsTable('dailyStatsTablePartTime', partTime || {});
+            renderSingleDailyStatsTable('dailyStatsTableWuhan', wuhan || {});
         }
         
         // 渲染顾问统计表格
@@ -9650,9 +9790,9 @@
                 totalRowData.push(grandTotal);
                 productWorksheet.addRow(totalRowData);
                 
-                // 创建按日统计表（排除经销商订单，分全职/兼职）
-                const dailyStatsGroup = window.rechargeDailyStats || generateDailyStats(data.resultList);
-                const { fullTime: dailyFullTimeStats, partTime: dailyPartTimeStats } = dailyStatsGroup || {};
+                // 创建按日统计表（排除经销商订单，分汇总/全职/兼职/武汉四张表）
+                const dailyStatsGroup = window.rechargeDailyStats || generateDailyStats(data.resultList, window.specialHoldData);
+                const { summary: dailySummaryStats, fullTime: dailyFullTimeStats, partTime: dailyPartTimeStats, wuhan: dailyWuhanStats } = dailyStatsGroup || {};
 
                 // 通用函数：将单套按日统计数据写入一个工作表
                 function writeDailyStatsSheet(sheetName, stats) {
@@ -9700,8 +9840,10 @@
                     ws.addRow(totalRow);
                 }
 
+                writeDailyStatsSheet('按日统计-汇总', dailySummaryStats || {});
                 writeDailyStatsSheet('按日统计-全职顾问', dailyFullTimeStats || {});
-                writeDailyStatsSheet('按日统计-兼职顾问', dailyPartTimeStats || {});
+                writeDailyStatsSheet('按日统计-兼职学管师', dailyPartTimeStats || {});
+                writeDailyStatsSheet('按日统计-武汉顾问', dailyWuhanStats || {});
                 
                 // 导出文件
                 const now = new Date();
