@@ -2817,6 +2817,16 @@
                     <button type="button" id="importSpecialHoldBtn" style="flex: 1;">导入文件</button>
                     <button type="button" id="addSpecialHoldBtn" style="flex: 1;">添加新记录</button>
                 </div>
+
+                <!-- 快速增加单日领取新用户上限 -->
+                <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px;">快速修改单日领取新用户上限（仅支持emp+数字格式的全职顾问）</div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <input type="text" id="increaseLimitEmpId" placeholder="输入empID数字，如 498" style="flex: 2; min-width: 150px; height: 36px; padding: 0 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                        <input type="number" id="increaseLimitAmount" value="1" step="1" title="增减数值（可为负数，上限最低减为0）" style="flex: 1; min-width: 90px; height: 36px; padding: 0 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                        <button type="button" id="increaseLimitBtn" style="flex: 1; min-width: 90px;">修改上限</button>
+                    </div>
+                </div>
                 
                 <div id="specialHoldResult" style="margin-top: 30px; display: none;">
                     <h3>查询结果</h3>
@@ -3798,6 +3808,28 @@
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
                 <button id="cancelAdd" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">取消</button>
                 <button id="confirmAdd" style="flex: 1; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上限+1确认模态框 -->
+    <div id="increaseLimitModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+        <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px;">
+            <div style="margin-bottom: 20px;">
+                <h2>修改单日领取新用户上限</h2>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div class="key-value-pair"><span class="key">员工姓名:</span><span id="increaseLimitStaffName" class="value"></span></div>
+                <div class="key-value-pair"><span class="key">员工empID:</span><span id="increaseLimitStaffTalkId" class="value"></span></div>
+                <div class="key-value-pair"><span class="key">当前单日领取新用户上限:</span><span id="increaseLimitCurrent" class="value"></span></div>
+                <div class="key-value-pair"><span class="key">增减数值:</span><span id="increaseLimitDelta" class="value"></span></div>
+                <div class="key-value-pair"><span class="key">修改后上限:</span><span id="increaseLimitNew" class="value" style="color: #28a745; font-weight: bold;"></span></div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+                <button id="cancelIncreaseLimit" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">取消</button>
+                <button id="confirmIncreaseLimit" style="flex: 1; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">确认增加</button>
             </div>
         </div>
     </div>
@@ -8445,6 +8477,153 @@
         // 绑定添加新记录按钮事件
         document.getElementById('addSpecialHoldBtn').addEventListener('click', function() {
             document.getElementById('addSpecialHoldModal').style.display = 'block';
+        });
+
+        // ============ 快速增加单日领取新用户上限（上限+1） ============
+        // 待确认的增加上限数据
+        window.pendingIncreaseLimit = null;
+
+        // 绑定上限+1按钮事件：查询保有量配置 -> 找到对应empID -> 弹窗确认
+        document.getElementById('increaseLimitBtn').addEventListener('click', async function() {
+            const btn = this;
+            const empIdInput = document.getElementById('increaseLimitEmpId');
+            const amountInput = document.getElementById('increaseLimitAmount');
+            const numStr = empIdInput.value.trim();
+
+            // 只需输入emp后面的数字，默认仅对emp+数字格式的全职顾问生效
+            if (!/^\d+$/.test(numStr)) {
+                alert('请输入正确的empID数字（只需输入emp后面的数字，如输入 498 代表 emp498）');
+                return;
+            }
+
+            const amount = parseInt(amountInput.value, 10);
+            if (!Number.isInteger(amount) || amount === 0) {
+                alert('增减数值必须为非0整数（可为负数，上限最低减为0）');
+                return;
+            }
+
+            const targetTalkId = 'emp' + numStr;
+
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = '查询中...';
+
+            try {
+                // 调用"查询保有量配置"接口，自动查出所有配置数据
+                const holdData = await fetchSpecialHoldData();
+                if (!holdData || holdData.length === 0) {
+                    alert('查询保有量配置失败或没有数据，请先登录获取token');
+                    return;
+                }
+
+                // 查找对应empID的配置记录（仅匹配emp+数字格式的全职顾问）
+                const record = holdData.find(item =>
+                    /^emp\d+$/i.test(item.staffTalkId || '') &&
+                    (item.staffTalkId || '').toLowerCase() === targetTalkId.toLowerCase()
+                );
+                if (!record) {
+                    alert(`未找到 empID 为 ${targetTalkId} 的全职顾问保有量配置（该功能仅对emp+数字格式的全职顾问生效）`);
+                    return;
+                }
+
+                const currentLimit = parseInt(record.todayUserGetLimit || 0, 10);
+                const newLimit = currentLimit + amount;
+
+                // 检查增加后的上限不能小于0（最多将上限减为0）
+                if (newLimit < 0) {
+                    alert(`增加后的上限不能小于0：${record.staffName || ''}（${record.staffTalkId}）当前上限为 ${currentLimit}，最多可输入 -${currentLimit} 将上限减为0`);
+                    return;
+                }
+
+                // 填充确认弹窗信息：员工姓名、员工empID、当前上限、增加数值、增加后上限
+                document.getElementById('increaseLimitStaffName').textContent = record.staffName || '-';
+                document.getElementById('increaseLimitStaffTalkId').textContent = record.staffTalkId || targetTalkId;
+                document.getElementById('increaseLimitCurrent').textContent = currentLimit;
+                document.getElementById('increaseLimitDelta').textContent = (amount > 0 ? '+' : '') + amount;
+                document.getElementById('increaseLimitNew').textContent = newLimit;
+
+                // 存储待确认数据
+                window.pendingIncreaseLimit = { record, amount, newLimit };
+
+                document.getElementById('increaseLimitModal').style.display = 'block';
+            } catch (error) {
+                console.error('查询保有量配置出错:', error);
+                alert('查询保有量配置出错: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+
+        // 绑定取消按钮：关闭弹窗退出
+        document.getElementById('cancelIncreaseLimit').addEventListener('click', function() {
+            document.getElementById('increaseLimitModal').style.display = 'none';
+            window.pendingIncreaseLimit = null;
+        });
+
+        // 绑定确认按钮：调用保有量配置的更新功能，为指定empID单日领取新用户上限+增加数值
+        document.getElementById('confirmIncreaseLimit').addEventListener('click', async function() {
+            const pending = window.pendingIncreaseLimit;
+            if (!pending) return;
+
+            const { record, newLimit } = pending;
+            const btn = this;
+
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录获取token');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '更新中...';
+
+            try {
+                // 构建更新请求参数（其余上限字段保持原配置不变）
+                const payload = {
+                    "id": parseInt(record.id),
+                    "staffUserTalkId": record.staffTalkId,
+                    "todayUserGetLimit": newLimit,
+                    "userHoldLimit": record.userHoldLimit || 0,
+                    "dayGetLimit": record.dayGetLimit || 0,
+                    "dayReturnLimit": record.dayReturnLimit || 0
+                };
+
+                const response = await fetch('https://www.talk915.com/users/adminSeaPool/updateSpecialHold', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/publicPoolManage/ruleConfig/inventory',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.resultCode === 0) {
+                    alert(`更新成功！${record.staffName || ''}（${record.staffTalkId}）的单日领取新用户上限已更新为 ${newLimit}`);
+                    document.getElementById('increaseLimitModal').style.display = 'none';
+                    window.pendingIncreaseLimit = null;
+                    // 更新成功后刷新所有保有量配置数据
+                    await querySpecialHoldData();
+                } else {
+                    alert('更新失败: ' + (data.resultMessage || '未知错误'));
+                }
+            } catch (error) {
+                console.error('更新错误:', error);
+                alert('网络请求出错: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认增加';
+            }
         });
         
 
