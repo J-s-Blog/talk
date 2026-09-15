@@ -806,7 +806,36 @@
             width: 150px;
             max-width: 100%;
         }
-        
+
+        /* 充值订单明细：日期条件PC端单行紧凑布局（label+起止日期横向一行） */
+        #rechargeOrder .date-conditions > .form-group.inline {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            min-height: 0;
+        }
+
+        #rechargeOrder .date-conditions > .form-group.inline > label {
+            margin-bottom: 0;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        #rechargeOrder .date-conditions > .form-group.inline > span {
+            margin: 0 2px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        #rechargeOrder .date-conditions input[type="date"] {
+            width: 125px;
+            max-width: 125px;
+            height: 32px;
+            min-height: 32px;
+            padding: 4px 6px;
+            font-size: 12px;
+        }
+
         .refresh-control {
             display: flex;
             align-items: center;
@@ -1776,13 +1805,13 @@
                 margin-bottom: 5px !important;
             }
             
-            /* 日期条件区域 - 移动端改为竖向堆叠 */
+            /* 日期条件区域 - 移动端改为竖向堆叠（紧凑） */
             #rechargeOrder .date-conditions {
                 flex-direction: column !important;
-                gap: 10px !important;
-                padding: 12px 10px !important;
+                gap: 6px !important;
+                padding: 10px 8px !important;
             }
-            
+
             /* 日期条件行 - 每行一个日期范围，内部横向并排 */
             #rechargeOrder .date-conditions > .form-group.inline {
                 display: flex !important;
@@ -1792,13 +1821,13 @@
                 width: 100% !important;
                 margin-right: 0 !important;
                 margin-bottom: 0 !important;
-                padding: 8px 10px !important;
+                padding: 5px 8px !important;
                 background-color: white !important;
                 border: 1px solid #e0e0e0 !important;
                 border-radius: 6px !important;
-                gap: 6px !important;
+                gap: 4px !important;
             }
-            
+
             #rechargeOrder .date-conditions > .form-group.inline > label {
                 font-size: 12px !important;
                 margin-bottom: 0 !important;
@@ -1806,50 +1835,56 @@
                 font-weight: 500 !important;
                 color: #555 !important;
                 flex-shrink: 0 !important;
-                width: 60px !important;
-                min-width: 60px !important;
+                width: auto !important;
+                min-width: 0 !important;
             }
-            
+
             /* 日期输入框 - 移动端自适应宽度 */
             #rechargeOrder .date-conditions input[type="date"] {
                 flex: 1 !important;
                 min-width: 0 !important;
-                height: 36px !important;
-                padding: 4px 6px !important;
-                font-size: 13px !important;
+                width: auto !important;
+                max-width: none !important;
+                height: 32px !important;
+                min-height: 32px !important;
+                padding: 3px 4px !important;
+                font-size: 12px !important;
                 border: 1px solid #ddd !important;
                 border-radius: 4px !important;
                 box-sizing: border-box !important;
             }
-            
+
             /* "至" 文字 */
             #rechargeOrder .date-conditions > .form-group.inline > span {
                 display: inline !important;
-                margin: 0 2px !important;
+                margin: 0 1px !important;
                 font-size: 12px !important;
                 flex-shrink: 0 !important;
             }
-            
-            /* 查询按钮区域 - 移动端全宽 */
+
+            /* 查询/导出/更多筛选条件按钮 - 移动端同一行，查询导出弹性撑开 */
             #rechargeOrder .date-conditions > div:last-of-type {
                 display: flex !important;
                 flex-direction: row !important;
                 gap: 8px !important;
                 width: 100% !important;
             }
-            
+
             #rechargeOrder #queryRechargeOrderBtn,
             #rechargeOrder #exportRechargeOrderBtn {
                 flex: 1 !important;
-                min-height: 40px !important;
-                padding: 8px 12px !important;
+                min-height: 36px !important;
+                padding: 6px 12px !important;
                 font-size: 14px !important;
             }
-            
-            /* 更多筛选条件按钮 - 移动端全宽 */
+
+            /* 更多筛选条件按钮 - 移动端缩小并排在导出后 */
             #rechargeOrder .toggle-advanced-btn {
-                width: 100% !important;
+                width: auto !important;
                 min-width: 0 !important;
+                flex: 0 0 auto !important;
+                padding: 6px 10px !important;
+                font-size: 13px !important;
             }
             
             /* 高级筛选条件 - 移动端网格布局 */
@@ -1893,11 +1928,18 @@
                 padding: 10px !important;
             }
             
-            /* 汇总信息 - 移动端竖向堆叠 */
+            /* 汇总信息 - 移动端流式排列，一行多个信息节省竖向空间 */
+            #rechargeSummary {
+                padding: 8px 10px !important;
+            }
+
             #rechargeSummary > div {
-                flex-direction: column !important;
-                gap: 8px !important;
-                font-size: 13px !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                gap: 4px 14px !important;
+                font-size: 12px !important;
+                line-height: 1.5 !important;
             }
             
             /* 充值订单明细表格 - 移动端优化 */
@@ -2290,19 +2332,25 @@
             }
             
             /* 充值订单明细 - 超小屏幕优化 */
-            #rechargeOrder .date-conditions > .form-group.inline {
-                padding: 6px 8px !important;
-                gap: 4px !important;
+            #rechargeOrder .date-conditions {
+                padding: 8px 6px !important;
+                gap: 5px !important;
             }
-            
+
+            #rechargeOrder .date-conditions > .form-group.inline {
+                padding: 4px 6px !important;
+                gap: 3px !important;
+            }
+
             #rechargeOrder .date-conditions > .form-group.inline > label {
                 font-size: 11px !important;
-                width: 55px !important;
-                min-width: 55px !important;
+                width: auto !important;
+                min-width: 0 !important;
             }
-            
+
             #rechargeOrder .date-conditions input[type="date"] {
-                height: 34px !important;
+                height: 30px !important;
+                min-height: 30px !important;
                 font-size: 12px !important;
             }
             
@@ -2920,40 +2968,36 @@
         <!-- 查询条件 -->
         <div style="margin-bottom: 20px;">
             <!-- 日期条件（默认显示） -->
-            <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;">
+            <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
                 <!-- 下单日期 -->
                 <div class="form-group inline">
-                    <label style="margin-bottom: 5px; display: block;">下单日期:</label>
-                    <input type="date" id="roBeginDate" style="width: 80px;">
-                    <span style="margin: 0 5px;">至</span>
-                    <input type="date" id="roEndDate" style="width: 80px;">
+                    <label>下单日期:</label>
+                    <input type="date" id="roBeginDate">
+                    <span>至</span>
+                    <input type="date" id="roEndDate">
                 </div>
-                
+
                 <!-- 支付日期 -->
                 <div class="form-group inline">
-                    <label style="margin-bottom: 5px; display: block;">支付日期:</label>
-                    <input type="date" id="roPayBeginDate" style="width: 80px;" value="">
-                    <span style="margin: 0 5px;">至</span>
-                    <input type="date" id="roPayEndDate" style="width: 80px;" value="">
+                    <label>支付日期:</label>
+                    <input type="date" id="roPayBeginDate" value="">
+                    <span>至</span>
+                    <input type="date" id="roPayEndDate" value="">
                 </div>
-                
+
                 <!-- 退款时间 -->
                 <div class="form-group inline">
-                    <label style="margin-bottom: 5px; display: block;">退款时间:</label>
-                    <input type="date" id="roRefundStartTime" style="width: 80px;">
-                    <span style="margin: 0 5px;">至</span>
-                    <input type="date" id="roRefundEndTime" style="width: 80px;">
+                    <label>退款时间:</label>
+                    <input type="date" id="roRefundStartTime">
+                    <span>至</span>
+                    <input type="date" id="roRefundEndTime">
                 </div>
-                
-                <!-- 查询按钮 -->
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" id="queryRechargeOrderBtn" style="padding: 6px 20px;">查询</button>
-                    <button type="button" id="exportRechargeOrderBtn" style="display: none; padding: 6px 20px;">导出</button>
-                </div>
-                
-                <!-- 更多条件切换按钮 -->
-                <div>
-                    <button type="button" class="toggle-advanced-btn" onclick="toggleCollapse('roAdvancedPanel')" id="roToggleBtn">
+
+                <!-- 查询按钮 + 更多条件切换（同一行） -->
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" id="queryRechargeOrderBtn" style="padding: 6px 16px;">查询</button>
+                    <button type="button" id="exportRechargeOrderBtn" style="display: none; padding: 6px 16px;">导出</button>
+                    <button type="button" class="toggle-advanced-btn" onclick="toggleCollapse('roAdvancedPanel')" id="roToggleBtn" style="padding: 6px 10px; min-width: 0;">
                         更多筛选条件 ▼
                     </button>
                 </div>
