@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>大学堂周报自动抓取工具</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
@@ -239,7 +239,9 @@
             .top-line .status-bar { flex: 1 1 100%; order: 3; }
             .tab-nav button { padding: 8px 14px; font-size: 12px; }
             .list-side { width: 100%; }
-            .detail-panel { padding: 10px 12px; }
+            /* 手机浏览器底部地址栏会悬浮遮挡内容，给内部滚动容器留出底部空间，保证最后的内容能滚动到可见区域 */
+            .person-list { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+            .detail-panel { padding: 10px 12px; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
             .detail-header h3 { font-size: 16px; }
             .detail-section .content { font-size: 12.5px; line-height: 1.8; }
             .detail-table { font-size: 11px; }
@@ -316,8 +318,8 @@ const DETAIL_PATH = '/employee/weekly/getWeeklyDetail';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
-const PHONE = '';
-const PASSWORD = '';
+const PHONE = '19924530939';
+const PASSWORD = 'ShuoKeYingYu123';
 
 let excelData = [];
 let authToken = '';
