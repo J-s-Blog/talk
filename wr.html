@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大学堂周报自动抓取工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 30px 15px;
+        }
+        .container {
+            background: rgba(255,255,255,0.97);
+            border-radius: 20px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 760px;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0f3460 0%, #533483 100%);
+            color: #fff;
+            padding: 28px 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 6px; letter-spacing: 1px; }
+        .header p { font-size: 12px; opacity: 0.75; }
+        .body { padding: 28px; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
+        input[type="text"], input[type="date"], input[type="password"], textarea, select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            background: #fafafa;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #533483;
+            box-shadow: 0 0 0 3px rgba(83,52,131,0.1);
+            background: #fff;
+        }
+        textarea { resize: vertical; min-height: 70px; font-family: "Consolas", monospace; font-size: 11px; }
+        .btn {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary {
+            background: linear-gradient(135deg, #0f3460 0%, #533483 100%);
+            color: #fff;
+        }
+        .btn-primary:hover { box-shadow: 0 6px 24px rgba(83,52,131,0.4); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #fff;
+        }
+        .btn-success:hover { box-shadow: 0 6px 24px rgba(17,153,142,0.4); transform: translateY(-1px); }
+        .progress-bar {
+            width: 100%; height: 6px;
+            background: #e8e8e8;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 0 0 8px;
+            display: none;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0f3460, #533483);
+            border-radius: 3px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+        .status-bar {
+            background: #f0f0f0; border-radius: 6px; padding: 5px 12px;
+            font-size: 10.5px; color: #666;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #ccc;
+            display: inline-block;
+        }
+        .status-dot.online { background: #4caf50; }
+        .status-dot.offline { background: #f44336; }
+        .status-dot.checking { background: #ff9800; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+
+        /* ===== 顶栏：在线浏览/导出周报 + 登录认证 + 时间范围 + 环境检测 ===== */
+        .top-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        .top-line .status-bar { flex: 1; min-width: 0; margin-bottom: 0; }
+        .top-line .cred-input { flex: 0 0 150px; width: 150px; padding: 6px 10px; font-size: 12px; }
+        .top-line .date-input { flex: 0 0 135px; width: 135px; padding: 5px 8px; font-size: 12px; }
+        .top-line #tabBtnExport { border-color: #b7dfb9; background: #f2faf2; color: #2e7d32; }
+        .top-line #tabBtnExport:hover { border-color: #2e7d32; }
+        .date-sep { flex: none; color: #999; font-size: 12px; }
+        .tab-nav { display: flex; gap: 6px; flex-shrink: 0; }
+        .tab-nav button {
+            flex: none; padding: 9px 18px; border: 2px solid #e0e0e0;
+            border-radius: 10px; background: #fafafa; cursor: pointer;
+            font-size: 13px; font-weight: bold; color: #666; transition: all 0.2s;
+        }
+        .tab-nav button.active { border-color: #533483; background: #ede7f6; color: #533483; }
+        .tab-nav button:hover { border-color: #533483; }
+        .container.wide { max-width: 1080px; }
+
+        /* ===== 在线浏览 ===== */
+        .btn-sm { width: auto; padding: 8px 14px; font-size: 12px; margin-top: 0; }
+        .btn-xs { width: auto; margin-top: 0; padding: 5px 12px; font-size: 11px; flex-shrink: 0; }
+        .browse-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; min-width: 0; }
+        .browse-status { font-size: 11px; color: #888; margin-bottom: 0; min-width: 0; }
+        /* 轻量提示气泡（登录成功/失败等） */
+        .toast {
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+            background: #323232; color: #fff; padding: 10px 18px; border-radius: 8px;
+            font-size: 13px; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 80%;
+        }
+        .toast.show { opacity: 1; }
+        .toast.success { background: #2e7d32; }
+        .toast.error { background: #c62828; }
+        .browse-wrap { display: flex; gap: 14px; align-items: stretch; }
+        /* 左侧栏：加载按钮 / 搜索框 / 部门下拉 / 名单列表 纵向排列 */
+        .list-side {
+            width: 250px; flex-shrink: 0; min-height: 0;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .list-side .btn-sm { width: 100%; }
+        .list-side select { width: 100%; cursor: pointer; padding: 7px 10px; }
+        .person-list {
+            flex: 1 1 0; min-height: 0; width: 100%; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 8px; padding-right: 2px;
+        }
+        .person-list::-webkit-scrollbar { width: 5px; }
+        .person-list::-webkit-scrollbar-thumb { background: #d5c8e8; border-radius: 3px; }
+        .person-card {
+            border: 1.5px solid #e0e0e0; border-radius: 10px; background: #fafafa;
+            padding: 10px 12px; cursor: pointer; transition: all 0.15s;
+        }
+        .person-card:hover { border-color: #533483; background: #f6f1fb; }
+        .person-card.active { border-color: #533483; background: #ede7f6; }
+        .person-card .p-name { font-weight: bold; font-size: 14px; color: #333; }
+        .person-card .p-meta { font-size: 11px; color: #888; margin-top: 3px; line-height: 1.6; }
+        .detail-panel {
+            flex: 1; min-width: 0; overflow-y: auto;
+            background: #fff; border: 1px solid #eee; border-radius: 12px;
+            padding: 14px 16px; box-shadow: 0 2px 10px rgba(83,52,131,0.06);
+        }
+        .detail-panel::-webkit-scrollbar { width: 6px; }
+        .detail-panel::-webkit-scrollbar-thumb { background: #d5c8e8; border-radius: 3px; }
+        .detail-panel:has(> .empty-tip) { display: flex; align-items: center; justify-content: center; }
+        .btn-back {
+            display: none; background: #eee; color: #555; border: none;
+            border-radius: 8px; padding: 8px 14px; font-size: 12px;
+            cursor: pointer; margin-bottom: 10px;
+            position: sticky; top: 0; z-index: 5;
+        }
+        .detail-header { border-bottom: 2px solid #ede7f6; padding-bottom: 10px; margin-bottom: 12px; }
+        .detail-header h3 { color: #533483; font-size: 18px; }
+        .detail-header .d-meta { font-size: 12px; color: #777; margin-top: 4px; line-height: 1.7; }
+        .detail-section { margin-bottom: 14px; }
+        .detail-section h4 {
+            font-size: 13px; color: #533483; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .detail-section h4::before {
+            content: ""; display: inline-block;
+            width: 4px; height: 12px; background: #533483; border-radius: 2px;
+        }
+        .detail-section .content {
+            background: #fafafa; border: 1px solid #eee; border-radius: 8px;
+            padding: 10px 12px; font-size: 13px; color: #444; line-height: 1.9;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .detail-imgs { display: flex; flex-wrap: wrap; gap: 8px; }
+        .detail-imgs img {
+            width: 90px; height: 90px; object-fit: cover;
+            border-radius: 8px; border: 1px solid #e0e0e0; cursor: pointer;
+        }
+        .indicator-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .indicator-table th, .indicator-table td {
+            border: 1px solid #e0e0e0; padding: 6px 8px; text-align: left;
+        }
+        .indicator-table th { background: #ede7f6; color: #533483; }
+        .indicator-remark td {
+            background: #fffde7; color: #8d6e00; font-size: 11px;
+            white-space: pre-wrap; word-break: break-word;
+        }
+
+        /* 周报正文中的表格还原 */
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; background: #fff; }
+        .detail-table th, .detail-table td {
+            border: 1px solid #d8d2e8; padding: 6px 8px;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .detail-table th { background: #ede7f6; color: #533483; font-weight: bold; text-align: center; }
+        .detail-table td { text-align: left; }
+        .detail-table tr:nth-child(even) td { background: #fafafa; }
+        .table-scroll { overflow-x: auto; }
+        .content + .table-scroll, .table-scroll + .content { margin-top: 8px; }
+        .table-scroll + .table-scroll { margin-top: 8px; }
+        .empty-tip { text-align: center; color: #aaa; font-size: 13px; padding: 20px 0; }
+
+        /* 浏览模式（默认视图）：铺满全屏、页面锁定不滚动，人员列表与周报详情各自内部滚动 */
+        body.browse-mode { overflow: hidden; height: 100vh; height: 100dvh; padding: 0; }
+        body.browse-mode .container { width: 100%; max-width: none; height: 100%; display: flex; flex-direction: column; border-radius: 0; }
+        body.browse-mode .header { flex-shrink: 0; padding: 12px 18px; }
+        body.browse-mode .header p { display: none; }
+        body.browse-mode .body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px 16px 14px; }
+        body.browse-mode .top-line, body.browse-mode .browse-status-row,
+        body.browse-mode #progressBar, body.browse-mode #progressText { flex-shrink: 0; }
+        body.browse-mode .browse-wrap { flex: 1 1 0; min-height: 0; }
+
+        /* ===== 小屏适配（手机 / 平板） ===== */
+        @media (max-width: 720px) {
+            body { padding: 12px 8px; }
+            .header { padding: 18px 14px; }
+            .header h1 { font-size: 17px; }
+            .header p { font-size: 10px; }
+            .body { padding: 16px 12px; }
+            .top-line .cred-input, .top-line .date-input { flex: 1 1 140px; width: auto; }
+            .top-line .status-bar { flex: 1 1 100%; order: 3; }
+            .tab-nav button { padding: 8px 14px; font-size: 12px; }
+            .list-side { width: 100%; }
+            .detail-panel { padding: 10px 12px; }
+            .detail-header h3 { font-size: 16px; }
+            .detail-section .content { font-size: 12.5px; line-height: 1.8; }
+            .detail-table { font-size: 11px; }
+            .indicator-table { display: block; overflow-x: auto; white-space: nowrap; }
+            .browse-wrap.show-detail .list-side { display: none; }
+            .browse-wrap.show-detail .btn-back { display: inline-block; }
+            .browse-wrap:not(.show-detail) .detail-panel { display: none; }
+        }
+        @media (max-width: 400px) {
+            .header h1 { font-size: 15px; }
+            .body { padding: 14px 10px; }
+        }
+    </style>
+</head>
+<body class="browse-mode">
+<div class="container wide">
+    <div class="header">
+        <h1>📊 大学堂周报自动抓取工具</h1>
+        <p>在线浏览周报 ｜ 配置账号与时间范围，点击「导出周报」自动抓取并生成Excel</p>
+    </div>
+    <div class="body">
+        <!-- 顶栏：在线浏览 + 导出周报 + 登录认证 + 时间范围 + 环境检测 -->
+        <div class="top-line">
+            <div class="tab-nav">
+                <button type="button" id="tabBtnBrowse" class="active">📖 在线浏览</button>
+                <button type="button" id="tabBtnExport" onclick="runExport()">📤 导出周报</button>
+            </div>
+            <input type="text" id="phoneInput" class="cred-input" placeholder="登录账号" autocomplete="username" title="登录账号（可修改）">
+            <input type="password" id="pwdInput" class="cred-input" placeholder="密码" autocomplete="current-password" title="登录密码（可修改）">
+            <input type="date" id="startDate" class="date-input" title="开始日期（默认上周五，可手动修改）">
+            <span class="date-sep">→</span>
+            <input type="date" id="endDate" class="date-input" title="结束日期（默认今天，可手动修改）">
+            <div class="status-bar" id="statusBar">
+                <span class="status-dot checking" id="statusDot"></span>
+                <span id="statusText">正在检测运行环境...</span>
+            </div>
+        </div>
+
+        <!-- 导出进度（点击「导出周报」时显示） -->
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div id="progressText" style="font-size:12px;color:#888;text-align:center;margin-top:4px;display:none;"></div>
+
+        <div class="browse-status-row">
+            <span class="browse-status" id="browseStatus">暂无数据，点击左侧「🔄 加载 / 刷新数据」获取周报清单</span>
+            <button type="button" class="btn btn-success btn-xs" id="redownloadBtn" style="display:none" onclick="downloadExcel()">📥 重新下载Excel</button>
+        </div>
+
+        <div class="browse-wrap" id="browseWrap">
+            <div class="list-side">
+                <button class="btn btn-primary btn-sm" id="loadBrowseBtn" onclick="loadBrowseData()">🔄 加载 / 刷新数据</button>
+                <input type="text" id="personSearch" placeholder="🔍 搜索姓名 / 部门 / 职位..." oninput="renderPersonList()">
+                <select id="deptFilter" onchange="renderPersonList()">
+                    <option value="">全部部门</option>
+                </select>
+                <div class="person-list" id="personList">
+                    <div class="empty-tip">暂无数据</div>
+                </div>
+            </div>
+            <div class="detail-panel" id="detailPanel">
+                <div class="empty-tip">👈 点击左侧人名查看周报详情</div>
+            </div>
+        </div>
+    </div><!-- /body -->
+</div><!-- /container -->
+
+<script>
+// ==================== 配置 ====================
+const API_BASE = 'https://www.keyclass.cn/studentServer';
+const LOGIN_PATH = '/userCommon/userLogin';
+const LIST_PATH = '/employee/weekly/getWeeklyList';
+const DETAIL_PATH = '/employee/weekly/getWeeklyDetail';
+const ORIGIN = 'https://qddxt.keyclass.cn';
+const REFERER = 'https://qddxt.keyclass.cn/';
+const COMPANY_ID = 15;
+const PHONE = '';
+const PASSWORD = '';
+
+let excelData = [];
+let authToken = '';
+
+// 初始化日期：上周五 ~ 今天
+(function initDates() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+    // 找最近的周五（今天之前或当天）
+    const daysSinceFriday = (dayOfWeek + 2) % 7;
+    const friday = new Date(today);
+    friday.setDate(today.getDate() - daysSinceFriday);
+    document.getElementById('startDate').value = formatDate(friday);
+    document.getElementById('endDate').value = formatDate(today);
+})();
+
+// 本地日期格式化（避免 toISOString 的 UTC 时区偏移导致日期差一天）
+function formatDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+// 预填默认账号密码（可手动修改；仅在点击「加载/刷新数据」或「导出周报」时才进行鉴权）
+document.getElementById('phoneInput').value = PHONE;
+document.getElementById('pwdInput').value = PASSWORD;
+let lastLoginCreds = ''; // 记录已登录凭据，凭据变化时自动重新登录
+
+// 环境检测
+(async function detectEnv() {
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+
+    try {
+        // 尝试访问API检测CORS
+        const resp = await fetch(API_BASE + LIST_PATH + '?currentPage=1&pageSize=1', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'isstudent': '1' },
+            credentials: 'include'
+        });
+        if (resp.ok) {
+            dot.className = 'status-dot online';
+            text.textContent = '✅ 检测到当前环境支持API调用，可直接使用';
+            return;
+        }
+    } catch(e) {}
+
+    // 检查是否在同一域名下
+    if (window.location.hostname.includes('keyclass.cn') ||
+        window.location.hostname.includes('localhost')) {
+        dot.className = 'status-dot online';
+        text.textContent = '✅ 在同一域名下运行，可直接使用';
+        return;
+    }
+
+    // file:// 协议或其他域名
+    dot.className = 'status-dot offline';
+    text.textContent = '⚠️ 当前从本地打开（file://），浏览器CORS限制将阻止API调用';
+    text.innerHTML += '<br><b>解决方法：</b>请在已登录 <a href="https://qddxt.keyclass.cn" target="_blank" style="color:#533483">qddxt.keyclass.cn</a> 的浏览器中打开此HTML文件，或将此HTML文件放到服务器上';
+})();
+
+// 轻量提示气泡（登录成功/失败等）
+let toastTimer = null;
+function showToast(msg, type) {
+    let t = document.getElementById('toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'toast';
+        t.className = 'toast';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// 登录鉴权：仅在点击「加载/刷新数据」或「导出周报」时调用
+// 已有token且凭据未变时直接复用；凭据变化则用新凭据重新登录
+async function ensureLogin() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    const password = document.getElementById('pwdInput').value;
+    if (!phone || !password) {
+        showToast('⚠️ 请先填写登录账号和密码', 'error');
+        throw new Error('请填写登录账号和密码');
+    }
+    const key = phone + '|' + password;
+    if (authToken && key === lastLoginCreds) return; // 凭据未变，复用token
+    try {
+        await doLogin(phone, password, COMPANY_ID);
+    } catch (e) {
+        showToast('❌ 登录失败：' + e.message, 'error');
+        throw e;
+    }
+    lastLoginCreds = key;
+    showToast(`✅ 登录成功（${phone}）`, 'success');
+}
+
+// 当前已加载清单的时间范围标识，用于判断是否需要按新范围重新抓取
+let listRangeKey = '';
+
+function getRangeKey() {
+    return document.getElementById('startDate').value + '|' + document.getElementById('endDate').value;
+}
+
+// 仅抓取周报列表清单（不抓详情），写入 excelData 摘要项，返回条数（0 表示无数据）
+async function fetchWeeklyList() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    if (!startDate || !endDate) throw new Error('请选择周报时间范围');
+
+    let allWeeklies = [];
+    let currentPage = 1;
+    let totalRecords = 0;
+    const pageSize = 300;
+    do {
+        const listUrl = `${LIST_PATH}?queryType=2&weeklyType=0&isView=&departmentId=&startTime=${startDate}&endTime=${endDate}&currentPage=${currentPage}&pageSize=${pageSize}&token=${authToken}&companyId=${COMPANY_ID}`;
+        const listData = await apiGet(listUrl);
+        if (!listData || listData.resultCode !== 0) {
+            throw new Error(`获取周报列表失败: ${listData?.resultMessage || '未知错误'}`);
+        }
+        const records = listData.resultData || [];
+        if (records.length === 0) break;
+        totalRecords = listData.totalCount || 0;
+        allWeeklies = allWeeklies.concat(records);
+        if (allWeeklies.length >= totalRecords) break;
+        currentPage++;
+    } while (true);
+
+    // 摘要项：仅含名单展示所需字段，详情（正文/指标）点击人名时再按需加载
+    excelData = allWeeklies.map(w => ({
+        name: w.trueName || '',
+        department: w.depTitle || '',
+        position: w.jobName || '',
+        submitTime: w.lastSubmitTime || w.firstSubmitTime || '',
+        weeklyId: w.weeklyId,
+        viewCount: w.isViewNum || 0,
+        noViewCount: w.noViewNum || 0,
+        listRecord: w,
+        detailLoaded: false
+    }));
+    listRangeKey = getRangeKey();
+    return excelData.length;
+}
+
+// 按需获取单人周报详情并合并进摘要项（detailLoaded 缓存，避免重复请求）
+async function ensureWeeklyDetail(d) {
+    if (d.detailLoaded || d.detailLoading) return;
+    d.detailLoading = true;
+    try {
+        const detailData = await apiGet(
+            `${DETAIL_PATH}?weeklyId=${d.weeklyId}&token=${authToken}&companyId=${COMPANY_ID}`
+        );
+        if (!detailData || detailData.resultCode !== 0 || !detailData.resultData) {
+            throw new Error(detailData?.resultMessage || '未知错误');
+        }
+        Object.assign(d, parseWeeklyData(detailData.resultData, d.listRecord));
+        d.detailLoaded = true;
+    } finally {
+        d.detailLoading = false;
+    }
+}
+
+// 导出用：抓取所有未加载的详情（已浏览过的复用缓存，跳过请求）
+async function fetchAllDetails(onItem) {
+    const total = excelData.length;
+    for (let i = 0; i < total; i++) {
+        const d = excelData[i];
+        if (onItem) onItem(i + 1, total, d.name);
+        if (!d.detailLoaded) {
+            try {
+                await ensureWeeklyDetail(d);
+            } catch (e) { console.warn(e); }
+            await sleep(150);
+        }
+    }
+    return total;
+}
+
+// 抓取完成后统一刷新浏览区
+function syncBrowseAfterLoad() {
+    selectedPersonIndex = -1;
+    document.getElementById('browseWrap').classList.remove('show-detail');
+    resetDetailPanel();
+    document.getElementById('personSearch').value = '';
+    populateDeptFilter();
+    document.getElementById('deptFilter').value = '';
+    renderPersonList();
+}
+
+// 导出周报：登录鉴权 → 确保清单已加载 → 补抓全部详情 → 生成Excel（详情缓存同步到在线浏览区）
+async function runExport() {
+    const btn = document.getElementById('tabBtnExport');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    btn.disabled = true;
+    progressBar.style.display = 'block';
+    progressText.style.display = 'block';
+    try {
+        updateBrowseStatus('正在登录鉴权...');
+        await ensureLogin();
+        // 清单未加载或时间范围已变更时，先重新抓取清单
+        if (getRangeKey() !== listRangeKey) {
+            updateBrowseStatus('正在获取周报列表...');
+            await fetchWeeklyList();
+            syncBrowseAfterLoad();
+        }
+        if (excelData.length === 0) {
+            progressText.textContent = '⚠️ 指定时间范围内没有周报数据';
+            updateBrowseStatus('⚠️ 指定时间范围内没有周报数据，未生成Excel', true);
+            return;
+        }
+        updateBrowseStatus('正在抓取周报详情...');
+        const count = await fetchAllDetails((i, total, name) => {
+            const pct = Math.round((i / total) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `正在获取详情: ${i}/${total} (${pct}%) - ${name}`;
+        });
+        progressFill.style.width = '100%';
+        progressText.textContent = `✅ 导出完成！共 ${count} 条数据`;
+        updateBrowseStatus(`✅ 已加载 ${count} 条周报数据，Excel已生成`);
+        downloadExcel();
+        document.getElementById('redownloadBtn').style.display = 'inline-block';
+    } catch (err) {
+        console.error(err);
+        progressText.textContent = `❌ 导出失败: ${err.message}`;
+        updateBrowseStatus(`❌ 导出失败: ${err.message}`, true);
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+            progressText.style.display = 'none';
+        }, 4000);
+    }
+}
+
+async function doLogin(phone, password, companyId) {
+    const data = await apiRequest(LOGIN_PATH, 'POST', {
+        loginId: phone,
+        password: password,
+        isApp: 2,
+        loginType: 2,
+        companyId: companyId,
+        languageType: null
+    });
+    if (!data || data.resultCode !== 0) {
+        throw new Error(`登录失败: ${data?.resultMessage || '未知错误'}`);
+    }
+    const token = extractTokenFromResponse(data);
+    if (token) {
+        authToken = token;
+        log('success', `✅ 登录成功！Token: ${token.substring(0, 12)}...`);
+    } else {
+        log('warn', '⚠️ 登录成功但未获取到Token，请检查接口响应');
+        throw new Error('未获取到有效Token，请确认账号密码正确');
+    }
+}
+
+function extractTokenFromResponse(data) {
+    if (data.token) return data.token;
+    if (data.resultData?.token) return data.resultData.token;
+    return null;
+}
+
+async function apiGet(path) {
+    const url = API_BASE + path;
+    const headers = buildHeaders();
+    headers['Accept'] = 'application/json';
+
+    const resp = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include'
+    });
+    return await resp.json();
+}
+
+async function apiRequest(path, method, body) {
+    const url = API_BASE + (path.startsWith('/') ? path : '/' + path);
+    const headers = buildHeaders();
+
+    const resp = await fetch(url, {
+        method: method,
+        headers: headers,
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'include'
+    });
+    return await resp.json();
+}
+
+function buildHeaders() {
+    return {
+        'Accept': 'application/json, text/plain, */*',
+        'Origin': ORIGIN,
+        'Referer': REFERER,
+        'isstudent': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0',
+        'Content-Type': 'application/json'
+    };
+}
+
+function parseWeeklyData(data, summary) {
+    return {
+        name: data.trueName || summary.trueName || '',
+        department: summary.depTitle || '',
+        position: summary.jobName || '',
+        submitTime: data.lastSubmitTime || data.firstSubmitTime || '',
+        weeklyId: data.weeklyId || summary.weeklyId || '',
+        priority: stripHtml(data.priority || ''),
+        intergrowth: stripHtml(data.intergrowth || ''),
+        afterPriority: stripHtml(data.afterPriority || ''),
+        introspection: stripHtml(data.introspection || ''),
+        selfStudy: stripHtml(data.selfStudy || ''),
+        imageUrls: extractImageUrls(data.priority || ''),
+        viewCount: summary.isViewNum || 0,
+        noViewCount: summary.noViewNum || 0,
+        constantMap: data.constantMap || null,
+        raw: data
+    };
+}
+
+function stripHtml(html) {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+}
+
+function extractImageUrls(html) {
+    if (!html) return [];
+    const urls = [];
+    const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+        urls.push(match[1]);
+    }
+    return urls;
+}
+
+function downloadExcel() {
+    if (excelData.length === 0) {
+        alert('暂无数据可导出！');
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const rows = excelData.map(d => {
+        // 将 constantMap 所有指标合并成一段文本
+        let indicatorText = '';
+        if (d.constantMap) {
+            const entries = [];
+            Object.values(d.constantMap).forEach(arr => {
+                arr.forEach(c => {
+                    if (c.constantName) {
+                        entries.push({
+                            name: c.constantName,
+                            target: c.target || '',
+                            units: c.units || '',
+                            lastProgress: c.lastProgress || '',
+                            progress: c.progress || '',
+                            progressSum: c.progressSum || ''
+                        });
+                    }
+                });
+            });
+            entries.forEach((e, i) => {
+                indicatorText += `${i + 1}、${e.name}：目标 ${e.target}，单位 ${e.units}，上周进度 ${e.lastProgress}，本周进度 ${e.progress}，累计进度 ${e.progressSum}。\n`;
+            });
+        }
+
+        return {
+            '序号': '',
+            '姓名': d.name,
+            '部门': d.department,
+            '职位': d.position,
+            '提交时间': d.submitTime,
+            '本周重点工作': d.priority,
+            '共生文化': d.intergrowth,
+            '下周工作计划': d.afterPriority,
+            '反思': d.introspection,
+            '自我学习': d.selfStudy,
+            '图片附件数': (d.imageUrls || []).length,
+            '个人指标': indicatorText.trim()
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+        { wch: 6 }, { wch: 10 }, { wch: 20 }, { wch: 14 }, { wch: 20 },
+        { wch: 65 }, { wch: 40 }, { wch: 65 }, { wch: 50 },
+        { wch: 40 }, { wch: 10 }, { wch: 60 }
+    ];
+
+    // 设置序号列
+    for (let i = 0; i < excelData.length; i++) {
+        ws[`A${i + 2}`] = { t: 'n', v: i + 1 };
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, '周报汇总');
+    const filename = `大学堂周报_${formatDate(new Date())}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    log('success', `📥 Excel已下载: ${filename}`);
+}
+
+// 日志输出到控制台（页面进度统一展示在顶部进度条与状态行）
+function log(type, msg) { console.log(`[${type}] ${msg}`); }
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ==================== 在线浏览 ====================
+let selectedPersonIndex = -1;
+let currentDetailImages = [];
+
+// 页面默认即为「在线浏览」视图（body.browse-mode 固定），无需Tab切换逻辑
+function updateBrowseStatus(msg, isError) {
+    const el = document.getElementById('browseStatus');
+    el.textContent = msg;
+    el.style.color = isError ? '#f44336' : '';
+}
+
+// 浏览页加载/刷新数据：先鉴权，再按当前时间范围抓取清单（仅浏览，详情点击人名时才加载）
+async function loadBrowseData() {
+    const btn = document.getElementById('loadBrowseBtn');
+    btn.disabled = true;
+    updateBrowseStatus('正在登录鉴权...');
+    try {
+        await ensureLogin();
+        updateBrowseStatus('正在获取周报列表...');
+        const count = await fetchWeeklyList();
+        syncBrowseAfterLoad();
+        if (count === 0) {
+            updateBrowseStatus('⚠️ 指定时间范围内没有周报数据', true);
+        } else {
+            updateBrowseStatus(`✅ 已加载 ${count} 条周报清单，点击人名查看详情`);
+        }
+    } catch (err) {
+        updateBrowseStatus(`❌ 加载失败: ${err.message}`, true);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function resetDetailPanel() {
+    document.getElementById('detailPanel').innerHTML =
+        '<div class="empty-tip">👈 点击左侧人名查看周报详情</div>';
+}
+
+// 填充部门下拉筛选（按数据中的部门去重统计，带人数）
+function populateDeptFilter() {
+    const sel = document.getElementById('deptFilter');
+    const prev = sel.value;
+    const counts = {};
+    excelData.forEach(d => {
+        const dep = (d.department || '').trim();
+        if (dep) counts[dep] = (counts[dep] || 0) + 1;
+    });
+    const depts = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'zh'));
+    sel.innerHTML = '<option value="">全部部门</option>' +
+        depts.map(dep => `<option value="${escapeHtml(dep)}">${escapeHtml(dep)} (${counts[dep]})</option>`).join('');
+    sel.value = depts.includes(prev) ? prev : '';
+}
+
+function renderPersonList() {
+    const listEl = document.getElementById('personList');
+    if (excelData.length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无数据</div>';
+        return;
+    }
+    const kw = (document.getElementById('personSearch').value || '').trim().toLowerCase();
+    const dept = document.getElementById('deptFilter').value;
+    const items = excelData
+        .map((d, i) => ({ d, i }))
+        .filter(({ d }) => (!dept || (d.department || '').trim() === dept)
+            && (!kw
+                || (d.name || '').toLowerCase().includes(kw)
+                || (d.department || '').toLowerCase().includes(kw)
+                || (d.position || '').toLowerCase().includes(kw)));
+
+    listEl.innerHTML = items.length === 0
+        ? '<div class="empty-tip">未找到匹配人员</div>'
+        : items.map(({ d, i }) => `
+            <div class="person-card ${i === selectedPersonIndex ? 'active' : ''}" onclick="selectPerson(${i})">
+                <div class="p-name">${escapeHtml(d.name || '未知')}</div>
+                <div class="p-meta">
+                    ${escapeHtml(d.department || '')}${d.position ? ' · ' + escapeHtml(d.position) : ''}<br>
+                    提交：${escapeHtml(d.submitTime || '-')}
+                </div>
+            </div>`).join('');
+}
+
+// 点击人名：按需抓取该人员的周报详情（懒加载），再渲染详情面板
+async function selectPerson(index) {
+    selectedPersonIndex = index;
+    document.getElementById('browseWrap').classList.add('show-detail');
+    renderPersonList();
+    const d = excelData[index];
+    if (!d) return;
+    const panel = document.getElementById('detailPanel');
+    if (!d.detailLoaded) {
+        if (d.detailLoading) return; // 已有请求进行中，避免重复触发
+        panel.innerHTML = `<div class="empty-tip">⏳ 正在获取 ${escapeHtml(d.name || '')} 的周报详情...</div>`;
+        try {
+            await ensureWeeklyDetail(d);
+        } catch (e) {
+            if (selectedPersonIndex !== index) return; // 期间已切换到其他人员
+            panel.innerHTML = `<div class="empty-tip">❌ 获取周报详情失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="selectPerson(${index})">🔄 重试</button></div>`;
+            return;
+        }
+    }
+    if (selectedPersonIndex !== index) return; // 期间已切换到其他人员
+    renderPersonDetail(d);
+}
+
+function backToList() {
+    document.getElementById('browseWrap').classList.remove('show-detail');
+}
+
+// 检测原始HTML中的<table>，按原文顺序提取内容块 [{type:'text'|'table', ...}]，无表格返回 null
+function extractFieldBlocks(html) {
+    if (!html || !/<table[\s>]/i.test(html)) return null;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+
+    const blocks = [];
+    let textBuf = '';
+
+    const flushText = () => {
+        const t = htmlToText(textBuf);
+        if (t) blocks.push({ type: 'text', text: t });
+        textBuf = '';
+    };
+
+    // 将表格重建为干净表格HTML
+    const rebuildTable = (tbl) => {
+        const rows = [];
+        tbl.querySelectorAll('tr').forEach(tr => {
+            const cells = [];
+            tr.querySelectorAll('th,td').forEach(cell => {
+                const colspan = cell.getAttribute('colspan');
+                const rowspan = cell.getAttribute('rowspan');
+                const attrs = (colspan && colspan !== '1' ? ` colspan="${escapeHtml(colspan)}"` : '')
+                            + (rowspan && rowspan !== '1' ? ` rowspan="${escapeHtml(rowspan)}"` : '');
+                cells.push({ text: htmlToText(cell.innerHTML), attrs });
+            });
+            if (cells.some(c => c.text !== '')) rows.push(cells);
+        });
+        if (rows.length === 0) return '';
+        // 首行含 th 或有多行时，首行按表头渲染
+        const firstHeader = !!tbl.querySelector('tr th') || rows.length > 1;
+        let t = '<table class="detail-table">';
+        rows.forEach((cells, ri) => {
+            const tag = (ri === 0 && firstHeader) ? 'th' : 'td';
+            t += '<tr>' + cells.map(c => `<${tag}${c.attrs}>${escapeHtml(c.text)}</${tag}>`).join('') + '</tr>';
+        });
+        return t + '</table>';
+    };
+
+    // 按文档顺序遍历：表格即时产出内容块，其余归入文本缓冲，保持「文字、表格」的原始顺序
+    const walk = (node) => {
+        Array.from(node.childNodes).forEach(child => {
+            if (child.nodeType === 3) { textBuf += child.textContent + '\n'; return; }
+            if (child.nodeType !== 1) return;
+            if (child.tagName === 'TABLE') {
+                const rebuilt = rebuildTable(child);
+                if (rebuilt) { flushText(); blocks.push({ type: 'table', html: rebuilt }); }
+                return;
+            }
+            if (child.querySelector && child.querySelector('table')) {
+                walk(child); // 容器内嵌表格，递归展开以保持顺序
+                return;
+            }
+            textBuf += child.outerHTML + '\n';
+        });
+    };
+    walk(tmp);
+    flushText();
+
+    return blocks.some(b => b.type === 'table') ? blocks : null;
+}
+
+function renderPersonDetail(d) {
+    const panel = document.getElementById('detailPanel');
+    currentDetailImages = collectAllImages(d);
+    const indicatorRows = buildIndicatorRows(d);
+
+    const section = (title, key) => {
+        const raw = d.raw && d.raw[key] ? d.raw[key] : '';
+        const blocks = extractFieldBlocks(raw);
+        let body;
+        if (blocks) {
+            // 按原文顺序渲染：文字段落与表格交替出现
+            body = blocks.map(b => b.type === 'table'
+                ? `<div class="table-scroll">${b.html}</div>`
+                : `<div class="content">${escapeHtml(b.text)}</div>`).join('');
+            if (!body) body = '<div class="content"><span style="color:#bbb">（无内容）</span></div>';
+        } else {
+            const text = fieldText(d, key);
+            body = `<div class="content">${text ? escapeHtml(text) : '<span style="color:#bbb">（无内容）</span>'}</div>`;
+        }
+        return `<div class="detail-section"><h4>${title}</h4>${body}</div>`;
+    };
+
+    panel.innerHTML = `
+        <button class="btn-back" onclick="backToList()">← 返回列表</button>
+        <div class="detail-header">
+            <h3>${escapeHtml(d.name || '')}</h3>
+            <div class="d-meta">
+                ${escapeHtml(d.department || '')}${d.position ? ' · ' + escapeHtml(d.position) : ''}
+                ${d.submitTime ? '<br>提交时间：' + escapeHtml(d.submitTime) : ''}
+            </div>
+        </div>
+        ${section('本周重点工作', 'priority')}
+        ${section('共生文化', 'intergrowth')}
+        ${section('下周工作计划', 'afterPriority')}
+        ${section('反思', 'introspection')}
+        ${section('自我学习', 'selfStudy')}
+        ${currentDetailImages.length ? `
+        <div class="detail-section">
+            <h4>图片附件（${currentDetailImages.length}）</h4>
+            <div class="detail-imgs">
+                ${currentDetailImages.map((u, idx) => `<img src="${escapeHtml(u)}" alt="附件图片" onclick="openImage(${idx})" onerror="this.style.display='none'">`).join('')}
+            </div>
+        </div>` : ''}
+        ${indicatorRows ? `
+        <div class="detail-section">
+            <h4>个人指标</h4>
+            <table class="indicator-table">
+                <tr><th>指标</th><th>目标</th><th>单位</th><th>上周进度</th><th>本周进度</th><th>累计进度</th></tr>
+                ${indicatorRows}
+            </table>
+        </div>` : ''}
+    `;
+    panel.scrollTop = 0;
+}
+
+function openImage(i) {
+    const u = currentDetailImages[i];
+    if (u) window.open(u, '_blank');
+}
+
+// 优先从原始HTML还原段落换行，保证浏览时可读性
+function fieldText(d, key) {
+    if (d.raw && d.raw[key]) return htmlToText(d.raw[key]);
+    return d[key] || '';
+}
+
+function htmlToText(html) {
+    if (!html) return '';
+    let s = String(html)
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|li|h[1-6]|tr|section|blockquote)>/gi, '\n')
+        .replace(/<li[^>]*>/gi, '• ');
+    const tmp = document.createElement('div');
+    tmp.innerHTML = s;
+    return (tmp.textContent || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+// 从原始数据所有字段提取图片（仅浏览展示，不影响Excel的图片统计口径）
+function collectAllImages(d) {
+    let urls = [];
+    if (d.raw) {
+        ['priority', 'intergrowth', 'afterPriority', 'introspection', 'selfStudy'].forEach(k => {
+            urls = urls.concat(extractImageUrls(d.raw[k] || ''));
+        });
+    }
+    return [...new Set(urls)];
+}
+
+function buildIndicatorRows(d) {
+    if (!d.constantMap) return '';
+    let rows = '';
+    Object.values(d.constantMap).forEach(arr => {
+        (arr || []).forEach(c => {
+            if (c.constantName) {
+                rows += `<tr>
+                    <td>${escapeHtml(c.constantName)}</td>
+                    <td>${escapeHtml(c.target ?? '-')}</td>
+                    <td>${escapeHtml(c.units ?? '-')}</td>
+                    <td>${escapeHtml(c.lastProgress ?? '-')}</td>
+                    <td>${escapeHtml(c.progress ?? '-')}</td>
+                    <td>${escapeHtml(c.progressSum ?? '-')}</td>
+                </tr>`;
+                // 指标备注（explainInfo，无则用评分说明）
+                const remark = String(c.explainInfo ?? c.ratingScoreExplain ?? '').trim();
+                if (remark) {
+                    rows += `<tr class="indicator-remark"><td colspan="6">备注：${escapeHtml(remark)}</td></tr>`;
+                }
+            }
+        });
+    });
+    return rows;
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// 自动运行：URL 带 ?taskName=autorun 时自动执行导出（使用预填账号与自动计算的日期范围）
+(function autoRunIfParam() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('taskName') === 'autorun') {
+        // 等待 DOM 和日期初始化完成后再执行
+        setTimeout(() => runExport(), 500);
+    }
+})();
+</script>
+</body>
+</html>
