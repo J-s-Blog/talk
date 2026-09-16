@@ -681,61 +681,61 @@
         <!-- 注册用户查询 Tab -->
         <div id="registeredUserTab" class="tab-content" style="display: none;">
             
-            <!-- 查询条件设置 -->
-            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-bottom: 20px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span>日期选择:</span>
-                    <input type="date" id="registeredUserStartDate" required style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                    <span>至</span>
-                    <input type="date" id="registeredUserEndDate" required style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <!-- 查询条件设置：单行紧凑布局，宽度不够自动换行 -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label for="registeredUserPhone" style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">手机号：</label>
+                    <input type="text" id="registeredUserPhone" placeholder="与编号二选一" style="width: 120px; padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
                 </div>
-                
-                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>合作用户:</span>
-                        <select id="cooperativeUser" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                            <option value="">全部</option>
-                            <option value="2">合作方</option>
-                            <option value="1" selected>说客</option>
-                        </select>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>套餐:</span>
-                        <select id="isPay" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                            <option value="0" selected>不限</option>
-                            <option value="1">购买过</option>
-                            <option value="3">购买过30课时及以上套餐(非累积)</option>
-                        </select>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>上过课:</span>
-                        <select id="isFreeClass" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                            <option value="0" selected>不限</option>
-                            <option value="1">是</option>
-                            <option value="2">否</option>
-                        </select>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>账号状态:</span>
-                        <select id="accountStatus" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                            <option value="" selected>全部</option>
-                            <option value="0">正常</option>
-                            <option value="1">屏蔽</option>
-                        </select>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <input type="checkbox" id="queryReferrerToggle" style="width: 16px; height: 16px;">
-                        <label for="queryReferrerToggle">查询用户推荐人</label>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label for="registeredUserId" style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">用户编号：</label>
+                    <input type="text" id="registeredUserId" placeholder="用户编号" style="width: 90px; padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
                 </div>
-                
-                <div style="display: flex; gap: 10px; flex-wrap: nowrap; white-space: nowrap;">
-                    <button id="registeredUserQueryBtn" style="padding: 8px 64px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">查询</button>
-                    <button id="registeredUserExportBtn" style="padding: 8px 64px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">导出</button>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">日期：</label>
+                    <input type="date" id="registeredUserStartDate" style="width: 118px; padding: 5px 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                    <span style="color: #555;">至</span>
+                    <input type="date" id="registeredUserEndDate" style="width: 118px; padding: 5px 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label for="cooperativeUser" style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">合作用户：</label>
+                    <select id="cooperativeUser" style="width: auto; min-width: 70px; max-width: 130px; padding: 5px 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                        <option value="">全部</option>
+                        <option value="2">合作方</option>
+                        <option value="1" selected>说客</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label for="isPay" style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">套餐：</label>
+                    <select id="isPay" style="width: auto; min-width: 70px; max-width: 130px; padding: 5px 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                        <option value="0" selected>不限</option>
+                        <option value="1">购买过</option>
+                        <option value="3">30课时及以上</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label for="isFreeClass" style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">上过课：</label>
+                    <select id="isFreeClass" style="width: auto; min-width: 60px; max-width: 100px; padding: 5px 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                        <option value="0" selected>不限</option>
+                        <option value="1">是</option>
+                        <option value="2">否</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label for="accountStatus" style="font-size: 13px; font-weight: bold; color: #555; white-space: nowrap; margin: 0;">账号状态：</label>
+                    <select id="accountStatus" style="width: auto; min-width: 60px; max-width: 100px; padding: 5px 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                        <option value="" selected>全部</option>
+                        <option value="0">正常</option>
+                        <option value="1">屏蔽</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="queryReferrerToggle" style="width: 15px; height: 15px; margin: 0;">
+                    <label for="queryReferrerToggle" style="font-weight: normal; font-size: 13px; cursor: pointer; white-space: nowrap; margin: 0;">查询推荐人</label>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="registeredUserQueryBtn" style="width: auto; padding: 5px 16px; font-size: 13px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">查询</button>
+                    <button id="registeredUserExportBtn" style="width: auto; padding: 5px 16px; font-size: 13px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">导出</button>
                 </div>
             </div>
             
@@ -3412,7 +3412,18 @@
             const queryBtn = document.getElementById('registeredUserQueryBtn');
             const statusMessage = document.getElementById('registeredUserQueryStatusMessage');
             const tableBody = document.getElementById('registeredUserTableBody');
-            
+
+            // 获取手机号和用户编号
+            const phone = document.getElementById('registeredUserPhone').value.trim();
+            const userId = document.getElementById('registeredUserId').value.trim();
+            const isQueryById = phone || userId;
+
+            // 如果输入了手机号或用户编号，清空日期
+            if (isQueryById) {
+                document.getElementById('registeredUserStartDate').value = '';
+                document.getElementById('registeredUserEndDate').value = '';
+            }
+
             // 获取查询条件
             const startDate = document.getElementById('registeredUserStartDate').value;
             const endDate = document.getElementById('registeredUserEndDate').value;
@@ -3420,27 +3431,33 @@
             const isPay = document.getElementById('isPay').value;
             const isFreeClass = document.getElementById('isFreeClass').value;
             const accountStatus = document.getElementById('accountStatus').value;
-            
+
             // 存储当前查询的账号状态，用于后续显示
             window.currentAccountStatus = accountStatus;
-            
-            // 验证日期
-            if (!startDate || !endDate) {
+
+            // 验证日期（非编号查询时必填）
+            if (!isQueryById && (!startDate || !endDate)) {
                 statusMessage.innerHTML = '<div class="error-message">请选择开始日期和结束日期</div>';
                 return;
             }
-            
-            if (new Date(startDate) > new Date(endDate)) {
+
+            if (!isQueryById && new Date(startDate) > new Date(endDate)) {
                 statusMessage.innerHTML = '<div class="error-message">开始日期不能晚于结束日期</div>';
                 return;
             }
-            
+
+            // 验证手机号或用户编号（编号查询时至少填一个）
+            if (isQueryById && !phone && !userId) {
+                statusMessage.innerHTML = '<div class="error-message">请输入手机号或用户编号</div>';
+                return;
+            }
+
             // 显示加载状态
             queryBtn.disabled = true;
             queryBtn.textContent = '查询中...';
             statusMessage.innerHTML = '<div class="success-message">正在查询注册用户数据...</div><div id="queryProgress" style="margin-top: 10px; font-size: 14px;">准备开始查询...</div>';
             tableBody.innerHTML = '';
-            
+
             try {
                 // 获取token（从共享的localStorage获取）
                 token = localStorage.getItem('talk915_token');
@@ -3448,49 +3465,59 @@
                     statusMessage.innerHTML = '<div class="error-message">请先登录获取token</div>';
                     return;
                 }
-                
-                // 生成日期列表
-                const dateList = generateDateList(startDate, endDate);
+
                 registeredUsers = [];
-                
-                // 按天查询
-                for (let i = 0; i < dateList.length; i++) {
-                    const date = dateList[i];
-                    // 更新进度显示
-                    document.getElementById('queryProgress').textContent = `正在查询 ${date} 的数据... (${i + 1}/${dateList.length})`;
-                    if (accountStatus === '') {
-                        // 调试：打印查询全部账号状态的信息
-                        console.log('查询全部账号状态');
-                        console.log('查询正常状态用户');
-                        // 查询全部账号状态，分别查询正常和屏蔽状态
-                        await queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, '0');
-                        console.log('查询屏蔽状态用户');
-                        await queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, '1');
-                    } else {
-                        // 调试：打印查询指定账号状态的信息
-                        console.log(`查询账号状态为 ${accountStatus} 的用户`);
-                        // 查询指定账号状态
-                        await queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, accountStatus);
+
+                if (isQueryById) {
+                    // 按手机号或用户编号查询（不分页，不依赖日期）
+                    const accountName = phone && /^\d+$/.test(phone) ? phone : '';
+                    const user = accountName ? '' : userId;
+                    document.getElementById('queryProgress').textContent = '正在查询用户数据...';
+                    await queryRegisteredUsersById(accountName, user, cooperativeUser, isPay, isFreeClass, accountStatus);
+                } else {
+                    // 按日期范围查询
+                    // 生成日期列表
+                    const dateList = generateDateList(startDate, endDate);
+
+                    // 按天查询
+                    for (let i = 0; i < dateList.length; i++) {
+                        const date = dateList[i];
+                        // 更新进度显示
+                        document.getElementById('queryProgress').textContent = `正在查询 ${date} 的数据... (${i + 1}/${dateList.length})`;
+                        if (accountStatus === '') {
+                            // 调试：打印查询全部账号状态的信息
+                            console.log('查询全部账号状态');
+                            console.log('查询正常状态用户');
+                            // 查询全部账号状态，分别查询正常和屏蔽状态
+                            await queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, '0', '', '');
+                            console.log('查询屏蔽状态用户');
+                            await queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, '1', '', '');
+                        } else {
+                            // 调试：打印查询指定账号状态的信息
+                            console.log(`查询账号状态为 ${accountStatus} 的用户`);
+                            // 查询指定账号状态
+                            await queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, accountStatus, '', '');
+                        }
                     }
                 }
-                
+
                 // 检查是否需要查询推荐人信息
                 const queryReferrerToggle = document.getElementById('queryReferrerToggle');
                 const shouldQueryReferrer = queryReferrerToggle.checked;
-                
+
                 // 查询推荐人信息
                 if (shouldQueryReferrer) {
                     // 更新进度显示
                     document.getElementById('queryProgress').textContent = '正在查询推荐人信息...';
                     await queryReferrerInfo();
                 }
-                
+
                 // 更新进度显示
                 document.getElementById('queryProgress').textContent = '查询完成，正在更新表格...';
-                
+
                 // 更新表格
                 updateRegisteredUserTable();
-                
+
                 // 显示查询结果
                 statusMessage.innerHTML = `<div class="success-message">查询完成：共找到 ${registeredUsers.length} 个注册用户</div>`;
             } catch (error) {
@@ -3500,6 +3527,52 @@
                 // 恢复按钮状态
                 queryBtn.disabled = false;
                 queryBtn.textContent = '查询';
+            }
+        }
+
+        // 按手机号或用户编号查询注册用户
+        async function queryRegisteredUsersById(accountName, user, cooperativeUser, isPay, isFreeClass, accountStatus) {
+            const payload = {
+                "accountName": accountName,
+                "user": user,
+                "date1": "",
+                "date2": "",
+                "majoy": "",
+                "accountType": accountStatus === '1' ? "-1" : "0",
+                "isFreeClass": isFreeClass,
+                "isPay": isPay,
+                "source": "-1",
+                "isStuCategory": "0",
+                "lid": "",
+                "cooperativeUser": cooperativeUser || 1,
+                "classesTool": "-1",
+                "accountStatus": accountStatus,
+                "currPage": 0,
+                "pageSize": 3000
+            };
+
+            const response = await fetch('https://www.talk915.com/users/studentManage/queryStudentManageList', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/plain, */*',
+                    'User-Agent': navigator.userAgent,
+                    'Referer': 'https://www.talk915.com/admin/userManagement/student/stuManage',
+                    'Origin': 'https://www.talk915.com',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'token': token
+                },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+            console.log('按编号查询API响应数据:', data);
+
+            if (data.resultCode === 0 && data.resultData) {
+                saveRegisteredUserInfo(data.resultData, accountStatus);
             }
         }
         
@@ -3518,11 +3591,11 @@
         }
         
         // 按天查询注册用户
-        async function queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, accountStatus) {
+        async function queryRegisteredUsersByDate(date, cooperativeUser, isPay, isFreeClass, accountStatus, accountName = '', user = '') {
             // 构建请求payload
             const payload = {
-                "accountName": "",
-                "user": "",
+                "accountName": accountName,
+                "user": user,
                 "date1": date,
                 "date2": date,
                 "majoy": "",
