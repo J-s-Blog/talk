@@ -385,6 +385,32 @@
             align-content: flex-start;
         }
 
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 180px;
+            max-width: 320px;
+        }
+        .search-box .input {
+            padding-right: 30px;
+        }
+        .search-clear {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 4px 6px;
+        }
+        .search-clear:hover {
+            color: var(--danger);
+        }
+
         .cat-item {
             padding: 6px 12px;
             border-radius: 6px;
@@ -747,6 +773,11 @@
                 padding: 5px 0;
             }
 
+            .search-box {
+                max-width: none;
+                width: 100%;
+            }
+
             .cat-item {
                 padding: 4px 10px;
                 border-radius: 15px;
@@ -876,6 +907,10 @@
         <div class="main-content">
             <div class="toolbar">
                 <div class="toolbar-left">
+                    <div class="search-box">
+                        <input type="text" id="search-input" class="input" placeholder="🔍 搜索标题 / 详情关键字" oninput="handleSearch()">
+                        <button id="search-clear" class="search-clear hidden" onclick="clearSearch()" title="清除">×</button>
+                    </div>
                     <!-- Category Filter remains here -->
                     <div id="category-list" class="category-filter"></div>
                 </div>
@@ -995,6 +1030,7 @@
             statusFilter: 'all',
             calMonth: new Date(), 
             selectedCategoryId: null,
+            searchKeyword: '',
             isCalendarCollapsed: false // State for mobile calendar collapse
         };
 
@@ -1401,6 +1437,27 @@
             renderTasks();
         }
 
+        // 关键字匹配：忽略大小写，支持空格分隔多个关键字（同时命中）
+        function matchesKeyword(task, keywords) {
+            if (keywords.length === 0) return true;
+            const haystack = `${task.title || ''} ${task.detail || ''}`.toLowerCase();
+            return keywords.every(k => haystack.includes(k));
+        }
+
+        function handleSearch() {
+            const input = document.getElementById('search-input');
+            state.searchKeyword = input.value.trim();
+            document.getElementById('search-clear').classList.toggle('hidden', !state.searchKeyword);
+            renderTasks();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('search-input');
+            input.value = '';
+            handleSearch();
+            input.focus();
+        }
+
         function openCategoryModal() {
             document.getElementById('category-modal').classList.remove('hidden');
             renderCategoryManageList();
@@ -1468,8 +1525,13 @@
             const now = state.currentDate;
             let filtered = [];
             let titleText = '';
+            const keywords = state.searchKeyword.toLowerCase().split(/\s+/).filter(Boolean);
 
-            if (state.viewMode === 'day') {
+            // 搜索状态下忽略视图日期范围，全局搜索所有任务
+            if (keywords.length > 0) {
+                filtered = [...state.tasks];
+                titleText = `搜索“${state.searchKeyword}”`;
+            } else if (state.viewMode === 'day') {
                 const ds = formatDate(now);
                 filtered = state.tasks.filter(t => t.date === ds);
                 titleText = `${now.getMonth() + 1}月${now.getDate()}日`;
@@ -1507,6 +1569,10 @@
                 titleText += ` · ${statusText}`;
             }
 
+            if (keywords.length > 0) {
+                filtered = filtered.filter(t => matchesKeyword(t, keywords));
+            }
+
             if (titleEl) titleEl.innerText = titleText;
             if (countBadge) {
                 countBadge.innerText = `${filtered.length} 条`;
@@ -1521,7 +1587,8 @@
             });
 
             if (filtered.length === 0) {
-                list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>当前暂无任务</p></div>`;
+                const emptyText = keywords.length > 0 ? '未找到匹配的任务' : '当前暂无任务';
+                list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>${emptyText}</p></div>`;
                 return;
             }
 
@@ -1673,8 +1740,11 @@
         function exportToExcel() {
             const now = state.currentDate;
             let filtered = [];
+            const keywords = state.searchKeyword.toLowerCase().split(/\s+/).filter(Boolean);
 
-            if (state.viewMode === 'day') {
+            if (keywords.length > 0) {
+                filtered = [...state.tasks];
+            } else if (state.viewMode === 'day') {
                 const ds = formatDate(now);
                 filtered = state.tasks.filter(t => t.date === ds);
             } else if (state.viewMode === 'week') {
@@ -1698,6 +1768,9 @@
             }
             if (state.statusFilter !== 'all') {
                 filtered = filtered.filter(t => t.status === state.statusFilter);
+            }
+            if (keywords.length > 0) {
+                filtered = filtered.filter(t => matchesKeyword(t, keywords));
             }
 
             if (filtered.length === 0) {
@@ -1730,7 +1803,8 @@
                            String(nowTime.getSeconds()).padStart(2, '0');
             
             let descPart = '';
-            if (state.viewMode === 'day') descPart = '日视图';
+            if (keywords.length > 0) descPart = `搜索-${state.searchKeyword.replace(/[\\/:*?"<>|\s]+/g, '_')}`;
+            else if (state.viewMode === 'day') descPart = '日视图';
             else if (state.viewMode === 'week') descPart = '周视图';
             else if (state.viewMode === 'month') descPart = '月视图';
             else descPart = '全部';
