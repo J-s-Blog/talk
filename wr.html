@@ -400,9 +400,16 @@ function showToast(msg, type) {
     toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+// 判断接口返回是否为「登录态失效」（token过期），用于自动用已填账号密码重新登录
+function isAuthExpired(data) {
+    if (!data || data.resultCode === 0) return false;
+    const msg = String(data.resultMessage || '');
+    return /登录失效|重新登录|登录已过期|登录状态已过期|未登录|请先登录|token/i.test(msg);
+}
+
 // 登录鉴权：仅在点击「加载/刷新数据」或「导出周报」时调用
-// 已有token且凭据未变时直接复用；凭据变化则用新凭据重新登录
-async function ensureLogin() {
+// 已有token且凭据未变时直接复用；force=true 或凭据变化则用当前填入的账号密码重新登录
+async function ensureLogin(force = false) {
     const phone = document.getElementById('phoneInput').value.trim();
     const password = document.getElementById('pwdInput').value;
     if (!phone || !password) {
@@ -410,7 +417,7 @@ async function ensureLogin() {
         throw new Error('请填写登录账号和密码');
     }
     const key = phone + '|' + password;
-    if (authToken && key === lastLoginCreds) return; // 凭据未变，复用token
+    if (!force && authToken && key === lastLoginCreds) return; // 凭据未变且token有效，复用
     try {
         await doLogin(phone, password, COMPANY_ID);
     } catch (e) {
@@ -439,8 +446,13 @@ async function fetchWeeklyList() {
     let totalRecords = 0;
     const pageSize = 300;
     do {
-        const listUrl = `${LIST_PATH}?queryType=2&weeklyType=0&isView=&departmentId=&startTime=${startDate}&endTime=${endDate}&currentPage=${currentPage}&pageSize=${pageSize}&token=${authToken}&companyId=${COMPANY_ID}`;
-        const listData = await apiGet(listUrl);
+        const buildListUrl = () => `${LIST_PATH}?queryType=2&weeklyType=0&isView=&departmentId=&startTime=${startDate}&endTime=${endDate}&currentPage=${currentPage}&pageSize=${pageSize}&token=${authToken}&companyId=${COMPANY_ID}`;
+        let listData = await apiGet(buildListUrl());
+        if (isAuthExpired(listData)) {
+            // token失效：直接用已填入的账号密码重新登录，再重试当前页
+            await ensureLogin(true);
+            listData = await apiGet(buildListUrl());
+        }
         if (!listData || listData.resultCode !== 0) {
             throw new Error(`获取周报列表失败: ${listData?.resultMessage || '未知错误'}`);
         }
@@ -473,9 +485,13 @@ async function ensureWeeklyDetail(d) {
     if (d.detailLoaded || d.detailLoading) return;
     d.detailLoading = true;
     try {
-        const detailData = await apiGet(
-            `${DETAIL_PATH}?weeklyId=${d.weeklyId}&token=${authToken}&companyId=${COMPANY_ID}`
-        );
+        const buildDetailUrl = () => `${DETAIL_PATH}?weeklyId=${d.weeklyId}&token=${authToken}&companyId=${COMPANY_ID}`;
+        let detailData = await apiGet(buildDetailUrl());
+        if (isAuthExpired(detailData)) {
+            // token失效：用已填入的账号密码重新登录后重试
+            await ensureLogin(true);
+            detailData = await apiGet(buildDetailUrl());
+        }
         if (!detailData || detailData.resultCode !== 0 || !detailData.resultData) {
             throw new Error(detailData?.resultMessage || '未知错误');
         }
