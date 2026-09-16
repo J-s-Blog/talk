@@ -901,16 +901,18 @@
                     <button id="status-pending" onclick="setStatusFilter('pending')">未完成</button>
                     <button id="status-completed" onclick="setStatusFilter('completed')">已完成</button>
                 </div>
+
+                <div class="time-nav-label" style="margin-top: 10px;">关键字搜索</div>
+                <div class="search-box" style="width: 100%; max-width: none;">
+                    <input type="text" id="search-input" class="input" placeholder="🔍 搜索标题 / 详情" oninput="handleSearch()">
+                    <button id="search-clear" class="search-clear hidden" onclick="clearSearch()" title="清除">×</button>
+                </div>
             </div>
         </div>
 
         <div class="main-content">
             <div class="toolbar">
                 <div class="toolbar-left">
-                    <div class="search-box">
-                        <input type="text" id="search-input" class="input" placeholder="🔍 搜索标题 / 详情关键字" oninput="handleSearch()">
-                        <button id="search-clear" class="search-clear hidden" onclick="clearSearch()" title="清除">×</button>
-                    </div>
                     <!-- Category Filter remains here -->
                     <div id="category-list" class="category-filter"></div>
                 </div>
