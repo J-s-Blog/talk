@@ -261,30 +261,41 @@
         .query-conditions {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 10px;
             align-items: flex-end;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
         .form-group.inline {
             margin-bottom: 0;
             display: flex;
             flex-direction: column;
+            flex: 0 0 auto;
         }
         .form-group.inline label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             white-space: nowrap;
-            font-size: 13px;
+            font-size: 12px;
+            color: #555;
         }
         .form-group.inline input[type="date"],
         .form-group.inline input[type="text"] {
-            padding: 6px 8px;
+            padding: 5px 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            height: 34px;
+            height: 32px;
             font-size: 13px;
-            width: 150px;
+            width: 140px;
             max-width: 100%;
+            box-sizing: border-box;
+        }
+        #queryBtn {
+            height: 32px;
+            padding: 0 20px;
+            font-size: 13px;
+            width: auto;
+            flex: 0 0 auto;
+            align-self: flex-end;
         }
 
         /* 操作日志区域 */
@@ -316,6 +327,84 @@
             color: #0c5460;
         }
 
+        /* ==================== 重分配弹窗样式 ==================== */
+        #reassignModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 99999;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        #reassignModal.show {
+            display: flex;
+        }
+        #reassignModal .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 380px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        #reassignModal .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        #reassignModal .modal-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        #reassignModal input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        #reassignModal .modal-btns {
+            display: flex;
+            gap: 10px;
+        }
+        #reassignModal .modal-btns button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        #reassignModal .btn-cancel {
+            background: #e9ecef;
+            color: #495057;
+        }
+        #reassignModal .btn-confirm {
+            background: #28a745;
+            color: white;
+        }
+        #reassignModal .btn-confirm:hover { background: #218838; }
+        #reassignModal .btn-cancel:hover { background: #dee2e6; }
+
+        /* 移动端弹窗适配 */
+        @media (max-width: 768px) {
+            #reassignModal .modal-content {
+                width: 92%;
+                padding: 20px 16px;
+            }
+            #reassignModal input {
+                font-size: 16px !important; /* 防止 iOS 自动缩放 */
+            }
+        }
+
         /* 移动端响应式 */
         @media (max-width: 768px) {
             .tab-buttons {
@@ -325,12 +414,18 @@
                 display: block;
             }
             .query-conditions {
-                flex-direction: column;
-                gap: 10px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: end;
             }
             .form-group.inline input[type="date"],
             .form-group.inline input[type="text"] {
                 width: 100%;
+            }
+            #queryBtn {
+                grid-column: 1 / -1;
+                justify-self: stretch;
             }
             /* 公海池用户批量分配/重分配 Tab 移动端样式 */
             #batchAssign .import-manual-row,
@@ -673,6 +768,19 @@
         </div>
 
         <div id="statusMessage" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- 重分配 empID 输入弹窗 -->
+    <div id="reassignModal">
+        <div class="modal-content">
+            <div class="modal-title">设置重分配顾问</div>
+            <div class="modal-info" id="reassignModalInfo"></div>
+            <input type="text" id="reassignEmpIdInput" placeholder="请输入顾问 empID" autocomplete="off">
+            <div class="modal-btns">
+                <button class="btn-cancel" id="reassignModalCancel">取消</button>
+                <button class="btn-confirm" id="reassignModalConfirm">确认重分配</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1111,110 +1219,145 @@
         }
 
         // ==================== 重分配功能 ====================
+        // 弹窗状态
+        let _reassignCallback = null;
+
+        function showReassignModal(userId, callback) {
+            const modal = document.getElementById('reassignModal');
+            const info = document.getElementById('reassignModalInfo');
+            const input = document.getElementById('reassignEmpIdInput');
+            info.textContent = '用户ID: ' + userId;
+            input.value = '';
+            _reassignCallback = callback;
+            modal.classList.add('show');
+            // iOS Safari: 延迟 focus 确保弹窗渲染后再聚焦
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function hideReassignModal() {
+            document.getElementById('reassignModal').classList.remove('show');
+            _reassignCallback = null;
+        }
+
+        document.getElementById('reassignModalCancel').addEventListener('click', hideReassignModal);
+        document.getElementById('reassignModalConfirm').addEventListener('click', function() {
+            const val = document.getElementById('reassignEmpIdInput').value.trim();
+            if (val) {
+                // 先保存回调再关闭弹窗，否则 hideReassignModal 会清空 _reassignCallback
+                const cb = _reassignCallback;
+                hideReassignModal();
+                if (cb) cb(val);
+            } else {
+                alert('顾问 empID 不能为空');
+                document.getElementById('reassignEmpIdInput').focus();
+            }
+        });
+        // 点击遮罩层关闭
+        document.getElementById('reassignModal').addEventListener('click', function(e) {
+            if (e.target === this) hideReassignModal();
+        });
+
         async function reallocateUser(userId, btn) {
             if (!userId || userId === '-') {
                 alert('用户ID无效');
                 return;
             }
 
-            // 弹窗输入staffTalkId
-            const staffTalkId = prompt(`请输入要重分配的顾问empID（staffTalkId）：\n用户ID: ${userId}`);
-            if (staffTalkId === null) {
-                return; // 用户取消
-            }
-            if (!staffTalkId.trim()) {
-                alert('staffTalkId不能为空');
-                return;
-            }
-
-            const token = localStorage.getItem('talk915_token');
-            if (!token) {
-                alert('请先登录获取Token');
-                return;
-            }
-
-            const trimmedStaffTalkId = staffTalkId.trim();
-
-            // 禁用按钮
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = '重分配中...';
-            }
-
-            try {
-                // 步骤1：先调用转出接口，将用户退回到公海池
-                addLog(`用户 ${userId} 开始重分配，先执行转出操作...`, 'info');
-
-                const transferResponse = await fetch('https://www.talk915.com/users/adminSeaPool/removeSeaPoolFollow', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json, text/plain, */*',
-                        'User-Agent': navigator.userAgent,
-                        'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
-                        'Origin': 'https://www.talk915.com',
-                        'Sec-Fetch-Dest': 'empty',
-                        'Sec-Fetch-Mode': 'cors',
-                        'Sec-Fetch-Site': 'same-origin',
-                        'token': token
-                    },
-                    body: JSON.stringify({
-                        "userId": parseInt(userId)
-                    }),
-                    credentials: 'include'
-                });
-
-                const transferData = await transferResponse.json();
-
-                if (!transferResponse.ok || transferData.resultCode !== 0) {
-                    addLog(`用户 ${userId} 转出失败：${transferData.resultMessage || '未知错误'}，重分配中止`, 'error');
-                    alert(`转出失败，重分配中止：${transferData.resultMessage || '未知错误'}`);
+            showReassignModal(userId, async function(staffTalkId) {
+                if (!staffTalkId.trim()) {
+                    alert('staffTalkId不能为空');
                     return;
                 }
 
-                addLog(`用户 ${userId} 转出成功：${transferData.resultMessage}`, 'success');
-
-                // 步骤2：立即调用重分配接口
-                const allocResponse = await fetch('https://www.talk915.com/users/adminSeaPool/allocationSeaPool', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json, text/plain, */*',
-                        'User-Agent': navigator.userAgent,
-                        'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
-                        'Origin': 'https://www.talk915.com',
-                        'Sec-Fetch-Dest': 'empty',
-                        'Sec-Fetch-Mode': 'cors',
-                        'Sec-Fetch-Site': 'same-origin',
-                        'token': token
-                    },
-                    body: JSON.stringify({
-                        "userId": parseInt(userId),
-                        "staffTalkId": trimmedStaffTalkId
-                    }),
-                    credentials: 'include'
-                });
-
-                const allocData = await allocResponse.json();
-
-                if (allocResponse.ok && allocData.resultCode === 0) {
-                    const resultMsg = allocData.resultData || allocData.resultMessage || '操作成功';
-                    addLog(`用户 ${userId} 重分配成功（分配给 ${trimmedStaffTalkId}）：${resultMsg}`, 'success');
-                    alert(`重分配成功：${resultMsg}`);
-                } else {
-                    addLog(`用户 ${userId} 重分配失败：${allocData.resultMessage || '未知错误'}`, 'error');
-                    alert(`重分配失败：${allocData.resultMessage || '未知错误'}`);
+                const token = localStorage.getItem('talk915_token');
+                if (!token) {
+                    alert('请先登录获取Token');
+                    return;
                 }
-            } catch (error) {
-                console.error('重分配错误:', error);
-                addLog(`用户 ${userId} 重分配异常：${error.message}`, 'error');
-                alert(`重分配异常：${error.message}`);
-            } finally {
+
+                const trimmedStaffTalkId = staffTalkId.trim();
+
+                // 禁用按钮
                 if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = '重分配';
+                    btn.disabled = true;
+                    btn.textContent = '重分配中...';
                 }
-            }
+
+                try {
+                    // 步骤1：先调用转出接口，将用户退回到公海池
+                    addLog(`用户 ${userId} 开始重分配，先执行转出操作...`, 'info');
+
+                    const transferResponse = await fetch('https://www.talk915.com/users/adminSeaPool/removeSeaPoolFollow', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            "userId": parseInt(userId)
+                        }),
+                        credentials: 'include'
+                    });
+
+                    const transferData = await transferResponse.json();
+
+                    if (!transferResponse.ok || transferData.resultCode !== 0) {
+                        addLog(`用户 ${userId} 转出失败：${transferData.resultMessage || '未知错误'}，重分配中止`, 'error');
+                        alert(`转出失败，重分配中止：${transferData.resultMessage || '未知错误'}`);
+                        return;
+                    }
+
+                    addLog(`用户 ${userId} 转出成功：${transferData.resultMessage}`, 'success');
+
+                    // 步骤2：立即调用重分配接口
+                    const allocResponse = await fetch('https://www.talk915.com/users/adminSeaPool/allocationSeaPool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/publicPool',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            "userId": parseInt(userId),
+                            "staffTalkId": trimmedStaffTalkId
+                        }),
+                        credentials: 'include'
+                    });
+
+                    const allocData = await allocResponse.json();
+
+                    if (allocResponse.ok && allocData.resultCode === 0) {
+                        const resultMsg = allocData.resultData || allocData.resultMessage || '操作成功';
+                        addLog(`用户 ${userId} 重分配成功（分配给 ${trimmedStaffTalkId}）：${resultMsg}`, 'success');
+                        alert(`重分配成功：${resultMsg}`);
+                    } else {
+                        addLog(`用户 ${userId} 重分配失败：${allocData.resultMessage || '未知错误'}`, 'error');
+                        alert(`重分配失败：${allocData.resultMessage || '未知错误'}`);
+                    }
+                } catch (error) {
+                    console.error('重分配错误:', error);
+                    addLog(`用户 ${userId} 重分配异常：${error.message}`, 'error');
+                    alert(`重分配异常：${error.message}`);
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '重分配';
+                    }
+                }
+            });
         }
 
         // ==================== 文件解析（共享） ====================
