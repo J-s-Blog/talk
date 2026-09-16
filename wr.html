@@ -147,6 +147,8 @@
         .person-list {
             flex: 1 1 0; min-height: 0; width: 100%; overflow-y: auto;
             display: flex; flex-direction: column; gap: 8px; padding-right: 2px;
+            /* 底部留出空间，避免最后一条内容被浏览器底栏/任务栏遮挡 */
+            padding-bottom: 40px;
         }
         .person-list::-webkit-scrollbar { width: 5px; }
         .person-list::-webkit-scrollbar-thumb { background: #d5c8e8; border-radius: 3px; }
@@ -161,7 +163,7 @@
         .detail-panel {
             flex: 1; min-width: 0; overflow-y: auto;
             background: #fff; border: 1px solid #eee; border-radius: 12px;
-            padding: 14px 16px; box-shadow: 0 2px 10px rgba(83,52,131,0.06);
+            padding: 14px 16px; padding-bottom: 40px; box-shadow: 0 2px 10px rgba(83,52,131,0.06);
         }
         .detail-panel::-webkit-scrollbar { width: 6px; }
         .detail-panel::-webkit-scrollbar-thumb { background: #d5c8e8; border-radius: 3px; }
