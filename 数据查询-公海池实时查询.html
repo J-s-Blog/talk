@@ -965,9 +965,34 @@
         #employeeManagement .form-group.inline select,
         #employeeManagement .form-group.inline input {
             width: 130px;
+            height: 34px;
             box-sizing: border-box;
         }
-        
+        #employeeManagement #queryEmployeeBtn,
+        #employeeManagement #exportEmployeeBtn {
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        /* 员工管理批量导入区域 - 控件并排一行，覆盖全局button 100%宽度 */
+        #empImportControls {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        #employeeManagement .batch-import-section button,
+        #empImportControls button {
+            width: auto;
+        }
+        #empBatchActions {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+        }
+
         /* 批量用户分配表格列宽 */
         #batchListTable th:nth-child(1),
         #batchListTable td:nth-child(1) {
@@ -1676,40 +1701,64 @@
                 font-size: 12px;
             }
             
-            /* 员工管理筛选条件移动端 - 一行多列紧凑布局 */
+            /* 员工管理筛选条件移动端 - 一行三列紧凑布局 */
             #employeeManagement .date-conditions {
                 flex-direction: row !important;
                 flex-wrap: wrap !important;
                 gap: 6px !important;
                 align-items: flex-start !important;
+                justify-content: flex-start !important;
             }
             #employeeManagement .form-group.inline {
-                width: calc(50% - 3px) !important;
+                flex: 1 1 30% !important;
+                width: auto !important;
                 min-width: 0 !important;
+                min-height: 0 !important;
                 margin-bottom: 0 !important;
             }
             #employeeManagement .form-group.inline select,
             #employeeManagement .form-group.inline input {
                 width: 100% !important;
+                height: 32px !important;
                 box-sizing: border-box !important;
-                padding: 5px 4px !important;
+                padding: 4px 6px !important;
                 font-size: 13px !important;
             }
             #employeeManagement .form-group.inline label {
                 font-size: 12px !important;
-                margin-bottom: 1px !important;
+                margin-bottom: 2px !important;
                 display: block !important;
+                line-height: 1.2 !important;
             }
-            #employeeManagement .date-conditions > div:last-child {
-                width: 100% !important;
-                justify-content: flex-end !important;
+            #employeeManagement #empFilterButtons {
+                justify-content: flex-start !important;
             }
             #employeeManagement #queryEmployeeBtn,
             #employeeManagement #exportEmployeeBtn {
-                padding: 6px 14px !important;
+                height: 32px !important;
+                padding: 4px 14px !important;
+                box-sizing: border-box !important;
                 font-size: 13px !important;
             }
-            
+
+            /* 员工管理批量导入 - 独占一行，控件左对齐自动换行 */
+            #empImportControls {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                gap: 6px !important;
+                flex: 1 1 100% !important;
+                align-self: flex-start !important;
+            }
+            #employeeManagement #empBatchActions {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                gap: 4px !important;
+            }
+
             /* 批量用户分配Tab移动端 */
             #batchAssign .batch-assign-section {
                 padding: 10px;
@@ -3340,12 +3389,37 @@
                 </select>
             </div>
             
-            <div style="display: flex; gap: 10px;">
-                <button type="button" id="queryEmployeeBtn" style="padding: 8px 20px; width: auto;">查询</button>
-                <button type="button" id="exportEmployeeBtn" style="padding: 8px 20px; width: auto; display: none;">导出</button>
+            <div id="empFilterButtons" class="form-group inline">
+                <label style="visibility: hidden;">.</label>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="queryEmployeeBtn" style="padding: 8px 20px; width: auto;">查询</button>
+                    <button type="button" id="exportEmployeeBtn" style="padding: 8px 20px; width: auto; display: none;">导出</button>
+                </div>
+            </div>
+
+            <!-- 批量导入控件：与筛选条件同行靠右，宽度不够时整组自动换行 -->
+            <div id="empImportControls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; align-self: center; flex: 1 1 380px; min-width: 0;">
+                <span style="font-size: 13px; font-weight: 600; color: #0056b3; white-space: nowrap;">批量导入:</span>
+                <input type="file" id="empImportFile" accept=".txt,.csv,.xlsx,.xls" style="font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-radius: 4px; max-width: 220px;">
+                <button type="button" id="empImportFileBtn" style="padding: 4px 12px; font-size: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">导入文件</button>
+                <span style="color: #999;">或</span>
+                <textarea id="empImportManual" rows="1" placeholder="输入员工ID，逗号或换行分隔" style="flex: 1 1 150px; min-width: 150px; max-width: 300px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; resize: none; height: 28px; box-sizing: border-box;"></textarea>
+                <button type="button" id="empImportManualBtn" style="padding: 4px 12px; font-size: 12px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">导入</button>
             </div>
         </div>
-        
+
+        <!-- 批量导入状态与批量操作（导入后显示，不占用空闲空间） -->
+        <div class="batch-import-section" id="empImportSection" style="display: none; margin-top: 8px; padding: 8px 12px; background-color: #f0f7ff; border-radius: 6px; border: 1px solid #b8d4f0;">
+            <div id="empImportStatus" style="font-size: 12px; line-height: 1.6;"></div>
+            <div id="empBatchActions" style="display: none; margin-top: 6px; border-top: 1px solid #b8d4f0; padding-top: 6px;">
+                <span style="font-size: 12px; color: #666; margin-right: 8px;">已导入 <strong id="empImportCount" style="color: #007bff;">0</strong> 个:</span>
+                <button type="button" id="empBatchDisableBtn" style="padding: 3px 10px; font-size: 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">禁用</button>
+                <button type="button" id="empBatchEnableBtn" style="padding: 3px 10px; font-size: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">启用</button>
+                <button type="button" id="empBatchResetPwdBtn" style="padding: 3px 10px; font-size: 12px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">重置密码</button>
+                <button type="button" id="empClearImportBtn" style="padding: 3px 10px; font-size: 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空</button>
+            </div>
+        </div>
+
         <!-- 查询结果 -->
         <div id="employeeResult" style="margin-top: 20px; display: none;">
             <div id="employeeStatus" style="margin-bottom: 15px;"></div>
@@ -3360,6 +3434,7 @@
                             <th>在职状态</th>
                             <th>账号状态</th>
                             <th>创建日期</th>
+                            <th class="new-pwd-col" style="display:none;">新密码</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -10925,20 +11000,22 @@
         
         // 导出员工数据
         function exportEmployeeToExcel() {
-            if (!employeeData || employeeData.length === 0) {
+            const data = importedEmployeeData.length > 0 ? importedEmployeeData : employeeData;
+            if (!data || data.length === 0) {
                 alert('没有可导出的数据');
                 return;
             }
-            
-            const headers = ['序号', '员工ID', '员工empID', '员工姓名', '在职状态', '账号状态', '创建日期'];
-            const rows = employeeData.map((item, index) => [
+            const hasNewPwd = data.some(item => item.newPassword);
+            const headers = ['序号', '员工ID', '员工empID', '员工姓名', '在职状态', '账号状态', '创建日期', ...(hasNewPwd ? ['新密码'] : [])];
+            const rows = data.map((item, index) => [
                 index + 1,
                 item.userId || '',
                 item.talkId || '',
                 item.userName || '',
                 item.jobStatus === 0 ? '在职' : (item.jobStatus === 1 ? '离职' : ''),
                 item.status === 0 ? '正常' : (item.status === 1 ? '禁用' : ''),
-                item.createTime || ''
+                item.createTime || '',
+                ...(hasNewPwd ? [(item.newPassword && item.newPassword !== '重置失败' && item.newPassword !== '请求失败') ? item.newPassword : ''] : [])
             ]);
             
             const csvContent = [headers, ...rows]
@@ -10963,7 +11040,322 @@
         document.getElementById('closeEmployeeEditModal').addEventListener('click', closeEmployeeEditModal);
         document.getElementById('cancelEmployeeEdit').addEventListener('click', closeEmployeeEditModal);
         document.getElementById('submitEmployeeEdit').addEventListener('click', submitEmployeeEdit);
-        
+
+        // ========== 员工管理批量导入功能 ==========
+        let importedEmployeeIds = [];   // 用户导入的员工ID列表
+        let importedEmployeeData = [];  // 导入后查询到的员工数据（含新密码）
+
+        // 解析导入文件（仅提取第一列员工ID）
+        function parseEmployeeImportFile(file) {
+            return new Promise((resolve, reject) => {
+                const fileName = file.name.toLowerCase();
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                            console.log('[emp-import] excel rows:', json.length, json.slice(0, 3));
+                            const ids = [];
+                            // 仅当首行首格含中文时视为表头跳过（empxgsxxx 格式的ID不含中文，不会被误跳）
+                            let startRow = 0;
+                            if (json.length > 0 && typeof json[0][0] === 'string' && /[\u4e00-\u9fa5]/.test(json[0][0])) {
+                                startRow = 1;
+                            }
+                            for (let i = startRow; i < json.length; i++) {
+                                const val = String(json[i] && json[i][0]).trim();
+                                if (val) ids.push(val);
+                            }
+                            resolve(ids);
+                        } catch (err) { reject(new Error('Excel解析失败: ' + err.message)); }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const text = e.target.result;
+                            console.log('[emp-import] file content preview:', text.substring(0, 200));
+                            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+                            const ids = [];
+                            // 仅当首行首格含中文时视为表头跳过（empxgsxxx 格式的ID不含中文，不会被误跳）
+                            let startLine = 0;
+                            if (lines.length > 0 && /[\u4e00-\u9fa5]/.test(lines[0].split(/[,\t]/)[0])) startLine = 1;
+                            for (let i = startLine; i < lines.length; i++) {
+                                const val = lines[i].split(/[,\t]/)[0].trim();
+                                if (val) ids.push(val);
+                            }
+                            console.log('[emp-import] parsed ids:', ids.length, ids.slice(0, 5));
+                            resolve(ids);
+                        } catch (err) { reject(new Error('文件解析失败: ' + err.message)); }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        // 导入员工账号
+        async function importEmployeeIds(source) {
+            const statusEl = document.getElementById('empImportStatus');
+            let ids = [];
+            try {
+                if (source === 'file') {
+                    const fileInput = document.getElementById('empImportFile');
+                    if (!fileInput.files.length) { statusEl.innerHTML = '<span style="color:#dc3545;">请先选择文件</span>'; return; }
+                    ids = await parseEmployeeImportFile(fileInput.files[0]);
+                } else {
+                    const text = document.getElementById('empImportManual').value.trim();
+                    if (!text) { statusEl.innerHTML = '<span style="color:#dc3545;">请输入员工ID</span>'; return; }
+                    ids = text.split(/[\r\n,，]+/).map(l => l.trim()).filter(l => l);
+                }
+                if (ids.length === 0) { statusEl.innerHTML = '<span style="color:#dc3545;">未解析到有效的员工ID</span>'; return; }
+                // 去重
+                ids = [...new Set(ids)];
+                importedEmployeeIds = ids;
+                importedEmployeeData = [];
+                statusEl.innerHTML = `<span style="color:#28a745;">已导入 ${ids.length} 个员工ID，正在查询...</span>`;
+                document.getElementById('empImportSection').style.display = 'block';
+                document.getElementById('empImportCount').textContent = ids.length;
+                document.getElementById('empBatchActions').style.display = 'flex';
+                await queryImportedEmployees(ids);
+            } catch (err) {
+                document.getElementById('empImportSection').style.display = 'block';
+                statusEl.innerHTML = `<span style="color:#dc3545;">导入失败: ${err.message}</span>`;
+            }
+        }
+
+        // 查询导入的员工数据（逐个ID查询，小响应更可靠；全量拉取易被网络截断）
+        async function queryImportedEmployees(ids) {
+            const token = localStorage.getItem('talk915_token');
+            const empStatus = document.getElementById('employeeStatus');
+            const empResult = document.getElementById('employeeResult');
+            const statusEl = document.getElementById('empImportStatus');
+            if (!token) { statusEl.innerHTML = '<span style="color:#dc3545;">请先登录</span>'; return; }
+
+            const idListText = ids.length <= 10 ? ids.join(', ') : ids.slice(0, 10).join(', ') + ` ...共${ids.length}个`;
+            statusEl.innerHTML = `<span style="color:#28a745;">已导入ID: ${idListText}</span><br><span style="color:#007bff;">正在查询 0/${ids.length} ...</span>`;
+            empResult.style.display = 'none';
+
+            // 单个ID查询，失败自动重试一次
+            async function queryOne(id) {
+                const payload = { "jobStatus": "", "staffUserInfo": id, "staffType": "", "configCertificate": "", "status": "", "currPage": 0, "pageSize": 50 };
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    try {
+                        const response = await fetch('https://www.talk915.com/users/adminStaff/queryStaff', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json;charset=UTF-8',
+                                'Accept': 'application/json, text/plain, */*',
+                                'User-Agent': navigator.userAgent,
+                                'Referer': 'https://www.talk915.com/admin/userManagement/staff/staffManage',
+                                'Origin': 'https://www.talk915.com',
+                                'Sec-Fetch-Dest': 'empty',
+                                'Sec-Fetch-Mode': 'cors',
+                                'Sec-Fetch-Site': 'same-origin',
+                                'token': token
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify(payload)
+                        });
+                        const rawText = await response.text();
+                        let data = null;
+                        try { data = JSON.parse(rawText); } catch (e) { /* 非JSON响应 */ }
+                        if (response.ok && data && data.resultCode === 0) {
+                            const list = data.resultData || [];
+                            const lower = id.toLowerCase();
+                            const emp = list.find(e => String(e.userId || '').toLowerCase() === lower || String(e.talkId || '').toLowerCase() === lower);
+                            return { id, emp: emp || null, error: emp ? null : '未找到' };
+                        } else {
+                            const msg = data ? (data.resultMessage || `resultCode=${data.resultCode}`) : `HTTP ${response.status}`;
+                            if (attempt === 1) return { id, emp: null, error: msg };
+                        }
+                    } catch (error) {
+                        if (attempt === 1) return { id, emp: null, error: (error && error.message) || String(error) };
+                    }
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            }
+
+            // 3个并发逐个查询，实时显示进度
+            const results = [];
+            let done = 0;
+            const queue = ids.slice();
+            const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
+                while (queue.length) {
+                    const id = queue.shift();
+                    const r = await queryOne(id);
+                    results.push(r);
+                    done++;
+                    statusEl.innerHTML = `<span style="color:#28a745;">已导入ID: ${idListText}</span><br><span style="color:#007bff;">正在查询 ${done}/${ids.length} ...</span>`;
+                }
+            });
+            await Promise.all(workers);
+
+            const matchedEmps = results.filter(r => r.emp).map(r => r.emp);
+            const notFound = results.filter(r => !r.emp && r.error === '未找到').map(r => r.id);
+            const failed = results.filter(r => !r.emp && r.error && r.error !== '未找到');
+
+            importedEmployeeData = matchedEmps.map(emp => ({ ...emp, newPassword: '' }));
+
+            let statusHtml = `<span style="color:#28a745;">已导入ID: ${idListText}</span>`;
+            if (notFound.length) statusHtml += `<br><span style="color:#dc3545;">未找到账号: ${notFound.join(', ')}</span>`;
+            if (failed.length) statusHtml += `<br><span style="color:#dc3545;">查询失败: ${failed.map(f => `${f.id}(${f.error})`).join(', ')}</span>`;
+            if (!notFound.length && !failed.length) statusHtml += `<br><span style="color:#28a745;">全部查询成功，匹配到 ${matchedEmps.length} 个账号</span>`;
+            statusEl.innerHTML = statusHtml;
+
+            empStatus.innerHTML = `<div class="${failed.length ? 'error-message' : 'success-message'}">查询完成！匹配到 ${matchedEmps.length} / ${ids.length} 个账号</div>`;
+            renderEmployeeTable(importedEmployeeData, true);
+            empResult.style.display = 'block';
+            document.getElementById('exportEmployeeBtn').style.display = 'inline-block';
+        }
+
+        // 渲染员工表格（支持导入模式）
+        function renderEmployeeTable(data, isImportMode) {
+            const tbody = document.querySelector('#employeeTable tbody');
+            tbody.innerHTML = '';
+            const newPwdCol = document.querySelectorAll('.new-pwd-col');
+            const hasNewPwd = data.some(item => item.newPassword);
+            newPwdCol.forEach(col => col.style.display = hasNewPwd ? '' : 'none');
+            data.forEach((item, index) => {
+                const row = document.createElement('tr');
+                const jobStatusText = item.jobStatus === 0 ? '在职' : (item.jobStatus === 1 ? '离职' : '-');
+                const statusText = item.status === 0 ? '正常' : (item.status === 1 ? '禁用' : '-');
+                const statusBtnText = item.status === 0 ? '禁用' : '恢复';
+                const statusBtnColor = item.status === 0 ? '#dc3545' : '#28a745';
+                const newPwdText = item.newPassword ? item.newPassword : (hasNewPwd ? '-' : '');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.userId || '-'}</td>
+                    <td>${item.talkId || '-'}</td>
+                    <td>${item.userName || '-'}</td>
+                    <td>${jobStatusText}</td>
+                    <td>${statusText}</td>
+                    <td>${item.createTime || '-'}</td>
+                    <td class="new-pwd-col" style="display:${hasNewPwd ? '' : 'none'};">${newPwdText}</td>
+                    <td style="display: flex; flex-direction: column; gap: 3px;">
+                        <button class="edit-employee-btn" data-userid="${item.userId}" style="padding: 4px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">编辑</button>
+                        <button class="toggle-status-btn" data-userid="${item.userId}" data-status="${item.status}" style="padding: 4px 10px; background-color: ${statusBtnColor}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">${statusBtnText}</button>
+                        <button class="reset-pwd-btn" data-userid="${item.userId}" style="padding: 4px 10px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">重置密码</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            tbody.querySelectorAll('.edit-employee-btn').forEach(btn => {
+                btn.addEventListener('click', function() { openEmployeeEditModal(this.getAttribute('data-userid')); });
+            });
+            tbody.querySelectorAll('.toggle-status-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    toggleEmployeeStatus(userId, parseInt(this.getAttribute('data-status')));
+                });
+            });
+            tbody.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+                btn.addEventListener('click', function() { resetEmployeePassword(this.getAttribute('data-userid')); });
+            });
+        }
+
+        // 批量更新员工状态（禁用/启用）
+        async function batchUpdateEmployeeStatus(targetStatus, actionName) {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) { alert('请先登录'); return; }
+            if (!importedEmployeeData.length) { alert('没有可操作的账号'); return; }
+            // 过滤出需要操作的账号（跳过已处于目标状态的）
+            const toProcess = importedEmployeeData.filter(emp => emp.status !== targetStatus);
+            const skipped = importedEmployeeData.length - toProcess.length;
+            if (skipped > 0) {
+                if (!confirm(`共有 ${importedEmployeeData.length} 个账号，其中 ${skipped} 个已处于${targetStatus === 1 ? '禁用' : '正常'}状态将跳过。\n\n确定要对剩余 ${toProcess.length} 个账号执行「${actionName}」吗？`)) return;
+            } else {
+                if (!confirm(`确定要对 ${toProcess.length} 个账号执行「${actionName}」吗？`)) return;
+            }
+            let successCount = 0, failCount = 0, skipCount = skipped;
+            const statusMsg = document.getElementById('employeeStatus');
+            statusMsg.innerHTML = `<div class="success-message">正在批量${actionName}...</div>`;
+            for (const emp of toProcess) {
+                try {
+                    const resp = await fetch('https://www.talk915.com/users/adminStaff/updateStaffStatus', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Accept': 'application/json, text/plain, */*', 'token': token },
+                        credentials: 'include',
+                        body: JSON.stringify({ userId: emp.userId, status: targetStatus })
+                    });
+                    const result = await resp.json();
+                    if (resp.ok && result.resultCode === 0) { successCount++; emp.status = targetStatus; emp.newPassword = ''; }
+                    else { failCount++; }
+                } catch (e) { failCount++; }
+            }
+            importedEmployeeData = importedEmployeeData.filter(emp => toProcess.includes(emp) || emp.status === targetStatus || true);
+            // 重新渲染保留所有导入数据
+            renderEmployeeTable(importedEmployeeData, true);
+            if (failCount === 0) {
+                statusMsg.innerHTML = `<div class="success-message">${actionName}完成！成功 ${successCount} 个，跳过 ${skipCount} 个</div>`;
+                document.getElementById('empImportCount').textContent = importedEmployeeData.length;
+            } else {
+                statusMsg.innerHTML = `<div class="error-message">${actionName}完成！成功 ${successCount} 个，跳过 ${skipCount} 个，失败 ${failCount} 个</div>`;
+            }
+        }
+
+        // 批量重置密码
+        async function batchResetEmployeePassword() {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) { alert('请先登录'); return; }
+            if (!importedEmployeeData.length) { alert('没有可操作的账号'); return; }
+            if (!confirm(`确定要对 ${importedEmployeeData.length} 个账号批量重置密码吗？\n重置后的新密码将显示在表格中，请及时保存。`)) return;
+            const statusMsg = document.getElementById('employeeStatus');
+            statusMsg.innerHTML = '<div class="success-message">正在批量重置密码...</div>';
+            let successCount = 0, failCount = 0;
+            for (const emp of importedEmployeeData) {
+                try {
+                    const resp = await fetch(`https://www.talk915.com/users/adminStaff/updateUserPassword/${emp.userId}/3`, {
+                        method: 'PUT',
+                        headers: { 'Accept': 'application/json, text/plain, */*', 'token': token },
+                        credentials: 'include'
+                    });
+                    const result = await resp.json();
+                    if (resp.ok && result.resultCode === 0) {
+                        successCount++;
+                        emp.newPassword = result.resultData || '';
+                    } else {
+                        failCount++;
+                        emp.newPassword = '重置失败';
+                    }
+                } catch (e) { failCount++; emp.newPassword = '请求失败'; }
+            }
+            renderEmployeeTable(importedEmployeeData, true);
+            if (failCount === 0) {
+                statusMsg.innerHTML = `<div class="success-message">密码重置完成！成功 ${successCount} 个，请使用下方导出按钮保存新密码。</div>`;
+            } else {
+                statusMsg.innerHTML = `<div class="error-message">密码重置完成！成功 ${successCount} 个，失败 ${failCount} 个，请使用下方导出按钮查看结果。</div>`;
+            }
+        }
+
+        // 清空导入
+        function clearEmployeeImport() {
+            if (!confirm('确定要清空已导入的账号数据吗？')) return;
+            importedEmployeeIds = [];
+            importedEmployeeData = [];
+            document.getElementById('empImportFile').value = '';
+            document.getElementById('empImportManual').value = '';
+            document.getElementById('empImportCount').textContent = '0';
+            document.getElementById('empBatchActions').style.display = 'none';
+            document.getElementById('empImportStatus').innerHTML = '';
+            document.getElementById('empImportSection').style.display = 'none';
+            document.getElementById('employeeResult').style.display = 'none';
+            document.getElementById('exportEmployeeBtn').style.display = 'none';
+            document.querySelectorAll('.new-pwd-col').forEach(col => col.style.display = 'none');
+        }
+
+        // 绑定批量导入按钮事件
+        document.getElementById('empImportFileBtn').addEventListener('click', () => importEmployeeIds('file'));
+        document.getElementById('empImportManualBtn').addEventListener('click', () => importEmployeeIds('manual'));
+        document.getElementById('empBatchDisableBtn').addEventListener('click', () => batchUpdateEmployeeStatus(1, '批量禁用'));
+        document.getElementById('empBatchEnableBtn').addEventListener('click', () => batchUpdateEmployeeStatus(0, '批量启用'));
+        document.getElementById('empBatchResetPwdBtn').addEventListener('click', batchResetEmployeePassword);
+        document.getElementById('empClearImportBtn').addEventListener('click', clearEmployeeImport);
+
         // ========== 批量用户分配功能 ==========
         
         // 批量分配数据存储
