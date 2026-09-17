@@ -32,8 +32,8 @@
         body {
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
-            overflow-y: auto;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .btn {
@@ -155,9 +155,10 @@
             grid-template-columns: 300px 1fr;
             max-width: 1200px;
             margin: 0 auto;
-            min-height: 100vh;
+            height: 100vh;
             background: var(--card);
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
         }
 
         .sidebar {
@@ -166,6 +167,7 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            overflow-y: auto;
         }
         .sidebar-header {
             display: flex;
@@ -309,6 +311,8 @@
         .main-content {
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
         }
 
         .toolbar {
@@ -446,6 +450,10 @@
         .task-area {
             padding: 20px;
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
         }
         
         .main-header-row {
@@ -479,6 +487,9 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
         }
 
         .task-card {
@@ -647,11 +658,34 @@
 
         /* Mobile Specific Styles */
         @media (max-width: 768px) {
+            /* 手机端恢复正常页面滚动（必须两个轴都恢复 visible，
+               否则 PC 端的 overflow:hidden 泄漏成 overflow-x:hidden，
+               会导致手机浏览器整页无法滚动） */
+            html {
+                height: auto;
+                overflow: visible;
+            }
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow: visible;
+                -webkit-overflow-scrolling: touch;
+            }
+
             .app-layout {
                 grid-template-columns: 1fr;
                 display: block;
                 box-shadow: none;
                 background: transparent;
+                height: auto;
+                overflow: visible;
+            }
+
+            .sidebar,
+            .main-content,
+            .task-area,
+            .task-list {
+                overflow: visible;
             }
 
             .sidebar {
