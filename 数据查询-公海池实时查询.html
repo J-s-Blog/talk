@@ -983,7 +983,9 @@
             gap: 8px;
         }
         #employeeManagement .batch-import-section button,
-        #empImportControls button {
+        #empImportControls button,
+        #empModifyControls button,
+        #empModifyActions button {
             width: auto;
         }
         #empBatchActions {
@@ -1741,8 +1743,9 @@
                 font-size: 13px !important;
             }
 
-            /* 员工管理批量导入 - 独占一行，控件左对齐自动换行 */
-            #empImportControls {
+            /* 员工管理批量导入/批量改资料 - 独占一行，控件左对齐自动换行 */
+            #empImportControls,
+            #empModifyControls {
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: wrap !important;
@@ -3417,6 +3420,28 @@
                 <button type="button" id="empBatchEnableBtn" style="padding: 3px 10px; font-size: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">启用</button>
                 <button type="button" id="empBatchResetPwdBtn" style="padding: 3px 10px; font-size: 12px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">重置密码</button>
                 <button type="button" id="empClearImportBtn" style="padding: 3px 10px; font-size: 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空</button>
+            </div>
+        </div>
+
+        <!-- 批量改资料控件行（姓名/手机号），紧凑单行布局 -->
+        <div id="empModifyControls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding: 6px 12px; background-color: #fffaf0; border: 1px solid #f0d8b8; border-radius: 6px;">
+            <span style="font-size: 13px; font-weight: 600; color: #b36b00; white-space: nowrap;">批量改资料:</span>
+            <input type="file" id="empModifyFile" accept=".txt,.csv,.xlsx,.xls" style="font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-radius: 4px; max-width: 200px;">
+            <button type="button" id="empModifyFileBtn" style="padding: 4px 12px; font-size: 12px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer;">导入文件</button>
+            <span style="color: #999;">或</span>
+            <textarea id="empModifyManual" rows="1" placeholder="empID,新姓名,新手机号，每行一条" style="flex: 1 1 200px; min-width: 180px; max-width: 360px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; resize: none; height: 28px; box-sizing: border-box;"></textarea>
+            <button type="button" id="empModifyManualBtn" style="padding: 4px 12px; font-size: 12px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">导入</button>
+        </div>
+
+        <!-- 批量改资料状态面板（导入后显示） -->
+        <div id="empModifySection" style="display: none; margin-top: 8px; padding: 8px 12px; background-color: #fffaf0; border-radius: 6px; border: 1px solid #f0d8b8;">
+            <div id="empModifyProgress" style="font-size: 12px; line-height: 1.6;"></div>
+            <div id="empModifyStatus" style="font-size: 12px; line-height: 1.7; margin-top: 4px;"></div>
+            <div id="empModifyActions" style="margin-top: 6px; border-top: 1px solid #f0d8b8; padding-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+                <span style="font-size: 12px; color: #666; margin-right: 8px;">已导入 <strong id="empModifyCount" style="color: #fd7e14;">0</strong> 条:</span>
+                <button type="button" id="empModifyRunBtn" style="padding: 3px 10px; font-size: 12px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer;">批量修改</button>
+                <button type="button" id="empModifyExportBtn" style="padding: 3px 10px; font-size: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;" disabled>导出备份</button>
+                <button type="button" id="empModifyClearBtn" style="padding: 3px 10px; font-size: 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空</button>
             </div>
         </div>
 
@@ -11355,6 +11380,373 @@
         document.getElementById('empBatchEnableBtn').addEventListener('click', () => batchUpdateEmployeeStatus(0, '批量启用'));
         document.getElementById('empBatchResetPwdBtn').addEventListener('click', batchResetEmployeePassword);
         document.getElementById('empClearImportBtn').addEventListener('click', clearEmployeeImport);
+
+        // ========== 员工管理批量改资料（姓名/手机号） ==========
+        // 条目结构: {empId, newName, newPhone, userId, talkId, oldName, oldPhone, detail, status, error, modifiedAt}
+        // status: pending待查询 queried待修改 modifying修改中 done成功 skipped无变化 failed失败 notfound未找到 invalid格式错误
+        let modifyEntries = [];
+        let modifyBusy = false;
+        const MODIFY_STATUS_META = {
+            pending:   { text: '待查询', color: '#6c757d' },
+            queried:   { text: '待修改', color: '#007bff' },
+            skipped:   { text: '无变化跳过', color: '#6c757d' },
+            modifying: { text: '修改中...', color: '#fd7e14' },
+            done:      { text: '成功', color: '#28a745' },
+            failed:    { text: '失败', color: '#dc3545' },
+            notfound:  { text: '未找到', color: '#dc3545' },
+            invalid:   { text: '格式错误', color: '#dc3545' }
+        };
+
+        function normalizePhone(v) {
+            return String(v || '').trim().replace(/[^0-9]/g, '');
+        }
+
+        // 解析修改资料文件（3列: empID,新姓名,新手机号），返回原始行数组
+        function parseModifyImportFile(file) {
+            return new Promise((resolve, reject) => {
+                const fileName = file.name.toLowerCase();
+                const isHeader = (cells) => {
+                    const c0 = String(cells[0] || '').trim().toLowerCase();
+                    const c1 = String(cells[1] || '').trim();
+                    return /^emp\W*id$/.test(c0) || /^id$/.test(c0) || /姓名|手机|员工|name|phone|tel/i.test(c0) || /姓名|手机|name|phone|tel/i.test(c1);
+                };
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                            console.log('[emp-modify] excel rows:', json.length, json.slice(0, 3));
+                            const rows = [];
+                            let startRow = (json.length > 0 && json[0] && isHeader(json[0])) ? 1 : 0;
+                            for (let i = startRow; i < json.length; i++) {
+                                const row = json[i];
+                                if (row && String(row[0] || '').trim()) {
+                                    rows.push([String(row[0]).trim(), String(row[1] == null ? '' : row[1]).trim(), String(row[2] == null ? '' : row[2]).trim()].join(','));
+                                }
+                            }
+                            resolve(rows);
+                        } catch (err) { reject(new Error('Excel解析失败: ' + err.message)); }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const text = e.target.result;
+                            console.log('[emp-modify] file content preview:', text.substring(0, 200));
+                            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+                            let startLine = (lines.length > 0 && isHeader(lines[0].split(/[,\t;；，；]/))) ? 1 : 0;
+                            resolve(lines.slice(startLine));
+                        } catch (err) { reject(new Error('文件解析失败: ' + err.message)); }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        // 渲染修改任务列表
+        function renderModifyList() {
+            const el = document.getElementById('empModifyStatus');
+            el.innerHTML = modifyEntries.map((e, i) => {
+                const m = MODIFY_STATUS_META[e.status] || MODIFY_STATUS_META.pending;
+                let info;
+                if (e.status === 'pending') {
+                    info = `新姓名:<b>${e.newName || '-'}</b> 新手机:${e.newPhone || '-'}`;
+                } else if (e.status === 'invalid' || e.status === 'notfound' || (e.status === 'failed' && !e.detail)) {
+                    info = `新姓名:${e.newName || '-'} 新手机:${e.newPhone || '-'} <span style="color:#dc3545;">${e.error || ''}</span>`;
+                } else {
+                    const namePart = e.oldName !== e.newName ? `${e.oldName || '(空)'} → <b>${e.newName}</b>` : e.newName;
+                    const phonePart = e.oldPhone !== e.newPhone ? `${e.oldPhone || '(空)'} → <b>${e.newPhone}</b>` : e.newPhone;
+                    info = `姓名: ${namePart}　手机: ${phonePart}`;
+                    if (e.status === 'failed' && e.error) info += ` <span style="color:#dc3545;">${e.error}</span>`;
+                    if (e.status === 'done') info += ` <span style="color:#999;">${e.modifiedAt || ''}</span>`;
+                }
+                return `<div>${i + 1}. <b>${e.empId}</b>${e.userId ? ` (uid:${e.userId})` : ''}　${info}　<span style="color:${m.color}; font-weight:600;">【${m.text}】</span></div>`;
+            }).join('');
+        }
+
+        // 导入修改任务
+        async function importModifyList(source) {
+            const progressEl = document.getElementById('empModifyProgress');
+            try {
+                let rows = [];
+                if (source === 'file') {
+                    const fileInput = document.getElementById('empModifyFile');
+                    if (!fileInput.files.length) { progressEl.innerHTML = '<span style="color:#dc3545;">请先选择文件</span>'; return; }
+                    rows = await parseModifyImportFile(fileInput.files[0]);
+                } else {
+                    const text = document.getElementById('empModifyManual').value.trim();
+                    if (!text) { progressEl.innerHTML = '<span style="color:#dc3545;">请输入内容，格式：empID,新姓名,新手机号（每行一条）</span>'; return; }
+                    rows = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+                }
+                const entries = [];
+                const seen = new Set();
+                let dupCount = 0;
+                for (const row of rows) {
+                    const parts = String(row).split(/[,\t;；，；]/).map(p => p.trim());
+                    if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) {
+                        if (parts[0]) entries.push({ empId: parts[0], newName: parts[1] || '', newPhone: '', status: 'invalid', error: '格式错误（应为 empID,新姓名,新手机号）' });
+                        continue;
+                    }
+                    const empId = parts[0], newName = parts[1], newPhone = normalizePhone(parts[2]);
+                    if (seen.has(empId)) { dupCount++; continue; }
+                    seen.add(empId);
+                    if (!/^1\d{10}$/.test(newPhone)) {
+                        entries.push({ empId, newName, newPhone, status: 'invalid', error: '手机号格式错误（应为11位手机号）' });
+                    } else {
+                        entries.push({ empId, newName, newPhone, status: 'pending', error: '' });
+                    }
+                }
+                if (!entries.length) { progressEl.innerHTML = '<span style="color:#dc3545;">未解析到有效数据，格式：empID,新姓名,新手机号（每行一条）</span>'; return; }
+                modifyEntries = entries;
+                document.getElementById('empModifySection').style.display = 'block';
+                document.getElementById('empModifyCount').textContent = entries.length;
+                document.getElementById('empModifyExportBtn').disabled = true;
+                progressEl.innerHTML = `<span style="color:#b36b00;">已导入 ${entries.length} 条修改任务${dupCount ? `（忽略重复 ${dupCount} 条）` : ''}。点击"批量修改"开始：先查询每个账号的现有姓名/手机号并显示，确认后逐个修改。</span>`;
+                renderModifyList();
+            } catch (err) {
+                document.getElementById('empModifySection').style.display = 'block';
+                progressEl.innerHTML = `<span style="color:#dc3545;">导入失败: ${err.message}</span>`;
+            }
+        }
+
+        // 按关键字（empID/数字ID）查询单个员工，返回 {emp} 或 {error}
+        async function queryStaffOne(keyword, token) {
+            const payload = { "jobStatus": "", "staffUserInfo": keyword, "staffType": "", "configCertificate": "", "status": "", "currPage": 0, "pageSize": 50 };
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const response = await fetch('https://www.talk915.com/users/adminStaff/queryStaff', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json;charset=UTF-8',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/userManagement/staff/staffManage',
+                            'Origin': 'https://www.talk915.com',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'token': token
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(payload)
+                    });
+                    const rawText = await response.text();
+                    let data = null;
+                    try { data = JSON.parse(rawText); } catch (e) { /* 非JSON响应 */ }
+                    if (response.ok && data && data.resultCode === 0) {
+                        const list = data.resultData || [];
+                        const lower = keyword.toLowerCase();
+                        const emp = list.find(e => String(e.userId || '').toLowerCase() === lower || String(e.talkId || '').toLowerCase() === lower);
+                        return emp ? { emp } : { error: '未找到' };
+                    }
+                    const msg = data ? (data.resultMessage || `resultCode=${data.resultCode}`) : `HTTP ${response.status}`;
+                    if (attempt === 1) return { error: msg };
+                } catch (error) {
+                    if (attempt === 1) return { error: (error && error.message) || String(error) };
+                }
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
+
+        // 批量修改：阶段1查询现有信息并显示 → 二次确认 → 阶段2逐个调用编辑接口修改
+        async function batchModifyEmployeeInfo() {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) { alert('请先登录'); return; }
+            if (modifyBusy) { alert('批量修改正在进行中，请稍候'); return; }
+            const valid = modifyEntries.filter(e => e.status === 'pending');
+            if (!valid.length) { alert('没有待处理的条目，请先导入'); return; }
+            modifyBusy = true;
+            const runBtn = document.getElementById('empModifyRunBtn');
+            const progressEl = document.getElementById('empModifyProgress');
+            runBtn.disabled = true;
+
+            try {
+                // ===== 阶段1：查询现有姓名/手机号（3并发，失败自动重试一次） =====
+                progressEl.innerHTML = `<span style="color:#007bff;">阶段1/2：正在查询 ${valid.length} 个账号的现有姓名/手机号... 0/${valid.length}</span>`;
+                let qdone = 0;
+                const queue = valid.slice();
+                const qworkers = Array.from({ length: Math.min(3, queue.length) }, async () => {
+                    while (queue.length) {
+                        const entry = queue.shift();
+                        const r = await queryStaffOne(entry.empId, token);
+                        if (r.error === '未找到') {
+                            entry.status = 'notfound';
+                        } else if (r.error) {
+                            entry.status = 'failed';
+                            entry.error = '查询失败: ' + r.error;
+                        } else {
+                            entry.userId = r.emp.userId;
+                            entry.talkId = r.emp.talkId || '';
+                            try {
+                                const resp = await fetch(`https://www.talk915.com/users/adminStaff/viewStaffInfo/${entry.userId}`, {
+                                    method: 'GET',
+                                    headers: { 'Accept': 'application/json, text/plain, */*', 'token': token },
+                                    credentials: 'include'
+                                });
+                                const data = await resp.json();
+                                if (resp.ok && data.resultCode === 0) {
+                                    entry.detail = data.resultData;
+                                    entry.oldName = data.resultData.userName || '';
+                                    entry.oldPhone = String(data.resultData.leval || '');
+                                    const changed = (entry.oldName !== entry.newName) || (entry.oldPhone !== entry.newPhone);
+                                    entry.status = changed ? 'queried' : 'skipped';
+                                } else {
+                                    entry.status = 'failed';
+                                    entry.error = '查询详情失败: ' + (data.resultMessage || `HTTP ${resp.status}`);
+                                }
+                            } catch (err) {
+                                entry.status = 'failed';
+                                entry.error = '查询详情请求失败: ' + err.message;
+                            }
+                        }
+                        qdone++;
+                        progressEl.innerHTML = `<span style="color:#007bff;">阶段1/2：正在查询 ${valid.length} 个账号的现有姓名/手机号... ${qdone}/${valid.length}</span>`;
+                        renderModifyList();
+                    }
+                });
+                await Promise.all(qworkers);
+
+                const changed = valid.filter(e => e.status === 'queried');
+                const skipped = valid.filter(e => e.status === 'skipped');
+                const bad = valid.filter(e => e.status === 'notfound' || e.status === 'failed');
+
+                // 查询结果（含旧信息）即可导出备份
+                document.getElementById('empModifyExportBtn').disabled = false;
+
+                if (!changed.length) {
+                    progressEl.innerHTML = `<span style="color:#6c757d;">无需修改：需要修改 0 个（无变化 ${skipped.length}，未找到/失败 ${bad.length}）。可点击"导出备份"保存查询到的信息。</span>`;
+                    return;
+                }
+
+                // 二次确认，避免误操作
+                const okGo = confirm(
+                    `已查询完成，各账号现有姓名/手机号已显示在列表中。\n\n` +
+                    `需要修改: ${changed.length} 个\n` +
+                    `无变化(自动跳过): ${skipped.length} 个\n` +
+                    `未找到/查询失败: ${bad.length} 个\n\n` +
+                    `确认按导入的新信息逐个执行修改吗？\n（修改完成后可"导出备份"存档新旧信息）`
+                );
+                if (!okGo) {
+                    progressEl.innerHTML = '<span style="color:#6c757d;">已取消修改。查询到的现有信息保留在列表中，可点击"导出备份"保存。</span>';
+                    return;
+                }
+
+                // ===== 阶段2：逐个调用编辑接口（updateStaff）修改 =====
+                let i = 0, okCount = 0, failCount = 0;
+                for (const entry of changed) {
+                    i++;
+                    entry.status = 'modifying';
+                    progressEl.innerHTML = `<span style="color:#fd7e14;">阶段2/2：正在修改 ${i}/${changed.length}（${entry.empId}）...</span>`;
+                    renderModifyList();
+                    try {
+                        // 与单个编辑功能相同的payload，权限等其余字段保持原值
+                        const payload = {
+                            permissionValues: entry.detail.permissionValues || [],
+                            userId: entry.detail.userId,
+                            talkId: entry.detail.talkId || '',
+                            staffType: entry.detail.staffType,
+                            userName: entry.newName,
+                            qq: entry.detail.qq || '',
+                            leval: entry.newPhone
+                        };
+                        const resp = await fetch('https://www.talk915.com/users/adminStaff/updateStaff', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json;charset=UTF-8',
+                                'Accept': 'application/json, text/plain, */*',
+                                'User-Agent': navigator.userAgent,
+                                'Referer': `https://www.talk915.com/admin/userManagement/staff/staffEdit/${entry.userId}`,
+                                'Origin': 'https://www.talk915.com',
+                                'Sec-Fetch-Dest': 'empty',
+                                'Sec-Fetch-Mode': 'cors',
+                                'Sec-Fetch-Site': 'same-origin',
+                                'token': token
+                            },
+                            body: JSON.stringify(payload),
+                            credentials: 'include'
+                        });
+                        const data = await resp.json();
+                        if (resp.ok && data.resultCode === 0) {
+                            entry.status = 'done';
+                            entry.modifiedAt = new Date().toLocaleString('zh-CN');
+                            okCount++;
+                        } else {
+                            entry.status = 'failed';
+                            entry.error = '修改失败: ' + (data.resultMessage || `resultCode=${data.resultCode}`);
+                            failCount++;
+                        }
+                    } catch (err) {
+                        entry.status = 'failed';
+                        entry.error = '修改请求失败: ' + err.message;
+                        failCount++;
+                    }
+                    renderModifyList();
+                }
+
+                // 同步上方已导入表格中的姓名显示
+                let tableSynced = false;
+                modifyEntries.filter(e => e.status === 'done').forEach(e => {
+                    importedEmployeeData.forEach(emp => {
+                        if (String(emp.userId) === String(e.userId)) { emp.userName = e.newName; tableSynced = true; }
+                    });
+                });
+                if (tableSynced) renderEmployeeTable(importedEmployeeData, true);
+
+                progressEl.innerHTML = `<span style="color:#28a745;">修改完成！成功 ${okCount} 个，失败 ${failCount} 个，无变化跳过 ${skipped.length} 个。请点击"导出备份"保存新旧信息存档。</span>`;
+            } finally {
+                modifyBusy = false;
+                runBtn.disabled = false;
+            }
+        }
+
+        // 导出新旧信息备份（CSV，含BOM可供Excel直接打开）
+        function exportModifyBackup() {
+            if (!modifyEntries.length) { alert('没有可导出的数据'); return; }
+            const header = 'empID,userId,emp账号,旧姓名,新姓名,旧手机号,新手机号,处理结果,失败原因,修改时间';
+            const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+            const lines = modifyEntries.map(e => {
+                const m = MODIFY_STATUS_META[e.status] || {};
+                return [e.empId, e.userId || '', e.talkId || e.empId, e.oldName || '', e.newName || '', e.oldPhone || '', e.newPhone || '', m.text || '', e.error || '', e.modifiedAt || ''].map(esc).join(',');
+            });
+            const csv = '\ufeff' + header + '\n' + lines.join('\n');
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const fname = `员工资料修改备份_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.csv`;
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fname;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        // 清空修改任务
+        function clearModifyList() {
+            if (modifyBusy) { alert('批量修改正在进行中，请稍候'); return; }
+            if (!confirm('确定要清空导入的修改任务吗？')) return;
+            modifyEntries = [];
+            document.getElementById('empModifyFile').value = '';
+            document.getElementById('empModifyManual').value = '';
+            document.getElementById('empModifyCount').textContent = '0';
+            document.getElementById('empModifyProgress').innerHTML = '';
+            document.getElementById('empModifyStatus').innerHTML = '';
+            document.getElementById('empModifySection').style.display = 'none';
+        }
+
+        // 绑定批量改资料按钮事件
+        document.getElementById('empModifyFileBtn').addEventListener('click', () => importModifyList('file'));
+        document.getElementById('empModifyManualBtn').addEventListener('click', () => importModifyList('manual'));
+        document.getElementById('empModifyRunBtn').addEventListener('click', batchModifyEmployeeInfo);
+        document.getElementById('empModifyExportBtn').addEventListener('click', exportModifyBackup);
+        document.getElementById('empModifyClearBtn').addEventListener('click', clearModifyList);
 
         // ========== 批量用户分配功能 ==========
         
