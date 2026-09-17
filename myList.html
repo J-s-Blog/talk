@@ -69,6 +69,10 @@
             padding: 4px 10px;
             font-size: 12px;
         }
+        .btn-xs {
+            padding: 3px 8px;
+            font-size: 12px;
+        }
         .input,
         .select,
         .textarea {
@@ -204,16 +208,15 @@
             padding: 5px 0;
         }
         .calendar-grid .day-cell {
-            aspect-ratio: 1;
-            min-height: 36px;
+            min-height: 26px;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             justify-content: center;
+            gap: 2px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            position: relative;
             transition: all 0.2s;
         }
         .calendar-grid .day-cell:hover {
@@ -231,16 +234,13 @@
         .calendar-grid .day-cell.other-month {
             color: #d1d5db;
         }
-        /* PC端的小点样式 */
+        /* 日期右侧的任务红点（PC/手机统一） */
         .calendar-grid .day-cell .dot {
             width: 4px;
             height: 4px;
-            background: var(--primary);
+            background: var(--task-dot);
             border-radius: 50%;
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
+            flex-shrink: 0;
         }
         .calendar-grid .day-cell.selected .dot {
             background: white;
@@ -263,10 +263,14 @@
             filter: grayscale(100%);
         }
 
-        .time-nav-label {
-            font-size: 12px; 
-            color: var(--text-light); 
-            margin-bottom: 2px;
+        .nav-row {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+        }
+        .nav-row .nav-control {
+            flex: 1;
+            min-width: 0;
         }
         .nav-control {
             display: flex;
@@ -308,27 +312,14 @@
         }
 
         .toolbar {
-            padding: 20px;
+            padding: 15px 20px;
             border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 15px;
-            flex-wrap: wrap;
         }
 
-        .toolbar-left {
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-            flex: 1;
-            flex-wrap: wrap;
-        }
-
-        .toolbar-right {
+        .header-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
         }
 
@@ -378,6 +369,18 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .status-search-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
         .category-filter {
             display: flex;
             gap: 8px;
@@ -387,9 +390,7 @@
 
         .search-box {
             position: relative;
-            flex: 1;
-            min-width: 180px;
-            max-width: 320px;
+            width: 100%;
         }
         .search-box .input {
             padding-right: 30px;
@@ -447,13 +448,20 @@
             flex: 1;
         }
         
+        .main-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--bg);
+        }
         .main-header-title {
             font-size: 20px;
             font-weight: 700;
             color: var(--text);
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--bg);
             display: flex;
             align-items: baseline;
             gap: 10px;
@@ -652,6 +660,7 @@
                 padding: 10px 15px;
                 background: var(--card);
                 margin-bottom: 10px;
+                gap: 10px;
             }
 
             .sidebar-header {
@@ -713,47 +722,37 @@
             .calendar-grid .day-cell {
                 font-size: 11px;
                 border-radius: 4px;
-                aspect-ratio: 1;
-                min-height: 28px; /* Reduced height */
-                padding: 2px 0;
+                min-height: 20px; /* 压扁日历行高 */
+                padding: 1px 0;
             }
-            
-            /* Mobile Task Dot Restoration & Optimization */
+
+            /* 手机端更小的红点 */
             .calendar-grid .day-cell .dot {
-                display: block; /* Restore dot display */
-                width: 3px; /* Smaller dot for mobile */
+                width: 3px;
                 height: 3px;
-                bottom: 2px; /* Adjust position */
-                background: var(--task-dot); /* Use the red task color */
             }
-            .calendar-grid .day-cell.selected .dot {
-                background: white;
+
+            /* 手机端滚动条默认隐藏，滚动时显示 */
+            html::-webkit-scrollbar,
+            body::-webkit-scrollbar {
+                width: 0;
+                height: 0;
             }
-            
-            /* Remove the text color override used previously */
-            .calendar-grid .day-cell.has-task-mobile {
-                color: inherit !important; 
-                font-weight: inherit !important;
+            html.scrolling::-webkit-scrollbar,
+            body.scrolling::-webkit-scrollbar {
+                width: 5px;
+            }
+            html.scrolling::-webkit-scrollbar-thumb,
+            body.scrolling::-webkit-scrollbar-thumb {
+                background: rgba(0, 0, 0, 0.25);
+                border-radius: 3px;
             }
 
             .toolbar {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
                 padding: 10px 15px;
                 background: var(--card);
                 margin-bottom: 10px;
                 border-bottom: none;
-            }
-
-            .toolbar-left {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-
-            .toolbar-right {
-                justify-content: space-between;
             }
 
             .view-switcher,
@@ -765,17 +764,44 @@
             .status-filter button {
                 flex: 1;
                 text-align: center;
-                padding: 10px 0;
-                font-size: 14px;
+                padding: 6px 0;
+                font-size: 13px;
+            }
+
+            .filter-section {
+                gap: 8px;
+            }
+
+            .status-search-row {
+                flex-direction: row;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .status-search-row .status-filter {
+                flex: 1.3;
+                width: auto;
+                height: 32px;
+            }
+            .status-search-row .status-filter button {
+                padding: 0;
+            }
+            .status-search-row .search-box {
+                flex: 1;
+                width: auto;
+                min-width: 0;
+            }
+            .status-search-row .search-box .input {
+                height: 32px;
+                padding: 0 28px 0 10px;
+                font-size: 13px;
+            }
+            .status-search-row .search-clear {
+                font-size: 15px;
+                padding: 2px 5px;
             }
 
             .category-filter {
                 padding: 5px 0;
-            }
-
-            .search-box {
-                max-width: none;
-                width: 100%;
             }
 
             .cat-item {
@@ -788,9 +814,11 @@
                 padding: 0 15px 20px 15px;
             }
 
+            .main-header-row {
+                margin-bottom: 12px;
+            }
             .main-header-title {
                 font-size: 18px;
-                margin-bottom: 15px;
             }
         }
         
@@ -875,59 +903,56 @@
             
             <!-- Unified Time Navigation Container (Moved to Sidebar) -->
             <div id="time-nav-container" class="time-nav hidden">
-                <div class="time-nav-label" id="time-nav-label-text">范围选择</div>
-                <div class="nav-control">
-                    <button id="time-nav-prev" onclick="navigateTime(-1)">‹</button>
-                    <span id="time-nav-display" onclick="triggerMonthPicker()"></span>
-                    <button id="time-nav-next" onclick="navigateTime(1)">›</button>
+                <div class="nav-row">
+                    <div class="nav-control">
+                        <button id="time-nav-prev" onclick="navigateTime(-1)">‹</button>
+                        <span id="time-nav-display" onclick="triggerMonthPicker()"></span>
+                        <button id="time-nav-next" onclick="navigateTime(1)">›</button>
+                    </div>
+                    <button id="time-nav-now" class="btn btn-xs btn-secondary" onclick="jumpToCurrentPeriod()">回到今日</button>
                 </div>
-                <!-- Quick Jump Button -->
-                <button id="time-nav-now" class="btn btn-sm btn-secondary" style="width:100%; margin-top:5px;" onclick="jumpToCurrentPeriod()">回到当前</button>
             </div>
 
-            <!-- View Switcher & Status Filter (Moved to Sidebar) -->
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-                <div class="time-nav-label">视图模式</div>
-                <div class="view-switcher" style="width: 100%; margin-bottom: 10px;">
+            <!-- View Switcher & Filters (Moved to Sidebar) -->
+            <div class="filter-section">
+                <div class="view-switcher" style="width: 100%;">
                     <button id="view-day" class="active" onclick="setView('day')">日</button>
                     <button id="view-week" onclick="setView('week')">周</button>
                     <button id="view-month" onclick="setView('month')">月</button>
                     <button id="view-all" onclick="setView('all')">所有</button>
                 </div>
 
-                <div class="time-nav-label">状态筛选</div>
-                <div class="status-filter" style="width: 100%;">
-                    <button id="status-all" class="active" onclick="setStatusFilter('all')">全部</button>
-                    <button id="status-pending" onclick="setStatusFilter('pending')">未完成</button>
-                    <button id="status-completed" onclick="setStatusFilter('completed')">已完成</button>
-                </div>
-
-                <div class="time-nav-label" style="margin-top: 10px;">关键字搜索</div>
-                <div class="search-box" style="width: 100%; max-width: none;">
-                    <input type="text" id="search-input" class="input" placeholder="🔍 搜索标题 / 详情" oninput="handleSearch()">
-                    <button id="search-clear" class="search-clear hidden" onclick="clearSearch()" title="清除">×</button>
+                <div class="status-search-row">
+                    <div class="status-filter" style="width: 100%;">
+                        <button id="status-all" class="active" onclick="setStatusFilter('all')">全部</button>
+                        <button id="status-pending" onclick="setStatusFilter('pending')">未完成</button>
+                        <button id="status-completed" onclick="setStatusFilter('completed')">已完成</button>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="search-input" class="input" placeholder="🔍 搜索标题 / 详情" oninput="handleSearch()">
+                        <button id="search-clear" class="search-clear hidden" onclick="clearSearch()" title="清除">×</button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="main-content">
             <div class="toolbar">
-                <div class="toolbar-left">
-                    <!-- Category Filter remains here -->
-                    <div id="category-list" class="category-filter"></div>
-                </div>
-
-                <div class="toolbar-right">
-                    <button class="btn btn-sm btn-secondary" onclick="openCategoryModal()">管理分类</button>
-                    <button class="btn btn-sm btn-secondary" onclick="exportToExcel()" title="导出当前筛选结果">📥 导出</button>
-                    <button class="btn btn-primary" onclick="openTaskModal()">+ 新建</button>
-                </div>
+                <!-- Category Filter remains here -->
+                <div id="category-list" class="category-filter"></div>
             </div>
 
             <div class="task-area">
-                <div class="main-header-title">
-                    <span id="mobile-main-title">今日任务</span>
-                    <span id="task-count-badge" class="count-badge hidden">0</span>
+                <div class="main-header-row">
+                    <div class="main-header-title">
+                        <span id="mobile-main-title">今日任务</span>
+                        <span id="task-count-badge" class="count-badge hidden">0</span>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-xs btn-secondary" onclick="openCategoryModal()">管理分类</button>
+                        <button class="btn btn-xs btn-secondary" onclick="exportToExcel()" title="导出当前筛选结果">📥 导出</button>
+                        <button class="btn btn-xs btn-primary" onclick="openTaskModal()">+ 新建</button>
+                    </div>
                 </div>
 
                 <div id="task-list" class="task-list"></div>
@@ -1197,10 +1222,7 @@
                 let cls = 'day-cell';
                 if (isToday) cls += ' today';
                 if (isSelected) cls += ' selected';
-                // Add mobile specific class for styling hooks (though we use dot now)
-                if (hasTask) cls += ' has-task-mobile';
 
-                // PC uses .dot, Mobile uses .dot (restored)
                 html += `<div class="${cls}" onclick="selectDate('${dateStr}')">${d}${hasTask ? '<div class="dot"></div>' : ''}</div>`;
             }
 
@@ -1258,14 +1280,12 @@
             document.getElementById(`view-${mode}`).classList.add('active');
             
             const timeNav = document.getElementById('time-nav-container');
-            const navLabel = document.getElementById('time-nav-label-text');
             const navDisplay = document.getElementById('time-nav-display');
             const nowBtn = document.getElementById('time-nav-now');
-            
+
             if (mode === 'all') {
                 timeNav.classList.remove('hidden');
                 timeNav.classList.add('disabled'); // 添加 disabled 类以灰显并阻止点击
-                navLabel.innerText = "范围选择 (已禁用)";
                 navDisplay.innerText = "-";
                 nowBtn.disabled = true; // 禁用按钮，不再隐藏
             } else {
@@ -1274,15 +1294,12 @@
                 nowBtn.disabled = false; // 启用按钮
 
                 if (mode === 'day') {
-                    navLabel.innerText = "日期选择";
                     updateDayLabel();
                     nowBtn.innerText = "回到今日";
                 } else if (mode === 'week') {
-                    navLabel.innerText = "周范围";
                     updateWeekRangeLabel();
                     nowBtn.innerText = "回到本周";
                 } else if (mode === 'month') {
-                    navLabel.innerText = "年月选择";
                     updateMonthLabel();
                     nowBtn.innerText = "回到本月";
                 }
@@ -1837,6 +1854,16 @@
 
             lUser.addEventListener('keydown', handleEnter);
             lPass.addEventListener('keydown', handleEnter);
+
+            // 手机端：滚动时显示滚动条，停止滚动后隐藏
+            let scrollTimer = null;
+            window.addEventListener('scroll', () => {
+                document.documentElement.classList.add('scrolling');
+                clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(() => {
+                    document.documentElement.classList.remove('scrolling');
+                }, 1000);
+            }, { passive: true });
         });
 
         window.onload = async () => {
