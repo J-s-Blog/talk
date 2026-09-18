@@ -2614,6 +2614,7 @@
                 <div class="action-buttons-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: stretch;">
                     <button type="button" id="querySeaPoolBtn" style="flex: 1; min-height: 44px; line-height: 1.4; display: flex; align-items: center; justify-content: center;">查询公海池数据</button>
                     <button type="button" id="exportExcelBtn" style="flex: 1; display: none; min-height: 44px; line-height: 1.4; align-items: center; justify-content: center;">导出</button>
+                    <button type="button" id="batchIncreaseLimitBtn" title="一键为所有已达上限的全职顾问（emp+数字）单日领取新用户上限+1（上限为0的账号跳过，兼职empxgs账号不参与）" style="flex: 1; min-height: 44px; line-height: 1.4; display: flex; align-items: center; justify-content: center;">增加上限</button>
                 </div>
                 
                 <div id="seaPoolResult" style="margin-top: 30px; display: none;">
@@ -2659,7 +2660,7 @@
                                             <th>当日实际领取用户数</th>
                                             <th>注销用户数</th>
                                             <th>公海池用户数</th>
-                                            <th>领取时间差平均值(分钟)</th>
+                                            <th>领取时间差平均值(秒)</th>
                                             <th>跟进时间差平均值(分钟)</th>
                                             <th>未跟进用户数</th>
                                             <th>未跟进用户明细 <span class="query-time" style="font-size: 14px; color: #666;"></span></th>
@@ -4394,7 +4395,7 @@
                 }
                 staffSummary[key].count++;
                 
-                // 计算领取时间差（分钟）
+                // 计算领取时间差（秒）
                 function calculateReceiveTimeDiff(createTime, receiveTime) {
                     if (!createTime || !receiveTime) return 0;
                     
@@ -4418,10 +4419,10 @@
                     
                     // 计算时间差（毫秒）
                     const diffMs = receiveDate - createDate;
-                    // 转换为分钟
-                    const diffMinutes = diffMs / (1000 * 60);
+                    // 转换为秒
+                    const diffSeconds = diffMs / 1000;
                     
-                    return diffMinutes;
+                    return diffSeconds;
                 }
                 
                 // 领取时间差仅在开关开启时累计计算（关闭时平均值显示'-'）
@@ -7773,7 +7774,7 @@
                 { header: '当日实际领取用户数', key: 'todayFootfallCount', width: 15, style: { alignment: { horizontal: 'right' } } },
                 { header: '注销用户数', key: 'canceledUserCount', width: 12, style: { alignment: { horizontal: 'right' } } },
                 { header: '公海池用户数', key: 'count', width: 15, style: { alignment: { horizontal: 'right' } } },
-                { header: '领取时间差平均值(分钟)', key: 'avgReceiveTimeDiff', width: 18, style: { numFmt: '0.00', alignment: { horizontal: 'right' } } },
+                { header: '领取时间差平均值(秒)', key: 'avgReceiveTimeDiff', width: 18, style: { numFmt: '0.00', alignment: { horizontal: 'right' } } },
                 { header: '跟进时间差平均值(分钟)', key: 'avgFollowTimeDiff', width: 18, style: { numFmt: '0.00', alignment: { horizontal: 'right' } } },
                 { header: '未跟进用户数', key: 'noFollowCount', width: 15, style: { alignment: { horizontal: 'right' } } },
                 { header: '未跟进用户明细', key: 'noFollowDetails', width: 50 }
@@ -7803,7 +7804,7 @@
                 }
                 staffSummary[key].count++;
                 
-                // 计算领取时间差（分钟）
+                // 计算领取时间差（秒）
                 function calculateReceiveTimeDiff(createTime, receiveTime) {
                     if (!createTime || !receiveTime) return 0;
                     
@@ -7827,10 +7828,10 @@
                     
                     // 计算时间差（毫秒）
                     const diffMs = receiveDate - createDate;
-                    // 转换为分钟
-                    const diffMinutes = diffMs / (1000 * 60);
+                    // 转换为秒
+                    const diffSeconds = diffMs / 1000;
                     
-                    return diffMinutes;
+                    return diffSeconds;
                 }
                 
                 // 领取时间差仅在开关开启时累计计算（关闭时平均值显示'-'）
@@ -8767,6 +8768,142 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = '确认增加';
+            }
+        });
+
+        // ============ 一键为所有全职顾问增加上限（公海池数据看板批量操作） ============
+        // 流程：查询保有量配置 -> 提取全职顾问（emp+数字，empxgs兼职不参与）-> 查询当日领取记录 ->
+        //       验证所有上限>0的全职顾问都已达上限（未全部达标则提示退出；上限为0的账号不参与判断也不增加）->
+        //       依次为每个上限>0的全职顾问单日领取新用户上限+1（无需用户确认）-> 给出结果汇总
+        document.getElementById('batchIncreaseLimitBtn').addEventListener('click', async function() {
+            const btn = this;
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录获取token');
+                return;
+            }
+
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = '查询中...';
+
+            try {
+                // 1. 查询保有量配置，取得全量顾问名单
+                const holdData = await fetchSpecialHoldData();
+                if (!holdData || holdData.length === 0) {
+                    alert('查询保有量配置失败或没有数据，请先登录获取token');
+                    return;
+                }
+
+                // 2. 提取全职顾问账号（仅 emp+数字 格式，按staffTalkId去重；empxgs+数字兼职账号不纳入判断也不增加）
+                const seen = new Set();
+                const empAccounts = [];
+                holdData.forEach(item => {
+                    const talkId = (item.staffTalkId || '').toString().trim().toLowerCase();
+                    if (!/^emp\d+$/.test(talkId) || seen.has(talkId)) return;
+                    seen.add(talkId);
+                    empAccounts.push({
+                        record: item,
+                        staffName: item.staffName || '未知',
+                        staffTalkId: item.staffTalkId,
+                        limit: parseInt(item.todayUserGetLimit, 10) || 0
+                    });
+                });
+                // 按emp数字升序排列，与保有量配置展示顺序一致
+                empAccounts.sort((a, b) =>
+                    (parseInt(String(a.staffTalkId).replace(/\D/g, ''), 10) || 0) -
+                    (parseInt(String(b.staffTalkId).replace(/\D/g, ''), 10) || 0)
+                );
+
+                if (empAccounts.length === 0) {
+                    alert('系统中没有 emp+数字 格式的全职顾问保有量配置，无需操作');
+                    return;
+                }
+
+                // 3. 查询当日领取记录，统计每个顾问的当日实际领取数
+                btn.textContent = '验证中...';
+                const now = new Date();
+                const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+                const footfallStats = await fetchFootfallRecordData(today, today, null);
+                const stats = (footfallStats && typeof footfallStats === 'object') ? footfallStats : {};
+
+                // 4. 验证：所有单日领取新用户上限>0的全职顾问都必须已达上限（当日领取数>=上限）
+                //    上限为0的全职顾问不参与判断、也不增加上限（第4条要求）
+                const targets = empAccounts.filter(a => a.limit > 0);
+                if (targets.length === 0) {
+                    alert('所有全职顾问的单日领取新用户上限均为0，没有可增加上限的账号，操作退出');
+                    return;
+                }
+                const notReached = targets.filter(a => {
+                    const received = (stats[a.staffName] && stats[a.staffName].todayFootfallCount) || 0;
+                    a.received = received;
+                    return received < a.limit;
+                });
+                if (notReached.length > 0) {
+                    const listText = notReached.map(a => `${a.staffName}（${a.staffTalkId}）：${a.received}/${a.limit}`).join('、');
+                    alert(`不是所有全职顾问都已达上限，操作退出。\n未达上限的顾问：\n${listText}`);
+                    return;
+                }
+
+                // 5. 依次为每个上限>0的全职顾问上限+1（全程无需用户确认），复用"修改上限"的更新接口与payload结构
+                const successList = [];
+                const failList = [];
+                for (let i = 0; i < targets.length; i++) {
+                    const a = targets[i];
+                    btn.textContent = `更新中 ${i + 1}/${targets.length}...`;
+                    const newLimit = a.limit + 1;
+                    try {
+                        // 构建更新请求参数（其余上限字段保持原配置不变，与确认弹窗逻辑一致）
+                        const payload = {
+                            "id": parseInt(a.record.id),
+                            "staffUserTalkId": a.record.staffTalkId,
+                            "todayUserGetLimit": newLimit,
+                            "userHoldLimit": a.record.userHoldLimit || 0,
+                            "dayGetLimit": a.record.dayGetLimit || 0,
+                            "dayReturnLimit": a.record.dayReturnLimit || 0
+                        };
+                        const response = await fetch('https://www.talk915.com/users/adminSeaPool/updateSpecialHold', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json;charset=UTF-8',
+                                'Accept': 'application/json, text/plain, */*',
+                                'User-Agent': navigator.userAgent,
+                                'Referer': 'https://www.talk915.com/admin/publicPoolManage/ruleConfig/inventory',
+                                'Origin': 'https://www.talk915.com',
+                                'Sec-Fetch-Dest': 'empty',
+                                'Sec-Fetch-Mode': 'cors',
+                                'Sec-Fetch-Site': 'same-origin',
+                                'token': token
+                            },
+                            body: JSON.stringify(payload),
+                            credentials: 'include'
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.resultCode === 0) {
+                            successList.push(`${a.staffName}（${a.staffTalkId}）：${a.limit} → ${newLimit}`);
+                        } else {
+                            failList.push(`${a.staffName}（${a.staffTalkId}）：${data.resultMessage || '未知错误'}`);
+                        }
+                    } catch (error) {
+                        failList.push(`${a.staffName}（${a.staffTalkId}）：${error.message}`);
+                    }
+                }
+
+                // 6. 结果汇总
+                let summary = `增加上限操作完成！\n成功 ${successList.length} 个，失败 ${failList.length} 个，跳过（上限为0）${empAccounts.length - targets.length} 个。`;
+                if (successList.length > 0) {
+                    summary += '\n\n成功明细：\n' + successList.join('\n');
+                }
+                if (failList.length > 0) {
+                    summary += '\n\n失败明细：\n' + failList.join('\n');
+                }
+                alert(summary);
+            } catch (error) {
+                console.error('一键增加上限出错:', error);
+                alert('一键增加上限出错: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         });
         
