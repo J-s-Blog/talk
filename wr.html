@@ -124,7 +124,14 @@
         .tab-nav button.active { border-color: #533483; background: #ede7f6; color: #533483; }
         .tab-nav button:hover { border-color: #533483; }
         .tab-nav button:disabled { opacity: 0.55; cursor: not-allowed; }
+        /* 视图切换按钮（周报/热点资讯）用蓝色系，与操作按钮区分 */
+        .tab-nav .view-btn { border-color: #c5cae9; background: #f5f7ff; color: #3949ab; }
+        .tab-nav .view-btn.active { border-color: #3949ab; background: #3949ab; color: #fff; }
+        .nav-sep { width: 1px; align-self: stretch; background: #e0e0e0; margin: 2px 4px; flex: none; }
         .container.wide { max-width: 1080px; }
+        /* 视图面板：在浏览模式下撑满剩余高度 */
+        .view-pane { display: flex; flex-direction: column; min-height: 0; }
+        .view-pane > .browse-wrap { flex: 1 1 0; min-height: 0; }
 
         /* ===== 在线浏览 ===== */
         .btn-sm { width: auto; padding: 8px 14px; font-size: 12px; margin-top: 0; }
@@ -228,6 +235,34 @@
         .table-scroll + .table-scroll { margin-top: 8px; }
         .empty-tip { text-align: center; color: #aaa; font-size: 13px; padding: 20px 0; }
 
+        /* ===== 热点资讯：文章卡片与富文本正文 ===== */
+        .person-card .p-title { font-weight: bold; font-size: 13.5px; color: #333; line-height: 1.5; }
+        .person-card .p-top { display: inline-block; font-size: 10px; color: #fff; background: #e53935; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
+        .news-cat { font-size: 11px; color: #533483; background: #ede7f6; border-radius: 4px; padding: 1px 7px; display: inline-block; margin-bottom: 6px; }
+        /* 富文本正文：还原文章原始格式（字体粗细、大小、表格、图片、列表等） */
+        .article-body { font-size: 15px; line-height: 1.9; color: #333; word-break: break-word; }
+        .article-body p { margin: 0 0 12px; }
+        .article-body h1, .article-body h2, .article-body h3, .article-body h4 { margin: 18px 0 10px; line-height: 1.5; color: #222; }
+        .article-body h2 { font-size: 20px; border-left: 4px solid #533483; padding-left: 10px; }
+        .article-body h3 { font-size: 17px; }
+        .article-body ol, .article-body ul { margin: 0 0 12px; padding-left: 26px; }
+        .article-body li { margin: 4px 0; }
+        .article-body img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; display: block; }
+        .article-body table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+        .article-body th, .article-body td { border: 1px solid #d8d2e8; padding: 7px 9px; vertical-align: top; }
+        .article-body th { background: #ede7f6; color: #533483; font-weight: bold; }
+        .article-body blockquote { border-left: 4px solid #d5c8e8; background: #faf7fd; margin: 12px 0; padding: 8px 14px; color: #666; }
+        .article-body a { color: #3949ab; text-decoration: underline; }
+        .article-body .ql-ui { display: none; } /* 隐藏 quill 编辑器占位符 */
+        .article-body .ql-indent-1 { padding-left: 2em; }
+        .article-body .ql-indent-2 { padding-left: 4em; }
+        .article-body .ql-indent-3 { padding-left: 6em; }
+        .article-body .ql-align-center { text-align: center; }
+        .article-body .ql-align-right { text-align: right; }
+        .article-body .ql-align-justify { text-align: justify; }
+        .article-meta { font-size: 12.5px; color: #777; margin-top: 6px; line-height: 1.8; }
+        .article-meta .am-stat { color: #999; margin-left: 10px; }
+
         /* 浏览模式（默认视图）：铺满全屏、页面锁定不滚动，人员列表与周报详情各自内部滚动 */
         body.browse-mode { overflow: hidden; height: 100vh; height: 100dvh; padding: 0; }
         body.browse-mode .container { width: 100%; max-width: none; height: 100%; display: flex; flex-direction: column; border-radius: 0; }
@@ -236,6 +271,7 @@
         body.browse-mode .body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px 16px 14px; }
         body.browse-mode .top-line,
         body.browse-mode #progressBar, body.browse-mode #progressText { flex-shrink: 0; }
+        body.browse-mode .view-pane { flex: 1 1 0; min-height: 0; }
         body.browse-mode .browse-wrap { flex: 1 1 0; min-height: 0; }
 
         /* ===== 小屏适配（手机 / 平板） ===== */
@@ -247,8 +283,8 @@
             .body { padding: 16px 12px; }
             /* 手机：按钮行 / 账号密码行 / 起止日期行 / 状态栏，各占一整行 */
             .top-line { gap: 8px; }
-            .top-line .tab-nav { flex: 1 1 100%; order: 1; }
-            .top-line .tab-nav button { flex: 1; }
+            .top-line .tab-nav { flex: 1 1 100%; order: 1; flex-wrap: wrap; }
+            .top-line .tab-nav button { flex: 1 1 auto; }
             .top-line .cred-group { flex: 1 1 100%; order: 2; }
             .top-line .date-range { flex: 1 1 100%; order: 3; }
             .top-line .status-bar { flex: 1 1 100%; order: 4; }
@@ -266,6 +302,8 @@
             .browse-wrap.show-detail .list-side { display: none; }
             .browse-wrap.show-detail .btn-back { display: inline-block; }
             .browse-wrap:not(.show-detail) .detail-panel { display: none; }
+            .article-body { font-size: 14px; }
+            .nav-sep { display: none; }
         }
         @media (max-width: 400px) {
             .header h1 { font-size: 15px; }
@@ -276,21 +314,25 @@
 <body class="browse-mode">
 <div class="container wide">
     <div class="header">
-        <h1>📊 大学堂周报自动抓取工具</h1>
-        <p>在线浏览周报 ｜ 配置账号与时间范围，点击「导出周报」自动抓取并生成Excel</p>
+        <h1>📊 大学堂周报 / 热点资讯抓取工具</h1>
+        <p>在线浏览周报与热点资讯 ｜ 配置账号，点击「加载」获取内容，周报可导出Excel</p>
     </div>
     <div class="body">
         <!-- 顶栏：加载周报 / 导出周报 + 登录认证 + 时间范围 + 状态信息（合并） -->
         <div class="top-line">
-            <div class="tab-nav">
-                <button type="button" id="loadBrowseBtn" class="active" onclick="loadBrowseData()">� 加载周报</button>
+            <div class="tab-nav" id="mainNav">
+                <button type="button" id="viewBtnWeekly" class="view-btn active" onclick="switchView('weekly')">📊 周报</button>
+                <button type="button" id="viewBtnNews" class="view-btn" onclick="switchView('news')">🔥 热点资讯</button>
+                <span class="nav-sep"></span>
+                <button type="button" id="loadBrowseBtn" onclick="loadBrowseData()">📥 加载周报</button>
                 <button type="button" id="tabBtnExport" onclick="runExport()">📤 导出周报</button>
+                <button type="button" id="loadNewsBtn" style="display:none" onclick="loadNewsData()">📥 加载热点资讯</button>
             </div>
             <div class="cred-group">
                 <input type="text" id="phoneInput" class="cred-input" placeholder="登录账号" autocomplete="username" title="登录账号（可修改）">
                 <input type="password" id="pwdInput" class="cred-input" placeholder="密码" autocomplete="current-password" title="登录密码（可修改）">
             </div>
-            <div class="date-range">
+            <div class="date-range" id="dateRangeWrap">
                 <input type="date" id="startDate" class="date-input" title="开始日期（默认上周五，可手动修改）">
                 <span class="date-sep">→</span>
                 <input type="date" id="endDate" class="date-input" title="结束日期（默认今天，可手动修改）">
@@ -308,20 +350,41 @@
         </div>
         <div id="progressText" style="font-size:12px;color:#888;text-align:center;margin-top:4px;display:none;"></div>
 
-        <div class="browse-wrap" id="browseWrap">
-            <div class="list-side">
-                <div class="filter-row">
-                    <input type="text" id="personSearch" placeholder="" oninput="renderPersonList()">
-                    <select id="deptFilter" onchange="renderPersonList()">
-                        <option value="">全部部门</option>
-                    </select>
+        <div class="view-pane" id="paneWeekly">
+            <div class="browse-wrap" id="browseWrap">
+                <div class="list-side">
+                    <div class="filter-row">
+                        <input type="text" id="personSearch" placeholder="" oninput="renderPersonList()">
+                        <select id="deptFilter" onchange="renderPersonList()">
+                            <option value="">全部部门</option>
+                        </select>
+                    </div>
+                    <div class="person-list" id="personList">
+                        <div class="empty-tip">暂无数据</div>
+                    </div>
                 </div>
-                <div class="person-list" id="personList">
-                    <div class="empty-tip">暂无数据</div>
+                <div class="detail-panel" id="detailPanel">
+                    <div class="empty-tip">👈 点击左侧人名查看周报详情</div>
                 </div>
             </div>
-            <div class="detail-panel" id="detailPanel">
-                <div class="empty-tip">👈 点击左侧人名查看周报详情</div>
+        </div>
+        <div class="view-pane" id="paneNews" style="display:none;">
+            <div class="browse-wrap" id="newsWrap">
+                <div class="list-side">
+                    <div class="filter-row">
+                        <input type="text" id="newsSearch" placeholder="搜索标题/作者" oninput="renderNewsList()">
+                        <select id="topFilter" onchange="renderNewsList()">
+                            <option value="">全部文章</option>
+                            <option value="1">只看置顶</option>
+                        </select>
+                    </div>
+                    <div class="person-list" id="newsList">
+                        <div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>
+                    </div>
+                </div>
+                <div class="detail-panel" id="newsDetailPanel">
+                    <div class="empty-tip">👈 点击左侧文章查看内容详情</div>
+                </div>
             </div>
         </div>
     </div><!-- /body -->
@@ -333,14 +396,42 @@ const API_BASE = 'https://www.keyclass.cn/studentServer';
 const LOGIN_PATH = '/userCommon/userLogin';
 const LIST_PATH = '/employee/weekly/getWeeklyList';
 const DETAIL_PATH = '/employee/weekly/getWeeklyDetail';
+// 热点资讯（论坛）接口
+const FORUM_LIST_PATH = '/forumHome/getForumHomePostPage';
+const FORUM_DETAIL_PATH = '/forum/getForumPostDetails';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
-const PHONE = '19924530939';
-const PASSWORD = 'ShuoKeYingYu123';
+const PHONE = '';
+const PASSWORD = '';
 
 let excelData = [];
+// token 持久化：优先从 localStorage 读取上次登录的 token 与凭据，有效期内直接复用、跳过登录
+const TOKEN_TTL = 2 * 24 * 60 * 60 * 1000; // token 有效期（毫秒），超时视为失效需重新登录
 let authToken = '';
+let tokenTs = 0;
+let lastLoginCreds = ''; // 记录已登录凭据，凭据变化时自动重新登录
+(function restoreToken() {
+    try {
+        const raw = localStorage.getItem('kc_token');
+        if (raw) {
+            const o = JSON.parse(raw);
+            if (o && o.token && o.ts && (Date.now() - o.ts) < TOKEN_TTL) {
+                authToken = o.token;
+                tokenTs = o.ts;
+                lastLoginCreds = o.key || '';
+            }
+        }
+    } catch (e) {}
+})();
+function saveToken(key) {
+    tokenTs = Date.now();
+    try { localStorage.setItem('kc_token', JSON.stringify({ token: authToken, ts: tokenTs, key })); } catch (e) {}
+}
+function clearToken() {
+    authToken = ''; tokenTs = 0; lastLoginCreds = '';
+    try { localStorage.removeItem('kc_token'); } catch (e) {}
+}
 
 // 初始化日期：上周五 ~ 今天
 (function initDates() {
@@ -365,7 +456,6 @@ function formatDate(d) {
 // 预填默认账号密码（可手动修改；仅在点击「加载/刷新数据」或「导出周报」时才进行鉴权）
 document.getElementById('phoneInput').value = PHONE;
 document.getElementById('pwdInput').value = PASSWORD;
-let lastLoginCreds = ''; // 记录已登录凭据，凭据变化时自动重新登录
 
 // 环境检测
 (async function detectEnv() {
@@ -433,14 +523,19 @@ async function ensureLogin(force = false) {
         throw new Error('请填写登录账号和密码');
     }
     const key = phone + '|' + password;
-    if (!force && authToken && key === lastLoginCreds) return; // 凭据未变且token有效，复用
+    // 当前进程已有有效token（凭据未变且未超时），直接复用，不调用登录流程
+    if (!force && authToken && key === lastLoginCreds && (Date.now() - tokenTs) < TOKEN_TTL) {
+        return;
+    }
     try {
         await doLogin(phone, password, COMPANY_ID);
     } catch (e) {
+        clearToken();
         showToast('❌ 登录失败：' + e.message, 'error');
         throw e;
     }
     lastLoginCreds = key;
+    saveToken(key);
     showToast(`✅ 登录成功（${phone}）`, 'success');
 }
 
@@ -465,7 +560,8 @@ async function fetchWeeklyList() {
         const buildListUrl = () => `${LIST_PATH}?queryType=2&weeklyType=0&isView=&departmentId=&startTime=${startDate}&endTime=${endDate}&currentPage=${currentPage}&pageSize=${pageSize}&token=${authToken}&companyId=${COMPANY_ID}`;
         let listData = await apiGet(buildListUrl());
         if (isAuthExpired(listData)) {
-            // token失效：直接用已填入的账号密码重新登录，再重试当前页
+            // token失效：清除缓存token，用已填入的账号密码重新登录，再重试当前页
+            clearToken();
             await ensureLogin(true);
             listData = await apiGet(buildListUrl());
         }
@@ -504,7 +600,8 @@ async function ensureWeeklyDetail(d) {
         const buildDetailUrl = () => `${DETAIL_PATH}?weeklyId=${d.weeklyId}&token=${authToken}&companyId=${COMPANY_ID}`;
         let detailData = await apiGet(buildDetailUrl());
         if (isAuthExpired(detailData)) {
-            // token失效：用已填入的账号密码重新登录后重试
+            // token失效：清除缓存token，用已填入的账号密码重新登录后重试
+            clearToken();
             await ensureLogin(true);
             detailData = await apiGet(buildDetailUrl());
         }
@@ -1073,6 +1170,221 @@ function escapeHtml(s) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+// ==================== 视图切换（周报 / 热点资讯） ====================
+let currentView = 'weekly';
+function switchView(view) {
+    currentView = view;
+    const isWeekly = view === 'weekly';
+    document.getElementById('viewBtnWeekly').classList.toggle('active', isWeekly);
+    document.getElementById('viewBtnNews').classList.toggle('active', !isWeekly);
+    // 操作按钮：周报视图显示「加载周报/导出周报」，资讯视图显示「加载热点资讯」
+    document.getElementById('loadBrowseBtn').style.display = isWeekly ? '' : 'none';
+    document.getElementById('tabBtnExport').style.display = isWeekly ? '' : 'none';
+    document.getElementById('loadNewsBtn').style.display = isWeekly ? 'none' : '';
+    // 日期范围仅周报视图需要
+    document.getElementById('dateRangeWrap').style.display = isWeekly ? '' : 'none';
+    // 内容面板
+    document.getElementById('paneWeekly').style.display = isWeekly ? '' : 'none';
+    document.getElementById('paneNews').style.display = isWeekly ? 'none' : '';
+}
+
+// ==================== 热点资讯 ====================
+let newsData = [];        // 文章列表摘要
+let selectedNewsIndex = -1;
+let newsDetailCache = {}; // postId -> 详情，避免重复请求
+
+// 加载热点资讯：复用登录token → 先取totalCount → 一次性拉取全部文章列表
+async function loadNewsData() {
+    const btn = document.getElementById('loadNewsBtn');
+    btn.disabled = true;
+    updateBrowseStatus('正在登录鉴权...', 'checking');
+    try {
+        await ensureLogin();
+        updateBrowseStatus('正在获取热点资讯列表...', 'checking');
+        const count = await fetchNewsList();
+        syncNewsAfterLoad();
+        if (count === 0) {
+            updateBrowseStatus('⚠️ 没有获取到热点资讯文章', 'error');
+        } else {
+            updateBrowseStatus(`✅ 已加载 ${count} 篇热点资讯，点击文章查看内容`);
+        }
+    } catch (err) {
+        updateBrowseStatus(`❌ 加载失败: ${err.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// 抓取热点资讯列表：第一次查询取 totalCount，再以 pageSize=totalCount 一次性拉全
+async function fetchNewsList() {
+    const buildUrl = (page, size) =>
+        `${FORUM_LIST_PATH}?keyWord=&plateId=&currentPage=${page}&pageSize=${size}&token=${authToken}&companyId=${COMPANY_ID}`;
+
+    // 第一次：探测总数
+    let first = await apiGet(buildUrl(1, 20));
+    if (isAuthExpired(first)) {
+        clearToken();
+        await ensureLogin(true);
+        first = await apiGet(buildUrl(1, 20));
+    }
+    if (!first || first.resultCode !== 0) {
+        throw new Error(`获取热点资讯列表失败: ${first?.resultMessage || '未知错误'}`);
+    }
+    const totalCount = first.totalCount || 0;
+    let records = first.resultData || [];
+
+    // 一次性获取全部（pageSize = totalCount）
+    if (totalCount > records.length) {
+        let all = await apiGet(buildUrl(1, totalCount));
+        if (isAuthExpired(all)) {
+            clearToken();
+            await ensureLogin(true);
+            all = await apiGet(buildUrl(1, totalCount));
+        }
+        if (all && all.resultCode === 0 && Array.isArray(all.resultData) && all.resultData.length) {
+            records = all.resultData;
+        }
+    }
+
+    newsData = records.map(p => ({
+        postId: p.postId,
+        title: p.title || '',
+        createTime: p.createTime || '',
+        userName: p.userName || '',
+        readNum: p.readNum || 0,
+        likedNum: p.likedNum || 0,
+        commentNum: p.commentNum || 0,
+        recommendFlag: p.recommendFlag || 0,
+        detailLoaded: false
+    }));
+    return newsData.length;
+}
+
+function syncNewsAfterLoad() {
+    selectedNewsIndex = -1;
+    document.getElementById('newsWrap').classList.remove('show-detail');
+    resetNewsDetailPanel();
+    document.getElementById('newsSearch').value = '';
+    document.getElementById('topFilter').value = '';
+    renderNewsList();
+}
+
+function resetNewsDetailPanel() {
+    document.getElementById('newsDetailPanel').innerHTML =
+        '<div class="empty-tip">👈 点击左侧文章查看内容详情</div>';
+}
+
+function renderNewsList() {
+    const listEl = document.getElementById('newsList');
+    if (newsData.length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>';
+        return;
+    }
+    const kw = (document.getElementById('newsSearch').value || '').trim().toLowerCase();
+    const topOnly = document.getElementById('topFilter').value === '1';
+    const items = newsData
+        .map((d, i) => ({ d, i }))
+        .filter(({ d }) => (!topOnly || d.recommendFlag === 1)
+            && (!kw
+                || (d.title || '').toLowerCase().includes(kw)
+                || (d.userName || '').toLowerCase().includes(kw)));
+
+    listEl.innerHTML = items.length === 0
+        ? '<div class="empty-tip">未找到匹配文章</div>'
+        : items.map(({ d, i }) => `
+            <div class="person-card ${i === selectedNewsIndex ? 'active' : ''}" onclick="selectNews(${i})">
+                <div class="p-title">${d.recommendFlag === 1 ? '<span class="p-top">置顶</span>' : ''}${escapeHtml(d.title || '无标题')}</div>
+                <div class="p-meta">
+                    ${escapeHtml(d.userName || '-')} · ${escapeHtml((d.createTime || '').slice(0, 10))}<br>
+                    👁 ${d.readNum} 阅读 · 👍 ${d.likedNum} 点赞
+                </div>
+            </div>`).join('');
+}
+
+// 点击文章：按需抓取详情（缓存），再渲染富文本内容
+async function selectNews(index) {
+    selectedNewsIndex = index;
+    document.getElementById('newsWrap').classList.add('show-detail');
+    renderNewsList();
+    const d = newsData[index];
+    if (!d) return;
+    const panel = document.getElementById('newsDetailPanel');
+    if (newsDetailCache[d.postId]) {
+        renderNewsDetail(newsDetailCache[d.postId]);
+        return;
+    }
+    panel.innerHTML = `<div class="empty-tip">⏳ 正在获取文章内容...</div>`;
+    try {
+        const detail = await fetchNewsDetail(d.postId);
+        newsDetailCache[d.postId] = detail;
+        if (selectedNewsIndex !== index) return; // 期间已切换
+        renderNewsDetail(detail);
+    } catch (e) {
+        if (selectedNewsIndex !== index) return;
+        panel.innerHTML = `<div class="empty-tip">❌ 获取文章内容失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="selectNews(${index})">🔄 重试</button></div>`;
+    }
+}
+
+async function fetchNewsDetail(postId) {
+    const buildUrl = () => `${FORUM_DETAIL_PATH}?postId=${postId}&token=${authToken}&companyId=${COMPANY_ID}`;
+    let data = await apiGet(buildUrl());
+    if (isAuthExpired(data)) {
+        clearToken();
+        await ensureLogin(true);
+        data = await apiGet(buildUrl());
+    }
+    if (!data || data.resultCode !== 0 || !data.resultData) {
+        throw new Error(data?.resultMessage || '未知错误');
+    }
+    return data.resultData;
+}
+
+function backToNewsList() {
+    document.getElementById('newsWrap').classList.remove('show-detail');
+}
+
+// 渲染文章详情：大类>子类、标题、作者、发布时间、富文本正文（保留原始格式）
+function renderNewsDetail(d) {
+    const panel = document.getElementById('newsDetailPanel');
+    const cat = [d.parentPlateName, d.plateName].filter(Boolean).join(' > ');
+    const contentHtml = sanitizeArticleHtml(d.content || '');
+    panel.innerHTML = `
+        <button class="btn-back" onclick="backToNewsList()">← 返回列表</button>
+        <div class="detail-header">
+            ${cat ? `<div class="news-cat">${escapeHtml(cat)}</div>` : ''}
+            <h3>${escapeHtml(d.title || '无标题')}</h3>
+            <div class="article-meta">
+                作者：${escapeHtml(d.postUserName || '-')}
+                ｜ 发布时间：${escapeHtml(d.releaseTime || '-')}
+                <span class="am-stat">👁 ${d.watchingNum ?? d.readNum ?? 0} · 👍 ${d.likedNum ?? 0} · 💬 ${d.commentNum ?? 0}</span>
+            </div>
+        </div>
+        <div class="article-body">${contentHtml || '<span style="color:#bbb">（无内容）</span>'}</div>
+    `;
+    panel.scrollTop = 0;
+}
+
+// 富文本清洗：保留排版标签与内联样式（字体粗细/大小、缩进、表格、图片等），
+// 移除脚本/事件属性，避免直接注入风险；图片强制自适应宽度。
+function sanitizeArticleHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = String(html);
+    tmp.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(n => n.remove());
+    tmp.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+            const name = attr.name.toLowerCase();
+            if (name.startsWith('on')) el.removeAttribute(attr.name);
+            if ((name === 'href' || name === 'src') && /^\s*javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+        });
+    });
+    tmp.querySelectorAll('img').forEach(img => {
+        img.removeAttribute('width'); img.removeAttribute('height');
+        img.style.maxWidth = '100%'; img.style.height = 'auto';
+        img.loading = 'lazy';
+    });
+    return tmp.innerHTML;
 }
 
 // 自动运行：URL 带 ?taskName=autorun 时自动执行导出（使用预填账号与自动计算的日期范围）
