@@ -1603,7 +1603,9 @@ async function ensureLearnList(postId) {
         const selfLearned = selfKnown
             ? users.some(u => Number(u.userId) === Number(currentUserId))
             : (newsDetailCache[postId]?.isCurrentPerson === 1);
-        if (!selfLearned) {
+        // 文章作者是登录用户本人时，不调用标记已读
+        const isSelfAuthor = selfKnown && Number(newsDetailCache[postId]?.postUserId) === Number(currentUserId);
+        if (!selfLearned && !isSelfAuthor) {
             const ok = await markArticleRead(postId);
             if (ok) {
                 showToast('✅ 已标记本文档为已学习', 'success');
