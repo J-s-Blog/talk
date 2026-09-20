@@ -276,6 +276,47 @@
             word-break: break-all;
         }
 
+        /* ===== 阅读量排名：状态栏徽章 + 前十弹窗 ===== */
+        .rank-chip {
+            flex: none; font-size: 11.5px; color: #533483; background: #ede7f6;
+            border: 1px solid #d5c8e8; border-radius: 20px; padding: 2px 10px;
+            cursor: pointer; white-space: nowrap; transition: all 0.15s;
+        }
+        .rank-chip:hover { background: #dcd3ee; border-color: #533483; }
+        .rank-chip b { font-weight: bold; }
+        .rank-modal-mask {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            display: none; align-items: center; justify-content: center; z-index: 9998;
+            padding: 16px;
+        }
+        .rank-modal-mask.show { display: flex; }
+        .rank-modal {
+            background: #fff; border-radius: 14px; width: 100%; max-width: 460px;
+            max-height: 80vh; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden;
+        }
+        .rank-modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px; background: linear-gradient(135deg, #0f3460 0%, #533483 100%); color: #fff;
+        }
+        .rank-modal-head h3 { font-size: 15px; }
+        .rank-modal-close {
+            background: rgba(255,255,255,0.15); border: none; color: #fff;
+            width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 13px;
+        }
+        .rank-modal-close:hover { background: rgba(255,255,255,0.3); }
+        .rank-modal-body { overflow-y: auto; padding: 12px 16px; }
+        .rank-mine {
+            background: #f2faf2; border: 1px solid #b7dfb9; border-radius: 8px;
+            padding: 8px 12px; font-size: 13px; color: #2e7d32; margin-bottom: 10px;
+        }
+        .rank-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .rank-table th, .rank-table td { padding: 7px 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .rank-table th { background: #ede7f6; color: #533483; }
+        .rank-table td.rk { width: 44px; text-align: center; font-weight: bold; color: #533483; }
+        .rank-table td.rk .medal { font-size: 15px; }
+        .rank-table tr.top1 td, .rank-table tr.top2 td, .rank-table tr.top3 td { background: #fdf9ef; }
+
         /* 浏览模式（默认视图）：铺满全屏、页面锁定不滚动，人员列表与周报详情各自内部滚动 */
         body.browse-mode { overflow: hidden; height: 100vh; height: 100dvh; padding: 0; }
         body.browse-mode .container { width: 100%; max-width: none; height: 100%; display: flex; flex-direction: column; border-radius: 0; }
@@ -353,6 +394,7 @@
             <div class="status-bar" id="statusBar">
                 <span class="status-dot checking" id="statusDot"></span>
                 <span id="statusText">正在检测运行环境...</span>
+                <span class="rank-chip" id="rankChip" style="display:none" onclick="openRankModal()" title="点击查看阅读量排名前十">📖 <b id="rankChipMine">-</b></span>
                 <button type="button" class="btn btn-success btn-xs" id="redownloadBtn" style="display:none" onclick="downloadExcel()">📥 重新下载Excel</button>
             </div>
         </div>
@@ -403,6 +445,17 @@
     </div><!-- /body -->
 </div><!-- /container -->
 
+<!-- 阅读量排名前十弹窗 -->
+<div class="rank-modal-mask" id="rankModalMask" onclick="if(event.target===this)closeRankModal()">
+    <div class="rank-modal">
+        <div class="rank-modal-head">
+            <h3>📖 人员阅读量排名（前十）</h3>
+            <button type="button" class="rank-modal-close" onclick="closeRankModal()">✕</button>
+        </div>
+        <div class="rank-modal-body" id="rankModalBody"></div>
+    </div>
+</div>
+
 <script>
 // ==================== 配置 ====================
 const API_BASE = 'https://www.keyclass.cn/studentServer';
@@ -414,6 +467,7 @@ const FORUM_LIST_PATH = '/forumHome/getForumHomePostPage';
 const FORUM_DETAIL_PATH = '/forum/getForumPostDetails';
 const FORUM_LEARN_LIST_PATH = '/forumLearn/queryForumLearnUserRecord';
 const FORUM_LEARN_SAVE_PATH = '/forumLearn/saveForumLearnDuration';
+const FORUM_RANK_PATH = '/forumLearn/queryForumRankingList';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
@@ -1213,6 +1267,8 @@ function switchView(view) {
     // 内容面板
     document.getElementById('paneWeekly').style.display = isWeekly ? '' : 'none';
     document.getElementById('paneNews').style.display = isWeekly ? 'none' : '';
+    // 阅读量排名徽章仅在资讯视图且有数据时显示
+    renderRankChip();
 }
 
 // ==================== 热点资讯 ====================
@@ -1235,6 +1291,8 @@ async function loadNewsData() {
         } else {
             updateBrowseStatus(`✅ 已加载 ${count} 篇热点资讯，点击文章查看内容`);
         }
+        // 同步获取阅读量排名（失败不影响资讯列表）
+        try { await fetchRanking(); } catch (e) { console.warn('获取阅读量排名失败:', e); }
     } catch (err) {
         updateBrowseStatus(`❌ 加载失败: ${err.message}`, 'error');
     } finally {
@@ -1412,6 +1470,8 @@ async function ensureLearnList(postId) {
             if (ok) {
                 showToast('✅ 已标记本文档为已学习', 'success');
                 users = await fetchLearnList(postId); // 标记成功后刷新清单
+                // 阅读量数据变化：调用一次排名查询刷新状态栏徽章
+                try { await fetchRanking(); } catch (e) { console.warn('刷新阅读量排名失败:', e); }
             }
         }
         renderLearnSection(postId, users);
@@ -1463,6 +1523,69 @@ function renderLearnSection(postId, users, errMsg) {
     namesEl.textContent = users.length
         ? users.map(u => u.userName || '未知').join('，')
         : '（暂无）';
+}
+
+// ==================== 阅读量排名 ====================
+let rankData = null; // { rankMyself, rankingList }
+
+// 获取人员阅读量排名（近30天，rankingType=1）
+async function fetchRanking() {
+    const end = new Date();
+    const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const buildUrl = () => `${FORUM_RANK_PATH}?startDate=${formatDate(start)}&endDate=${formatDate(end)}&rankingType=1&token=${authToken}&companyId=${COMPANY_ID}`;
+    let data = await apiGet(buildUrl());
+    if (isAuthExpired(data)) {
+        clearToken();
+        await ensureLogin(true);
+        data = await apiGet(buildUrl());
+    }
+    if (!data || data.resultCode !== 0 || !data.resultData) {
+        throw new Error(data?.resultMessage || '获取阅读量排名失败');
+    }
+    rankData = data.resultData;
+    renderRankChip();
+}
+
+// 状态栏排名徽章：仅资讯视图且有排名数据时显示「阅读N · 第M名」，点击弹窗看前十
+function renderRankChip() {
+    const chip = document.getElementById('rankChip');
+    if (!chip) return;
+    const mine = rankData && rankData.rankMyself;
+    if (currentView !== 'news' || !mine) {
+        chip.style.display = 'none';
+        return;
+    }
+    chip.style.display = '';
+    document.getElementById('rankChipMine').textContent =
+        `阅读 ${mine.count ?? '-'} · 第 ${mine.ranking ?? '-'} 名`;
+}
+
+// 点击徽章：弹窗展示前十人员名单
+function openRankModal() {
+    const body = document.getElementById('rankModalBody');
+    if (!rankData) {
+        body.innerHTML = '<div class="empty-tip">暂无排名数据</div>';
+    } else {
+        const mine = rankData.rankMyself;
+        const list = (rankData.rankingList || []).slice(0, 10);
+        const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+        body.innerHTML = `
+            ${mine ? `<div class="rank-mine">我（${escapeHtml(mine.userName || '-')}）：阅读 <b>${mine.count ?? '-'}</b> 篇 · 当前排名 <b>第 ${mine.ranking ?? '-'}</b> 名</div>` : ''}
+            <table class="rank-table">
+                <tr><th>排名</th><th>姓名</th><th>阅读量</th></tr>
+                ${list.map(u => `
+                    <tr class="${u.ranking <= 3 ? 'top' + u.ranking : ''}">
+                        <td class="rk">${medals[u.ranking] || u.ranking}</td>
+                        <td>${escapeHtml(u.userName || '-')}</td>
+                        <td>${u.count ?? '-'}</td>
+                    </tr>`).join('')}
+            </table>`;
+    }
+    document.getElementById('rankModalMask').classList.add('show');
+}
+
+function closeRankModal() {
+    document.getElementById('rankModalMask').classList.remove('show');
 }
 
 // 富文本清洗：保留排版标签与内联样式（字体粗细/大小、缩进、表格、图片等），
