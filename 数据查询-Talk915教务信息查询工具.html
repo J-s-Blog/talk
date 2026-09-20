@@ -1604,13 +1604,26 @@
             
             <!-- 查询表单与操作按钮（同一行，减少竖向空间占用） -->
             <div style="display: flex; align-items: flex-end; margin-bottom: 15px; gap: 10px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
                     <label for="aiReportStartDate">开始日期:</label>
-                    <input type="date" id="aiReportStartDate" name="aiReportStartDate" required>
+                    <input type="date" id="aiReportStartDate" name="aiReportStartDate">
                 </div>
-                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
                     <label for="aiReportEndDate">结束日期:</label>
-                    <input type="date" id="aiReportEndDate" name="aiReportEndDate" required>
+                    <input type="date" id="aiReportEndDate" name="aiReportEndDate">
+                </div>
+                <div class="form-group" style="flex: 1.4; min-width: 190px; margin-bottom: 0;">
+                    <label for="aiReportStudentQuery">学生查询(手机/talk_ID/邮箱):</label>
+                    <input type="text" id="aiReportStudentQuery" name="aiReportStudentQuery" placeholder="手机号/talk_ID/邮箱">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label for="aiReportUserId">用户编号:</label>
+                    <input type="text" id="aiReportUserId" name="aiReportUserId" placeholder="userId">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="aiReportAbsent" style="display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; margin-bottom: 8px;">
+                        <input type="checkbox" id="aiReportAbsent" name="aiReportAbsent" style="width: auto; margin: 0;"> 学生缺勤
+                    </label>
                 </div>
                 <button type="button" id="queryAiReportBtn" style="width: auto; padding: 8px 16px;">查询测评课清单</button>
                 <button type="button" id="stopAiReportBtn" style="width: auto; background-color: #dc3545; padding: 8px 16px;" disabled>停止</button>
@@ -10921,7 +10934,7 @@
         }
         
         // 查询单日测评课清单
-        async function queryAiScheduleByDay(date, pageSize, token) {
+        async function queryAiScheduleByDay(date, pageSize, token, filters) {
             const response = await fetch('https://www.talk915.com/datebook/adminQuerySchedule/queryScheduleList', {
                 method: 'POST',
                 headers: {
@@ -10953,7 +10966,7 @@
                     "teacherStatus": "",
                     "uncomitted": "",
                     "teaTypes": "",
-                    "name": "",
+                    "name": (filters && filters.name) || "",
                     "datebookId": "",
                     "agentsCode": "",
                     "mark": 1,
@@ -10965,7 +10978,7 @@
                     "bookGroupId": "",
                     "bookId": "",
                     "lessonId": "",
-                    "absent": "",
+                    "absent": (filters && filters.absent) || "",
                     "channel": "",
                     "week": "",
                     "allowSubstituteTea": "",
@@ -10974,7 +10987,7 @@
                     "needAudit": "",
                     "status": 0,
                     "cancelStatus": "",
-                    "userId": "",
+                    "userId": (filters && filters.userId) || "",
                     "currPage": 0,
                     "pageSize": pageSize
                 }),
@@ -11044,12 +11057,28 @@
             // 获取表单数据
             const startDate = document.getElementById('aiReportStartDate').value;
             const endDate = document.getElementById('aiReportEndDate').value;
-            
-            // 验证输入
-            if (!startDate || !endDate) {
+            const studentQuery = document.getElementById('aiReportStudentQuery').value.trim();
+            const userId = document.getElementById('aiReportUserId').value.trim();
+            const absentChecked = document.getElementById('aiReportAbsent').checked;
+
+            // 验证输入：未输入学生查询/用户编号时（无论是否勾选"学生缺勤"），起止日期不能为空
+            const hasStudentFilter = !!(studentQuery || userId);
+            if (!hasStudentFilter && (!startDate || !endDate)) {
                 statusMessage.innerHTML = '<div class="error-message">请选择开始日期和结束日期</div>';
                 return;
             }
+            // 若只输入了其中一个日期（有学生查询或用户编号时日期可为空，但输入了就要成对）
+            if ((startDate && !endDate) || (!startDate && endDate)) {
+                statusMessage.innerHTML = '<div class="error-message">开始日期和结束日期需同时填写，或同时留空</div>';
+                return;
+            }
+
+            // 组装查询过滤条件（对应API payload：name=学生查询，userId=用户编号，absent=学生缺勤）
+            const filters = {
+                name: studentQuery || '',
+                userId: userId || '',
+                absent: absentChecked ? '1' : ''
+            };
             
             try {
                 // 获取存储的token
@@ -11073,29 +11102,30 @@
                 queryProgress.style.display = 'block';
                 resultSection.style.display = 'none';
                 
-                // 按天顺序查询并汇总
-                const dates = generateDateRange(startDate, endDate);
+                // 按天顺序查询并汇总；日期留空（按学生查询/用户编号搜索）时只查一次
+                const dates = (startDate && endDate) ? generateDateRange(startDate, endDate) : [''];
                 const seenIds = new Set();
-                
+
                 for (let i = 0; i < dates.length; i++) {
                     if (aiReportStopFlag) {
                         statusMessage.innerHTML = '<div class="error-message">查询已停止</div>';
                         break;
                     }
-                    
+
                     const date = dates[i];
+                    const dayLabel = (startDate && endDate) ? date : '无日期限制(按学生条件)';
                     // 更新进度
                     const progress = Math.round((i / dates.length) * 100);
-                    progressText.textContent = `正在查询 ${date}（第 ${i + 1}/${dates.length} 天）...`;
+                    progressText.textContent = `正在查询 ${dayLabel}（第 ${i + 1}/${dates.length} 天）...`;
                     progressBar.style.width = `${progress}%`;
-                    
+
                     // 第一次查询，pageSize=500
-                    let data = await queryAiScheduleByDay(date, 500, storedToken);
-                    
+                    let data = await queryAiScheduleByDay(date, 500, storedToken, filters);
+
                     // 如果当天数据返回的totalcount大于500，则以totalcount为pagesize值再一次查出当天所有记录
                     if (data && data.totalCount > 500) {
-                        progressText.textContent = `正在查询 ${date}（第 ${i + 1}/${dates.length} 天，共 ${data.totalCount} 条，补充查询中）...`;
-                        data = await queryAiScheduleByDay(date, data.totalCount, storedToken);
+                        progressText.textContent = `正在查询 ${dayLabel}（第 ${i + 1}/${dates.length} 天，共 ${data.totalCount} 条，补充查询中）...`;
+                        data = await queryAiScheduleByDay(date, data.totalCount, storedToken, filters);
                     }
                     
                     // 提取记录并按datebookId去重
@@ -11116,7 +11146,8 @@
                 renderAiReportTable();
                 resultSection.style.display = 'block';
                 if (!aiReportStopFlag) {
-                    statusMessage.innerHTML = `<div class="success-message">查询完成！共查询 ${dates.length} 天，找到 ${aiReportRecords.length} 条测评课记录</div>`;
+                    const rangeText = (startDate && endDate) ? `共查询 ${dates.length} 天` : '按学生条件查询';
+                    statusMessage.innerHTML = `<div class="success-message">查询完成！${rangeText}，找到 ${aiReportRecords.length} 条测评课记录</div>`;
                 }
             } catch (error) {
                 console.error('查询测评课清单错误:', error);
