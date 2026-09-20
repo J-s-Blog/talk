@@ -262,6 +262,19 @@
         .article-body .ql-align-justify { text-align: justify; }
         .article-meta { font-size: 12.5px; color: #777; margin-top: 6px; line-height: 1.8; }
         .article-meta .am-stat { color: #999; margin-left: 10px; }
+        /* 文章末尾「已学习」名单 */
+        .learn-section {
+            margin-top: 22px; border-top: 2px solid #ede7f6; padding-top: 12px;
+        }
+        .learn-section h4 {
+            font-size: 14px; color: #533483; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .learn-names {
+            background: #fafafa; border: 1px solid #eee; border-radius: 8px;
+            padding: 10px 12px; font-size: 13px; color: #444; line-height: 1.9;
+            word-break: break-all;
+        }
 
         /* 浏览模式（默认视图）：铺满全屏、页面锁定不滚动，人员列表与周报详情各自内部滚动 */
         body.browse-mode { overflow: hidden; height: 100vh; height: 100dvh; padding: 0; }
@@ -399,6 +412,8 @@ const DETAIL_PATH = '/employee/weekly/getWeeklyDetail';
 // 热点资讯（论坛）接口
 const FORUM_LIST_PATH = '/forumHome/getForumHomePostPage';
 const FORUM_DETAIL_PATH = '/forum/getForumPostDetails';
+const FORUM_LEARN_LIST_PATH = '/forumLearn/queryForumLearnUserRecord';
+const FORUM_LEARN_SAVE_PATH = '/forumLearn/saveForumLearnDuration';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
@@ -411,6 +426,7 @@ const TOKEN_TTL = 2 * 24 * 60 * 60 * 1000; // token 有效期（毫秒），超�
 let authToken = '';
 let tokenTs = 0;
 let lastLoginCreds = ''; // 记录已登录凭据，凭据变化时自动重新登录
+let currentUserId = null; // 登录用户ID（用于判断是否已在文章已学习清单中）
 (function restoreToken() {
     try {
         const raw = localStorage.getItem('kc_token');
@@ -420,16 +436,17 @@ let lastLoginCreds = ''; // 记录已登录凭据，凭据变化时自动重新�
                 authToken = o.token;
                 tokenTs = o.ts;
                 lastLoginCreds = o.key || '';
+                currentUserId = o.userId || null;
             }
         }
     } catch (e) {}
 })();
 function saveToken(key) {
     tokenTs = Date.now();
-    try { localStorage.setItem('kc_token', JSON.stringify({ token: authToken, ts: tokenTs, key })); } catch (e) {}
+    try { localStorage.setItem('kc_token', JSON.stringify({ token: authToken, ts: tokenTs, key, userId: currentUserId })); } catch (e) {}
 }
 function clearToken() {
-    authToken = ''; tokenTs = 0; lastLoginCreds = '';
+    authToken = ''; tokenTs = 0; lastLoginCreds = ''; currentUserId = null;
     try { localStorage.removeItem('kc_token'); } catch (e) {}
 }
 
@@ -704,7 +721,8 @@ async function doLogin(phone, password, companyId) {
     const token = extractTokenFromResponse(data);
     if (token) {
         authToken = token;
-        log('success', `✅ 登录成功！Token: ${token.substring(0, 12)}...`);
+        currentUserId = extractUserIdFromResponse(data);
+        log('success', `✅ 登录成功！Token: ${token.substring(0, 12)}... 用户ID: ${currentUserId ?? '未获取到'}`);
     } else {
         log('warn', '⚠️ 登录成功但未获取到Token，请检查接口响应');
         throw new Error('未获取到有效Token，请确认账号密码正确');
@@ -715,6 +733,13 @@ function extractTokenFromResponse(data) {
     if (data.token) return data.token;
     if (data.resultData?.token) return data.resultData.token;
     return null;
+}
+
+// 从登录响应中提取当前用户ID（兼容常见字段名），用于判断是否已在已学习清单中
+function extractUserIdFromResponse(data) {
+    const rd = data.resultData || {};
+    const cand = rd.userId ?? rd.id ?? rd.postUserId ?? data.userId ?? data.id;
+    return cand != null ? Number(cand) : null;
 }
 
 async function apiGet(path) {
@@ -1303,7 +1328,7 @@ function renderNewsList() {
             </div>`).join('');
 }
 
-// 点击文章：按需抓取详情（缓存），再渲染富文本内容
+// 点击文章：按需抓取详情（缓存），并自动获取已学习清单/标记已读，再渲染富文本内容
 async function selectNews(index) {
     selectedNewsIndex = index;
     document.getElementById('newsWrap').classList.add('show-detail');
@@ -1313,6 +1338,7 @@ async function selectNews(index) {
     const panel = document.getElementById('newsDetailPanel');
     if (newsDetailCache[d.postId]) {
         renderNewsDetail(newsDetailCache[d.postId]);
+        ensureLearnList(d.postId); // 已缓存详情时后台刷新清单，不阻塞渲染
         return;
     }
     panel.innerHTML = `<div class="empty-tip">⏳ 正在获取文章内容...</div>`;
@@ -1321,6 +1347,7 @@ async function selectNews(index) {
         newsDetailCache[d.postId] = detail;
         if (selectedNewsIndex !== index) return; // 期间已切换
         renderNewsDetail(detail);
+        ensureLearnList(d.postId); // 打开文章后自动执行：获取已学习清单 + 未读时标记已读
     } catch (e) {
         if (selectedNewsIndex !== index) return;
         panel.innerHTML = `<div class="empty-tip">❌ 获取文章内容失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="selectNews(${index})">🔄 重试</button></div>`;
@@ -1345,7 +1372,7 @@ function backToNewsList() {
     document.getElementById('newsWrap').classList.remove('show-detail');
 }
 
-// 渲染文章详情：大类>子类、标题、作者、发布时间、富文本正文（保留原始格式）
+// 渲染文章详情：大类>子类、标题、作者、发布时间、富文本正文（保留原始格式）、已学习名单占位
 function renderNewsDetail(d) {
     const panel = document.getElementById('newsDetailPanel');
     const cat = [d.parentPlateName, d.plateName].filter(Boolean).join(' > ');
@@ -1362,8 +1389,80 @@ function renderNewsDetail(d) {
             </div>
         </div>
         <div class="article-body">${contentHtml || '<span style="color:#bbb">（无内容）</span>'}</div>
+        <div class="learn-section" id="learnSection" data-postid="${d.postId}">
+            <h4>📖 已学习（<span id="learnCount">-</span>）</h4>
+            <div class="learn-names" id="learnNames"><span style="color:#bbb">名单加载中...</span></div>
+        </div>
     `;
     panel.scrollTop = 0;
+}
+
+// ==================== 已学习清单 / 标记已读 ====================
+// 打开文章后自动执行：获取已学习人员清单；若当前登录用户不在清单中，则调用接口标记为已读并刷新清单
+async function ensureLearnList(postId) {
+    try {
+        let users = await fetchLearnList(postId);
+        // 登录用户ID未知（旧缓存token未记录ID）时，通过 isCurrentPerson 兜底判断
+        const selfKnown = currentUserId != null;
+        const selfLearned = selfKnown
+            ? users.some(u => Number(u.userId) === Number(currentUserId))
+            : (newsDetailCache[postId]?.isCurrentPerson === 1);
+        if (!selfLearned) {
+            const ok = await markArticleRead(postId);
+            if (ok) {
+                showToast('✅ 已标记本文档为已学习', 'success');
+                users = await fetchLearnList(postId); // 标记成功后刷新清单
+            }
+        }
+        renderLearnSection(postId, users);
+    } catch (e) {
+        console.warn('获取已学习清单失败:', e);
+        renderLearnSection(postId, null, e.message);
+    }
+}
+
+// 获取文章已学习人员清单（GET queryForumLearnUserRecord）
+async function fetchLearnList(postId) {
+    const buildUrl = () => `${FORUM_LEARN_LIST_PATH}?postId=${postId}&token=${authToken}&companyId=${COMPANY_ID}`;
+    let data = await apiGet(buildUrl());
+    if (isAuthExpired(data)) {
+        clearToken();
+        await ensureLogin(true);
+        data = await apiGet(buildUrl());
+    }
+    if (!data || data.resultCode !== 0) {
+        throw new Error(data?.resultMessage || '获取已学习清单失败');
+    }
+    return data.resultData || [];
+}
+
+// 设置文章阅读状态为已读（POST saveForumLearnDuration），返回是否成功
+async function markArticleRead(postId) {
+    const body = { postId: Number(postId), duration: 15, token: authToken, languageType: null, companyId: COMPANY_ID };
+    let data = await apiRequest(FORUM_LEARN_SAVE_PATH, 'POST', body);
+    if (isAuthExpired(data)) {
+        clearToken();
+        await ensureLogin(true);
+        body.token = authToken;
+        data = await apiRequest(FORUM_LEARN_SAVE_PATH, 'POST', body);
+    }
+    return !!(data && data.resultCode === 0);
+}
+
+// 渲染文章末尾「已学习」名单：username 逗号分隔 + 总人数
+function renderLearnSection(postId, users, errMsg) {
+    const sec = document.getElementById('learnSection');
+    if (!sec || String(sec.dataset.postid) !== String(postId)) return; // 期间已切换文章
+    const namesEl = sec.querySelector('#learnNames');
+    const countEl = sec.querySelector('#learnCount');
+    if (users === null) {
+        namesEl.innerHTML = `<span style="color:#c62828">名单获取失败：${escapeHtml(errMsg || '未知错误')}</span>`;
+        return;
+    }
+    countEl.textContent = users.length;
+    namesEl.textContent = users.length
+        ? users.map(u => u.userName || '未知').join('，')
+        : '（暂无）';
 }
 
 // 富文本清洗：保留排版标签与内联样式（字体粗细/大小、缩进、表格、图片等），
