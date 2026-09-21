@@ -218,10 +218,10 @@
             padding: 10px 12px; font-size: 13px; color: #444; line-height: 1.9;
             white-space: pre-wrap; word-break: break-word;
         }
-        .detail-imgs { display: flex; flex-wrap: wrap; gap: 8px; }
-        .detail-imgs img {
-            width: 90px; height: 90px; object-fit: cover;
-            border-radius: 8px; border: 1px solid #e0e0e0; cursor: pointer;
+        .inline-img-wrap { margin: 8px 0; }
+        .inline-img {
+            max-width: 100%; height: auto; border-radius: 8px;
+            border: 1px solid #e0e0e0; cursor: pointer; display: block;
         }
         .indicator-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .indicator-table th, .indicator-table td {
@@ -493,8 +493,8 @@ const FORUM_RANK_PATH = '/forumLearn/queryForumRankingList';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
-const PHONE = '';
-const PASSWORD = '';
+const PHONE = '19924530939';
+const PASSWORD = 'ShuoKeYingYu123';
 
 let excelData = [];
 // token 持久化：优先从 localStorage 读取上次登录的 token 与凭据，有效期内直接复用、跳过登录
@@ -1084,9 +1084,9 @@ function backToList() {
     document.getElementById('browseWrap').classList.remove('show-detail');
 }
 
-// 检测原始HTML中的<table>，按原文顺序提取内容块 [{type:'text'|'table', ...}]，无表格返回 null
+// 检测原始HTML中的<table>/<img>，按原文顺序提取内容块 [{type:'text'|'table'|'image', ...}]，无表格且无图片返回 null
 function extractFieldBlocks(html) {
-    if (!html || !/<table[\s>]/i.test(html)) return null;
+    if (!html || !/<(table|img)[\s>]/i.test(html)) return null;
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
 
@@ -1134,7 +1134,12 @@ function extractFieldBlocks(html) {
                 if (rebuilt) { flushText(); blocks.push({ type: 'table', html: rebuilt }); }
                 return;
             }
-            if (child.querySelector && child.querySelector('table')) {
+            if (child.tagName === 'IMG') {
+                const src = child.getAttribute('src');
+                if (src) { flushText(); blocks.push({ type: 'image', url: src }); }
+                return;
+            }
+            if (child.querySelector && child.querySelector('table,img')) {
                 walk(child); // 容器内嵌表格，递归展开以保持顺序
                 return;
             }
@@ -1144,7 +1149,7 @@ function extractFieldBlocks(html) {
     walk(tmp);
     flushText();
 
-    return blocks.some(b => b.type === 'table') ? blocks : null;
+    return blocks.some(b => b.type === 'table' || b.type === 'image') ? blocks : null;
 }
 
 function renderPersonDetail(d) {
@@ -1157,10 +1162,16 @@ function renderPersonDetail(d) {
         const blocks = extractFieldBlocks(raw);
         let body;
         if (blocks) {
-            // 按原文顺序渲染：文字段落与表格交替出现
-            body = blocks.map(b => b.type === 'table'
-                ? `<div class="table-scroll">${b.html}</div>`
-                : `<div class="content">${escapeHtml(b.text)}</div>`).join('');
+            // 按原文顺序渲染：文字段落、表格、图片交替出现（图文混排）
+            body = blocks.map(b => {
+                if (b.type === 'table') return `<div class="table-scroll">${b.html}</div>`;
+                if (b.type === 'image') {
+                    const idx = currentDetailImages.indexOf(b.url);
+                    const click = idx >= 0 ? ` onclick="openImage(${idx})"` : '';
+                    return `<div class="inline-img-wrap"><img class="inline-img" src="${escapeHtml(b.url)}" alt="图片" loading="lazy"${click} onerror="this.parentElement.style.display='none'"></div>`;
+                }
+                return `<div class="content">${escapeHtml(b.text)}</div>`;
+            }).join('');
             if (!body) body = '<div class="content"><span style="color:#bbb">（无内容）</span></div>';
         } else {
             const text = fieldText(d, key);
@@ -1179,17 +1190,8 @@ function renderPersonDetail(d) {
             </div>
         </div>
         ${section('本周重点工作', 'priority')}
-        ${section('共生文化', 'intergrowth')}
         ${section('下周工作计划', 'afterPriority')}
         ${section('反思', 'introspection')}
-        ${section('自我学习', 'selfStudy')}
-        ${currentDetailImages.length ? `
-        <div class="detail-section">
-            <h4>图片附件（${currentDetailImages.length}）</h4>
-            <div class="detail-imgs">
-                ${currentDetailImages.map((u, idx) => `<img src="${escapeHtml(u)}" alt="附件图片" onclick="openImage(${idx})" onerror="this.style.display='none'">`).join('')}
-            </div>
-        </div>` : ''}
         ${indicatorRows ? `
         <div class="detail-section">
             <h4>个人指标</h4>
@@ -1198,6 +1200,8 @@ function renderPersonDetail(d) {
                 ${indicatorRows}
             </table>
         </div>` : ''}
+        ${section('共生文化', 'intergrowth')}
+        ${section('自我学习', 'selfStudy')}
     `;
     panel.scrollTop = 0;
 }
