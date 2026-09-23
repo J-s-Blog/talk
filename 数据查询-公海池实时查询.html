@@ -4549,11 +4549,15 @@
                     // 匹配保有量配置数据
                     if (specialHoldData && specialHoldData.length > 0) {
                         Object.values(staffSummary).forEach(item => {
-                            const holdConfig = specialHoldData.find(hold => 
+                            const holdConfig = specialHoldData.find(hold =>
                                 hold.staffTalkId === item.staffTalkId || hold.staffName === item.staffName
                             );
                             if (holdConfig && holdConfig.todayUserGetLimit !== undefined && holdConfig.todayUserGetLimit !== null) {
                                 item.todayUserGetLimit = holdConfig.todayUserGetLimit;
+                            }
+                            // empID缺失时按姓名从保有量配置回填真实empID
+                            if (holdConfig && (item.staffTalkId === '-' || !item.staffTalkId) && holdConfig.staffTalkId && holdConfig.staffTalkId !== '-') {
+                                item.staffTalkId = holdConfig.staffTalkId;
                             }
                         });
                     }
@@ -4577,7 +4581,12 @@
                         Object.keys(footfallStats).forEach(staffName => {
                             if (!staffSummary[staffName]) {
                                 const stats = footfallStats[staffName];
-                                const staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                                let staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                                // 注销用户列表查不到时，按姓名从保有量配置回填真实empID
+                                if (staffTalkId === '-' && specialHoldData && specialHoldData.length > 0) {
+                                    const holdByStaff = specialHoldData.find(h => h.staffName === staffName && h.staffTalkId && h.staffTalkId !== '-');
+                                    if (holdByStaff) staffTalkId = holdByStaff.staffTalkId;
+                                }
                                 // 从保有量配置中查找当日领取上限
                                 let todayUserGetLimit = '-';
                                 if (specialHoldData && specialHoldData.length > 0) {
@@ -4661,11 +4670,15 @@
                 // 匹配保有量配置数据
                 if (specialHoldData && specialHoldData.length > 0) {
                     Object.values(staffSummary).forEach(item => {
-                        const holdConfig = specialHoldData.find(hold => 
+                        const holdConfig = specialHoldData.find(hold =>
                             hold.staffTalkId === item.staffTalkId || hold.staffName === item.staffName
                         );
                         if (holdConfig && holdConfig.todayUserGetLimit !== undefined && holdConfig.todayUserGetLimit !== null) {
                             item.todayUserGetLimit = holdConfig.todayUserGetLimit;
+                        }
+                        // empID缺失时按姓名从保有量配置回填真实empID
+                        if (holdConfig && (item.staffTalkId === '-' || !item.staffTalkId) && holdConfig.staffTalkId && holdConfig.staffTalkId !== '-') {
+                            item.staffTalkId = holdConfig.staffTalkId;
                         }
                     });
                 }
@@ -4689,7 +4702,12 @@
                     Object.keys(footfallStats).forEach(staffName => {
                         if (!staffSummary[staffName]) {
                             const stats = footfallStats[staffName];
-                            const staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                            let staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                            // 注销用户列表查不到时，按姓名从保有量配置回填真实empID
+                            if (staffTalkId === '-' && specialHoldData && specialHoldData.length > 0) {
+                                const holdByStaff = specialHoldData.find(h => h.staffName === staffName && h.staffTalkId && h.staffTalkId !== '-');
+                                if (holdByStaff) staffTalkId = holdByStaff.staffTalkId;
+                            }
                             let todayUserGetLimit = '-';
                             if (specialHoldData && specialHoldData.length > 0) {
                                 const holdConfig = specialHoldData.find(h => 
@@ -7961,11 +7979,15 @@
             const specialHoldData = await fetchSpecialHoldData();
             if (specialHoldData && specialHoldData.length > 0) {
                 Object.values(staffSummary).forEach(item => {
-                    const holdConfig = specialHoldData.find(hold => 
+                    const holdConfig = specialHoldData.find(hold =>
                         hold.staffTalkId === item.staffTalkId || hold.staffName === item.staffName
                     );
                     if (holdConfig && holdConfig.todayUserGetLimit !== undefined && holdConfig.todayUserGetLimit !== null) {
                         item.todayUserGetLimit = holdConfig.todayUserGetLimit;
+                    }
+                    // empID缺失时按姓名从保有量配置回填真实empID
+                    if (holdConfig && (item.staffTalkId === '-' || !item.staffTalkId) && holdConfig.staffTalkId && holdConfig.staffTalkId !== '-') {
+                        item.staffTalkId = holdConfig.staffTalkId;
                     }
                 });
             }
