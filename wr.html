@@ -200,6 +200,7 @@
             border-radius: 8px; padding: 8px 14px; font-size: 12px;
             cursor: pointer; margin-bottom: 10px;
             position: sticky; top: 0; z-index: 5;
+            margin-left: auto; /* 手机端靠右显示，方便右手单手点击 */
         }
         .detail-header { border-bottom: 2px solid #ede7f6; padding-bottom: 10px; margin-bottom: 12px; }
         .detail-header h3 { color: #533483; font-size: 18px; }
@@ -366,7 +367,7 @@
             .detail-table { font-size: 11px; }
             .indicator-table { display: block; overflow-x: auto; white-space: nowrap; }
             .browse-wrap.show-detail .list-side { display: none; }
-            .browse-wrap.show-detail .btn-back { display: inline-block; }
+            .browse-wrap.show-detail .btn-back { display: block; }
             .browse-wrap:not(.show-detail) .detail-panel { display: none; }
             .article-body { font-size: 14px; }
             .nav-sep { display: none; }
@@ -379,10 +380,6 @@
 </head>
 <body class="browse-mode">
 <div class="container wide">
-    <div class="header">
-        <h1>📊 大学堂周报 / 热点资讯抓取工具</h1>
-        <p>在线浏览周报与热点资讯 ｜ 配置账号，点击「加载」获取内容，周报可导出Excel</p>
-    </div>
     <div class="body">
         <!-- 顶栏：加载周报 / 导出周报 + 登录认证 + 时间范围 + 状态信息（合并） -->
         <div class="top-line">
@@ -493,8 +490,8 @@ const FORUM_RANK_PATH = '/forumLearn/queryForumRankingList';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
-const PHONE = '';
-const PASSWORD = '';
+const PHONE = '19924530939';
+const PASSWORD = 'ShuoKeYingYu123';
 
 let excelData = [];
 // token 持久化：优先从 localStorage 读取上次登录的 token 与凭据，有效期内直接复用、跳过登录
@@ -729,7 +726,7 @@ async function fetchAllDetails(onItem) {
 // 抓取完成后统一刷新浏览区
 function syncBrowseAfterLoad() {
     selectedPersonIndex = -1;
-    document.getElementById('browseWrap').classList.remove('show-detail');
+    leaveDetailView('browseWrap');
     resetDetailPanel();
     document.getElementById('personSearch').value = '';
     populateDeptFilter();
@@ -1092,7 +1089,7 @@ function renderPersonList() {
 // 点击人名：按需抓取该人员的周报详情（懒加载），再渲染详情面板
 async function selectPerson(index) {
     selectedPersonIndex = index;
-    document.getElementById('browseWrap').classList.add('show-detail');
+    enterDetailView('browseWrap');
     renderPersonList();
     const d = excelData[index];
     if (!d) return;
@@ -1112,8 +1109,38 @@ async function selectPerson(index) {
     renderPersonDetail(d);
 }
 
+// —— 详情页历史记录管理 ——
+// 进入详情时压入一条历史记录：手机/浏览器的返回键即可返回列表，而不会直接退出工具页面
+function enterDetailView(wrapId) {
+    const wrap = document.getElementById(wrapId);
+    if (wrap.classList.contains('show-detail')) return;
+    wrap.classList.add('show-detail');
+    // 若历史栈顶已是详情记录（如刷新后残留），直接复用，避免堆积
+    if (!(history.state && history.state.detail)) {
+        try { history.pushState({ detail: true }, ''); } catch (e) { /* 环境不支持时仅靠按钮返回 */ }
+    }
+}
+
+let detailLeavePending = false; // 由页面按钮触发 history.back() 时，popstate 无需重复关闭
+function leaveDetailView(wrapId) {
+    document.getElementById(wrapId).classList.remove('show-detail');
+    if (history.state && history.state.detail) {
+        detailLeavePending = true;
+        history.back(); // 消耗掉压入的历史记录，保持历史栈同步
+    }
+}
+
+// 返回键（浏览器/手机手势）：从详情回到列表视图，而不是退出页面
+window.addEventListener('popstate', () => {
+    if (detailLeavePending) { detailLeavePending = false; return; }
+    ['browseWrap', 'newsWrap'].forEach(id => {
+        const w = document.getElementById(id);
+        if (w) w.classList.remove('show-detail');
+    });
+});
+
 function backToList() {
-    document.getElementById('browseWrap').classList.remove('show-detail');
+    leaveDetailView('browseWrap');
 }
 
 // 检测原始HTML中的<table>/<img>，按原文顺序提取内容块 [{type:'text'|'table'|'image', ...}]，无表格且无图片返回 null
@@ -1493,7 +1520,7 @@ async function newsGoPage(page) {
         await fetchNewsPage(target);
         // 保留搜索/置顶筛选条件，仅重置选中项与详情面板
         selectedNewsIndex = -1;
-        document.getElementById('newsWrap').classList.remove('show-detail');
+        leaveDetailView('newsWrap');
         resetNewsDetailPanel();
         renderNewsList();
         renderNewsPager();
@@ -1522,7 +1549,7 @@ function renderNewsPager() {
 
 function syncNewsAfterLoad() {
     selectedNewsIndex = -1;
-    document.getElementById('newsWrap').classList.remove('show-detail');
+    leaveDetailView('newsWrap');
     resetNewsDetailPanel();
     document.getElementById('newsSearch').value = '';
     document.getElementById('topFilter').value = '';
@@ -1565,7 +1592,7 @@ function renderNewsList() {
 // 点击文章：按需抓取详情（缓存），并自动获取已学习清单/标记已读，再渲染富文本内容
 async function selectNews(index) {
     selectedNewsIndex = index;
-    document.getElementById('newsWrap').classList.add('show-detail');
+    enterDetailView('newsWrap');
     renderNewsList();
     const d = newsData[index];
     if (!d) return;
@@ -1603,7 +1630,7 @@ async function fetchNewsDetail(postId) {
 }
 
 function backToNewsList() {
-    document.getElementById('newsWrap').classList.remove('show-detail');
+    leaveDetailView('newsWrap');
 }
 
 // 渲染文章详情：大类>子类、标题、作者、发布时间、富文本正文（保留原始格式）、已学习名单占位
