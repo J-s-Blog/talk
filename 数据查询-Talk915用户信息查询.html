@@ -322,6 +322,17 @@
                 border-color: #007bff;
                 color: #007bff;
             }
+        }
+        /* 用户注册时间和套餐查询 - 表格与分页样式（全局生效，用类替代每格内联样式，大幅降低DOM内存占用） */
+            .urp-table { width: 100%; border-collapse: collapse; }
+            .urp-table th { padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa; position: sticky; top: 0; z-index: 1; }
+            .urp-table td { padding: 6px; border: 1px solid #ddd; }
+            .urp-pager { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 2px; font-size: 12px; color: #555; }
+            .urp-pager button { width: auto; padding: 3px 10px; border: 1px solid #ddd; border-radius: 3px; background: #fff; cursor: pointer; font-size: 12px; color: #333; }
+            .urp-pager button:hover:not(:disabled) { background: #e9f0ff; border-color: #007bff; color: #007bff; }
+            .urp-pager button:disabled { color: #bbb; cursor: default; }
+            .urp-pager input { width: 52px; padding: 2px 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; text-align: center; }
+            .urp-pager .urp-pager-info { font-weight: bold; }
         </style>
 </head>
 <body>
@@ -472,6 +483,27 @@
                                 <option value="">请先导入数据</option>
                             </select>
                         </div>
+                        <!-- 批量查询控制：并发数/每页条数/实时刷新开关（默认关闭，大数据量建议查询完成后统一显示） -->
+                        <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label for="fuConcurrency" style="font-weight: bold; color: #555; margin: 0;">并发数:</label>
+                            <select id="fuConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
+                            <label for="fuPageSizeSelect" style="font-weight: bold; color: #555; margin: 0;">每页:</label>
+                            <select id="fuPageSizeSelect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="100">100</option>
+                                <option value="200" selected>200</option>
+                                <option value="500">500</option>
+                            </select>
+                            <label style="display: flex; align-items: center; gap: 4px; margin: 0;">
+                                <input type="checkbox" id="fuLiveRefresh" style="width: 14px; height: 14px;">
+                                <span>实时刷新结果</span>
+                            </label>
+                            <span class="info-text" style="font-size: 11px;">大数据量建议不勾选实时刷新</span>
+                        </div>
                         <div style="display: flex; gap: 6px;">
                             <button id="queryBtn" style="flex: 1; padding: 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">开始查询</button>
                             <button id="exportBtn" style="flex: 1; padding: 8px; background-color: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">导出CSV</button>
@@ -556,6 +588,28 @@
                         </div>
                         <button id="sourceManualQueryBtn" style="width: 100%; padding: 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">手动查询</button>
                     </div>
+                </div>
+                
+                <!-- 查询控制行：并发数/每页条数/实时刷新（性能优化新增） -->
+                <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <label for="srcConcurrency" style="font-weight: bold; color: #555; margin: 0;">并发数:</label>
+                    <select id="srcConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                    </select>
+                    <label for="srcPageSizeSelect" style="font-weight: bold; color: #555; margin: 0;">每页:</label>
+                    <select id="srcPageSizeSelect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="100">100</option>
+                        <option value="200" selected>200</option>
+                        <option value="500">500</option>
+                    </select>
+                    <label style="display: flex; align-items: center; gap: 4px; margin: 0;">
+                        <input type="checkbox" id="srcLiveRefresh" style="width: 14px; height: 14px;">
+                        <span>实时刷新结果</span>
+                    </label>
+                    <span class="info-text" style="font-size: 11px;">大数据量建议不勾选实时刷新，查询完成后统一显示</span>
                 </div>
                 
                 <div id="sourceQueryStatus" style="margin-bottom: 10px; padding: 6px; border-radius: 4px; display: none;"></div>
@@ -643,6 +697,28 @@
                     <label for="loginLogEndDate">结束日期:</label>
                     <input type="date" id="loginLogEndDate" value="2026-02-24" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                 </div>
+            </div>
+            
+            <!-- 查询控制行：并发数/每页条数/实时刷新（性能优化新增） -->
+            <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <label for="llConcurrency" style="font-weight: bold; color: #555; margin: 0;">并发数:</label>
+                <select id="llConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                </select>
+                <label for="llPageSizeSelect" style="font-weight: bold; color: #555; margin: 0;">每页:</label>
+                <select id="llPageSizeSelect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="100">100</option>
+                    <option value="200" selected>200</option>
+                    <option value="500">500</option>
+                </select>
+                <label style="display: flex; align-items: center; gap: 4px; margin: 0;">
+                    <input type="checkbox" id="llLiveRefresh" style="width: 14px; height: 14px;">
+                    <span>实时刷新结果</span>
+                </label>
+                <span class="info-text" style="font-size: 11px;">大数据量建议不勾选实时刷新，查询完成后统一显示</span>
             </div>
             
             <!-- 操作按钮 -->
@@ -1398,6 +1474,26 @@
                                 <span>用户来源</span>
                             </label>
                         </div>
+                        <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label for="userRegPackageConcurrency" style="font-weight: bold; color: #555; margin: 0;">并发数:</label>
+                            <select id="userRegPackageConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
+                            <label for="userRegPackagePageSizeSelect" style="font-weight: bold; color: #555; margin: 0;">每页:</label>
+                            <select id="userRegPackagePageSizeSelect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="100">100</option>
+                                <option value="200" selected>200</option>
+                                <option value="500">500</option>
+                            </select>
+                            <label style="display: flex; align-items: center; gap: 4px; margin: 0;">
+                                <input type="checkbox" id="userRegPackageLiveRefresh" style="width: 14px; height: 14px;">
+                                <span>实时刷新结果</span>
+                            </label>
+                            <span class="info-text" style="font-size: 11px;">大数据量建议不勾选实时刷新，查询完成后统一显示</span>
+                        </div>
                         <div style="display: flex; gap: 6px;">
                             <button id="userRegPackageQueryBtn" style="flex: 1; padding: 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">开始查询</button>
                             <button id="userRegPackageExportBtn" style="flex: 1; padding: 8px; background-color: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">导出CSV</button>
@@ -1477,6 +1573,25 @@
                                 <input type="date" id="courseQueryBatchEndDate" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                             </div>
                         </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                            <label for="cqConcurrency" style="font-weight: bold; color: #555; margin: 0; font-size: 12px;">并发数:</label>
+                            <select id="cqConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
+                            <label for="cqPageSizeSelect" style="font-weight: bold; color: #555; margin: 0; font-size: 12px;">每页:</label>
+                            <select id="cqPageSizeSelect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="100">100</option>
+                                <option value="200" selected>200</option>
+                                <option value="500">500</option>
+                            </select>
+                            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-size: 12px;">
+                                <input type="checkbox" id="cqLiveRefresh" style="width: 14px; height: 14px;">
+                                <span>实时刷新结果</span>
+                            </label>
+                        </div>
                         <button id="courseQueryBatchBtn" style="width: 100%; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">批量查询</button>
                     </div>
                 </div>
@@ -1531,6 +1646,20 @@
                                 <option value="">请先导入文件</option>
                             </select>
                             <div class="info-text" style="margin-top: 2px; font-size: 11px;">选择要查询的ID所在列后点击批量查询</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                            <label for="ccqConcurrency" style="font-weight: bold; color: #555; margin: 0; font-size: 12px;">并发数:</label>
+                            <select id="ccqConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
+                            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-size: 12px;">
+                                <input type="checkbox" id="ccqLiveRefresh" style="width: 14px; height: 14px;">
+                                <span>实时刷新结果</span>
+                            </label>
+                            <span style="font-size: 11px; color: #999;">大数据量建议不勾选</span>
                         </div>
                         <button id="clearQueryBatchBtn" style="width: 100%; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: auto;">批量查询</button>
                     </div>
@@ -3917,6 +4046,17 @@ function exportRegisteredUsers() {
             rows: []
         };
 
+        // ===== 用户跟进人查询tab：分页与批量查询状态（fu前缀，避免与其他tab冲突） =====
+        let fuCurrentPage = 1;                      // 当前页码
+        let fuResults = [];                         // 查询结果数组（与去重后的ID一一对应）
+        let fuRowIndices = [];                      // 结果对应的 importedData.rows 行下标
+        let fuQueryActive = false;                  // 是否有查询正在进行
+
+        // 获取每页条数
+        function fuPageSize() {
+            return parseInt(document.getElementById('fuPageSizeSelect').value) || 200;
+        }
+
         // 存储套餐数据
         let productData = [];
 
@@ -4572,6 +4712,118 @@ function exportRegisteredUsers() {
             }
         }
         
+        // ===== 用户跟进人查询tab专用批量查询：并发工作池（替代"5个一批+批间延时"模式） =====
+        // 注意：通用函数 queryFollowUpInfoInParallel 仍保留给手动查询/自律卡等场景使用，本tab不再调用
+        let fuQueryAbort = false;      // 停止标志
+        let fuSubQueryFailures = 0;    // 子查询失败计数（聚合，不逐条打印）
+
+        // 判断单个结果是否失败（与旧重试逻辑的失败口径一致）
+        function fuIsFailedResult(result) {
+            return !result || result.remark === '查询失败' || result.remark === '未找到数据' || result.remark === '无权限查询';
+        }
+
+        // 并发工作池批量查询：固定N个worker持续领取下一个ID，流水线无空闲、可随时停止
+        // ids：待查询ID列表（可与rowIndices重复对应）；rowIndices：ids[i]对应的importedData.rows行下标
+        async function queryFollowUpInfoWorkerPool(ids, rowIndices, token) {
+            // ID去重：重复ID只查询一次，结果会填充到所有相同ID的行
+            const uniqueIds = [...new Set(ids)];
+            const duplicateCount = ids.length - uniqueIds.length;
+            // 唯一ID在原始列表中的首个下标（用于把结果映射回数据行）
+            const firstIndexOf = new Map();
+            ids.forEach((id, idx) => {
+                if (!firstIndexOf.has(id)) firstIndexOf.set(id, idx);
+            });
+
+            const concurrency = parseInt(document.getElementById('fuConcurrency').value) || 10;
+            // 实时刷新开关：默认关闭（查询过程中只更新进度文字，不重绘表格，降低资源占用）
+            const liveRefresh = document.getElementById('fuLiveRefresh').checked;
+
+            fuQueryAbort = false;
+            fuSubQueryFailures = 0;
+            fuResults = [];
+            // 每个唯一ID对应的数据行下标（与fuResults一一对应）
+            fuRowIndices = uniqueIds.map(id => rowIndices[firstIndexOf.get(id)]);
+
+            // 顶部进度条（不遮挡表格，结果实时填充到当前页）
+            const tableResultDiv = document.getElementById('tableResult');
+            const oldIndicator = document.getElementById('fuLoadingIndicator');
+            if (oldIndicator) oldIndicator.remove();
+
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.id = 'fuLoadingIndicator';
+            loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+            loadingIndicator.innerHTML = '<span id="fuProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="fuStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+            tableResultDiv.insertBefore(loadingIndicator, tableResultDiv.firstChild);
+
+            const progressText = document.getElementById('fuProgressText');
+            document.getElementById('fuStopBtn').addEventListener('click', function() {
+                fuQueryAbort = true;
+                this.disabled = true;
+                this.textContent = '正在停止...';
+            });
+
+            const total = uniqueIds.length;
+            let completed = 0;
+            let nextIndex = 0;
+            let lastRefreshTime = 0;
+
+            // 节流更新进度（最多约3次/秒）；默认只更新文字不重绘表格
+            const refreshProgress = (force) => {
+                const now = Date.now();
+                if (!force && now - lastRefreshTime < 300) return;
+                lastRefreshTime = now;
+                const percent = Math.round((completed / total) * 100);
+                let text = `正在查询 ${completed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}`;
+                if (duplicateCount > 0) text += `，已去重 ${duplicateCount}`;
+                if (fuSubQueryFailures > 0) text += `，失败 ${fuSubQueryFailures}`;
+                if (fuQueryAbort) text += '，正在停止...';
+                progressText.textContent = text;
+                if (liveRefresh) renderFuTable();
+            };
+
+            // 工作池：每个worker循环领取下一个ID；单个ID内沿用queryFollowUpInfo既有的重试/降级链
+            async function worker() {
+                while (!fuQueryAbort) {
+                    const index = nextIndex;
+                    if (index >= total) return;
+                    nextIndex++;
+                    try {
+                        const result = await queryFollowUpInfo(uniqueIds[index], token);
+                        fuResults.push(result);
+                        if (fuIsFailedResult(result)) fuSubQueryFailures++;
+                    } catch (error) {
+                        // 失败计数聚合，不逐条console.error刷屏
+                        fuResults.push({
+                            userId: uniqueIds[index],
+                            staffName: '-',
+                            staffUserId: '-',
+                            staffTalkId: '-',
+                            remark: '查询失败'
+                        });
+                        fuSubQueryFailures++;
+                    }
+                    completed++;
+                    refreshProgress(false);
+                }
+            }
+
+            fuQueryActive = true;
+            try {
+                const workerCount = Math.min(concurrency, total);
+                await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+                refreshProgress(true);
+                loadingIndicator.remove();
+                renderFuTable();
+                return fuResults;
+            } catch (error) {
+                loadingIndicator.remove();
+                throw error;
+            } finally {
+                fuQueryActive = false;
+            }
+        }
+
         // 优化后的批量查询函数，支持真正的并发查询、动态间隔调整、失败重试和批次控制
         async function queryFollowUpInfoInParallel(ids, token, batchSize = 5, progressCallback) {
             const results = new Array(ids.length);
@@ -5904,51 +6156,22 @@ function exportRegisteredUsers() {
                 rows: dataRows
             };
             
-            // 生成表格HTML
-            let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto;">';
-            
-            // 表头
-            tableHtml += '<thead style="background-color: #f8f9fa;">';
-            tableHtml += '<tr>';
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; width: 60px; white-space: nowrap;">序号</th>';
-            headers.forEach(header => {
-                tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 100px; white-space: nowrap;">${header}</th>`;
-            });
-            // 添加顾问信息列
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 100px; white-space: nowrap;">顾问姓名</th>';
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 100px; white-space: nowrap;">顾问ID</th>';
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 100px; white-space: nowrap;">顾问empID</th>';
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 150px; white-space: nowrap;">备注</th>';
-            tableHtml += '</tr>';
-            tableHtml += '</thead>';
-            
-            // 数据行
-            tableHtml += '<tbody>';
-            dataRows.forEach((row, index) => {
-                tableHtml += '<tr style="border-bottom: 1px solid #ddd;">';
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; white-space: nowrap;">${index + 1}</td>`;
-                row.forEach(cell => {
-                    tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 100px; white-space: nowrap;">${cell}</td>`;
-                });
-                // 添加顾问信息列（初始为空）
-                tableHtml += '<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 100px; white-space: nowrap;">-</td>';
-                tableHtml += '<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 100px; white-space: nowrap;">-</td>';
-                tableHtml += '<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 100px; white-space: nowrap;">-</td>';
-                tableHtml += '<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 150px; white-space: nowrap;">-</td>';
-                tableHtml += '</tr>';
-            });
-            tableHtml += '</tbody>';
-            tableHtml += '</table>';
-            
+            // 重置分页与查询结果（新导入的数据与旧结果无关；若有查询正在进行则先停止，避免旧结果写入新数据）
+            fuCurrentPage = 1;
+            fuResults = [];
+            fuRowIndices = [];
+            fuQueryAbort = true;
+            fuQueryActive = false;
+
             // 为表格容器添加样式，确保表格内容超出时显示滚动条
             const tableContainer = document.getElementById('tableContainer');
             tableContainer.style.overflow = 'auto';
             tableContainer.style.width = '100%';
             tableContainer.style.boxSizing = 'border-box';
-            
-            // 显示表格
-            tableContainer.innerHTML = tableHtml;
-            
+
+            // 分页渲染（只渲染当前页DOM，万行数据不再一次性拼接全部HTML，避免内存暴涨卡顿）
+            renderFuTable();
+
             // 填充下拉列表
             const columnSelect = document.getElementById('columnSelect');
             columnSelect.innerHTML = '<option value="">选择查询条件列</option>';
@@ -5956,6 +6179,98 @@ function exportRegisteredUsers() {
                 columnSelect.innerHTML += `<option value="${index}">${header}</option>`;
             });
         }
+
+        // 分页渲染导入表格（导入数据 + 查询结果共用，查询过程中结果会实时填充到当前页）
+        function renderFuTable() {
+            const tableContainer = document.getElementById('tableContainer');
+            const totalRows = importedData.rows.length;
+
+            if (totalRows === 0) {
+                tableContainer.innerHTML = '<div class="text-center" style="padding: 20px;">没有数据</div>';
+                return;
+            }
+
+            const pageSize = fuPageSize();
+            const totalPages = Math.ceil(totalRows / pageSize);
+            if (fuCurrentPage > totalPages) fuCurrentPage = totalPages;
+            if (fuCurrentPage < 1) fuCurrentPage = 1;
+
+            const start = (fuCurrentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalRows);
+
+            // 结果映射（行下标 → 查询结果，查询过程中可能只有部分结果）
+            const resultMap = new Map();
+            fuRowIndices.forEach((rowIndex, i) => {
+                if (fuResults[i]) resultMap.set(rowIndex, fuResults[i]);
+            });
+
+            const htmlParts = [];
+            htmlParts.push('<table class="urp-table"><thead><tr>');
+            htmlParts.push('<th>序号</th>');
+            importedData.headers.forEach(header => {
+                htmlParts.push(`<th>${header || ''}</th>`);
+            });
+            htmlParts.push('<th>顾问姓名</th><th>顾问ID</th><th>顾问empID</th><th>备注</th>');
+            htmlParts.push('</tr></thead><tbody>');
+
+            for (let i = start; i < end; i++) {
+                const row = importedData.rows[i];
+                const result = resultMap.get(i);
+
+                htmlParts.push('<tr>');
+                htmlParts.push(`<td>${i + 1}</td>`);
+                row.forEach(cell => htmlParts.push(`<td>${cell}</td>`));
+                if (result) {
+                    htmlParts.push(`<td>${result.staffName}</td>`);
+                    htmlParts.push(`<td>${result.staffUserId}</td>`);
+                    htmlParts.push(`<td>${result.staffTalkId}</td>`);
+                    htmlParts.push(`<td>${result.remark}</td>`);
+                } else {
+                    htmlParts.push('<td>-</td><td>-</td><td>-</td><td>-</td>');
+                }
+                htmlParts.push('</tr>');
+            }
+            htmlParts.push('</tbody></table>');
+
+            // 分页控件
+            htmlParts.push('<div class="urp-pager">');
+            htmlParts.push(`<span>共 ${totalRows} 条</span>`);
+            htmlParts.push(`<button data-fu-page="1" ${fuCurrentPage === 1 ? 'disabled' : ''}>首页</button>`);
+            htmlParts.push(`<button data-fu-page="${fuCurrentPage - 1}" ${fuCurrentPage === 1 ? 'disabled' : ''}>上一页</button>`);
+            htmlParts.push(`<span class="urp-pager-info">第 ${fuCurrentPage} / ${totalPages} 页（每页 ${pageSize} 条）</span>`);
+            htmlParts.push(`<button data-fu-page="${fuCurrentPage + 1}" ${fuCurrentPage >= totalPages ? 'disabled' : ''}>下一页</button>`);
+            htmlParts.push(`<button data-fu-page="${totalPages}" ${fuCurrentPage >= totalPages ? 'disabled' : ''}>末页</button>`);
+            htmlParts.push(`<input type="number" min="1" max="${totalPages}" data-fu-jump><button data-fu-jump-btn>跳转</button>`);
+            htmlParts.push('</div>');
+
+            // 保持滚动位置，避免查询过程中实时刷新导致跳动
+            const scrollTop = tableContainer.scrollTop;
+            tableContainer.innerHTML = htmlParts.join('');
+            tableContainer.scrollTop = scrollTop;
+        }
+
+        // 跳转到指定页
+        function goToFuPage(page) {
+            const totalPages = Math.max(1, Math.ceil(importedData.rows.length / fuPageSize()));
+            fuCurrentPage = Math.min(Math.max(1, page), totalPages);
+            renderFuTable();
+            document.getElementById('tableContainer').scrollTop = 0;
+        }
+
+        // 分页控件事件（事件委托，只绑定一次；data-fu-* 属性与其他tab的分页控件区分）
+        document.getElementById('tableContainer').addEventListener('click', function(e) {
+            const jumpBtn = e.target.closest('[data-fu-jump-btn]');
+            if (jumpBtn) {
+                const input = this.querySelector('[data-fu-jump]');
+                const page = parseInt(input && input.value);
+                if (!isNaN(page)) goToFuPage(page);
+                return;
+            }
+            const pageBtn = e.target.closest('button[data-fu-page]');
+            if (pageBtn && !pageBtn.disabled) {
+                goToFuPage(parseInt(pageBtn.dataset.fuPage));
+            }
+        });
 
         // 导入按钮点击事件
         document.getElementById('importBtn').addEventListener('click', function() {
@@ -5985,6 +6300,12 @@ function exportRegisteredUsers() {
                 return;
             }
             
+            // 防止并发重复启动
+            if (fuQueryActive) {
+                alert('已有查询正在进行，请等待完成或点击停止后再试');
+                return;
+            }
+            
             // 检查是否登录并获取了token
             const token = localStorage.getItem('talk915_token');
             if (!token) {
@@ -5992,18 +6313,13 @@ function exportRegisteredUsers() {
                 return;
             }
             
-            // 显示查询状态
+            // 显示查询状态（实时进度见表格上方的进度条）
             queryStatus.style.display = 'block';
             queryStatus.style.backgroundColor = '#d4edda';
             queryStatus.style.color = '#155724';
             queryStatus.textContent = '正在查询数据，请稍候...';
             
-            // 获取表格元素
-            const table = document.querySelector('#tableContainer table');
-            const tbody = table.querySelector('tbody');
-            const rows = tbody.querySelectorAll('tr');
-            
-            // 提取需要查询的ID列表
+            // 从数据数组提取需要查询的ID列表（不再依赖DOM表格）
             const queryValues = [];
             const rowIndices = [];
             
@@ -6021,6 +6337,7 @@ function exportRegisteredUsers() {
             
             // 统计信息
             const totalQueries = importedData.rows.length;
+            const uniqueCount = new Set(queryValues).size;
             let successfulQueries = 0;
             let failedQueries = 0;
             let returnedToPoolCount = 0;
@@ -6034,25 +6351,13 @@ function exportRegisteredUsers() {
             }
             
             try {
-                // 存储查询结果
-                let results = [];
+                // 使用并发工作池批量查询（并发数/每页条数见上方控件；结果存数组，完成后统一渲染当前页）
+                const results = await queryFollowUpInfoWorkerPool(queryValues, rowIndices, token);
                 
-                // 使用优化后的批量查询函数（批次大小为5）
-                results = await queryFollowUpInfoInParallel(queryValues, token, 5, (processed, total) => {
-                    // 更新查询状态
-                    queryStatus.textContent = `正在查询数据，已完成 ${processed}/${totalQueries}...`;
-                    
-                    // 每批次更新一次表格，减少DOM更新频率
-                    updateFollowUpTable(results, rowIndices, rows);
-                });
-                
-                // 最终更新表格
-                updateFollowUpTable(results, rowIndices, rows);
-                
-                // 统计信息
+                // 统计信息（按去重后的结果统计）
                 for (let i = 0; i < results.length; i++) {
                     const result = results[i];
-                    if (result.remark !== '查询失败' && result.remark !== '未找到数据' && result.remark !== '无权限查询') {
+                    if (!fuIsFailedResult(result)) {
                         successfulQueries++;
                         if (result.remark.includes('用户已退回公海')) {
                             returnedToPoolCount++;
@@ -6064,8 +6369,7 @@ function exportRegisteredUsers() {
                 
                 // 处理空值的情况
                 for (let i = 0; i < importedData.rows.length; i++) {
-                    const rowData = importedData.rows[i];
-                    if (!rowData[selectedColumn]) {
+                    if (!importedData.rows[i][selectedColumn]) {
                         failedQueries++;
                     }
                 }
@@ -6073,29 +6377,17 @@ function exportRegisteredUsers() {
                 // 显示查询完成状态
                 queryStatus.style.backgroundColor = '#d4edda';
                 queryStatus.style.color = '#155724';
-                queryStatus.textContent = `查询完成！总共 ${totalQueries} 条数据，成功 ${successfulQueries} 条，失败 ${failedQueries} 条，已退回公海 ${returnedToPoolCount} 条。`;
+                if (fuQueryAbort) {
+                    // 手动停止：保留已完成的结果（可翻页查看、可导出CSV）
+                    queryStatus.textContent = `查询已停止，已完成 ${results.length}/${uniqueCount}，成功 ${successfulQueries} 条，失败 ${failedQueries} 条，已退回公海 ${returnedToPoolCount} 条。已完成的结果已保留（可导出CSV）。`;
+                } else {
+                    queryStatus.textContent = `查询完成！总共 ${totalQueries} 条数据，成功 ${successfulQueries} 条，失败 ${failedQueries} 条，已退回公海 ${returnedToPoolCount} 条。`;
+                }
             } catch (error) {
                 console.error('查询失败:', error);
                 queryStatus.style.backgroundColor = '#f8d7da';
                 queryStatus.style.color = '#721c24';
                 queryStatus.textContent = `查询失败: ${error.message}`;
-            }
-            
-            // 更新跟进人查询表格
-            function updateFollowUpTable(results, rowIndices, rows) {
-                for (let i = 0; i < results.length; i++) {
-                    const result = results[i];
-                    const rowIndex = rowIndices[i];
-                    const tableRow = rows[rowIndex];
-                    if (tableRow) {
-                        const cells = tableRow.querySelectorAll('td');
-                        // 更新表格行
-                        cells[cells.length - 4].textContent = result.staffName;
-                        cells[cells.length - 3].textContent = result.staffUserId;
-                        cells[cells.length - 2].textContent = result.staffTalkId;
-                        cells[cells.length - 1].textContent = result.remark;
-                    }
-                }
             }
         });
 
@@ -6107,38 +6399,35 @@ function exportRegisteredUsers() {
                 return;
             }
             
-            // 获取表格元素
-            const table = document.querySelector('#tableContainer table');
-            if (!table) {
-                alert('请先导入数据并生成表格');
-                return;
-            }
-            
-            // 生成CSV内容
+            // 生成CSV内容（直接从数据数组生成；分页后DOM中只有当前页，不能再从表格读取）
             let csvContent = '';
             
-            // 获取表头
-            const headers = table.querySelectorAll('thead th');
-            const headerRow = Array.from(headers).map(header => {
-                // 移除序号列的表头文本
-                return header.textContent === '序号' ? '' : header.textContent;
+            // 表头（首列为空的序号占位与旧导出格式一致；追加顾问信息列）
+            const headerRow = importedData.headers.map(header => {
+                const text = (header || '').toString();
+                return text.includes(',') ? `"${text}"` : text;
             }).join(',');
-            csvContent += headerRow + '\n';
+            csvContent += ',' + headerRow + ',顾问姓名,顾问ID,顾问empID,备注\n';
             
-            // 获取数据行
-            const tbody = table.querySelector('tbody');
-            const rows = tbody.querySelectorAll('tr');
+            // 结果映射（行下标 → 查询结果）
+            const resultMap = new Map();
+            fuRowIndices.forEach((rowIndex, i) => {
+                if (fuResults[i]) resultMap.set(rowIndex, fuResults[i]);
+            });
             
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const dataRow = Array.from(cells).map((cell, index) => {
-                    // 移除序号列的数据
-                    if (index === 0) return '';
+            // 数据行
+            importedData.rows.forEach((row, index) => {
+                const cells = row.map(cell => {
+                    const cellText = (cell === null || cell === undefined) ? '' : cell.toString().trim();
                     // 处理包含逗号的单元格
-                    const cellText = cell.textContent.trim();
                     return cellText.includes(',') ? `"${cellText}"` : cellText;
-                }).join(',');
-                csvContent += dataRow + '\n';
+                });
+                const result = resultMap.get(index);
+                cells.push(result ? result.staffName : '-');
+                cells.push(result ? result.staffUserId : '-');
+                cells.push(result ? result.staffTalkId : '-');
+                cells.push(result ? result.remark : '-');
+                csvContent += ',' + cells.join(',') + '\n';
             });
             
             // 创建Blob对象
@@ -6600,6 +6889,96 @@ function exportRegisteredUsers() {
             headers: [],
             rows: []
         };
+        // 查询结果数组（下标与sourceImportedData.rows一一对应，null=未查询；替代原"结果写回DOM单元格"）
+        let srcResults = [];
+        // 用户来源表当前页码
+        let srcCurrentPage = 1;
+        // 批量查询控制状态
+        let srcQueryAbort = false;
+        let srcSubQueryFailures = 0;
+
+        // 获取每页条数
+        function getSourcePageSize() {
+            return parseInt(document.getElementById('srcPageSizeSelect').value) || 200;
+        }
+
+        // 分页渲染用户来源表格（导入数据+查询结果共用；结果从srcResults数组读取，复用全局.urp样式类）
+        function renderSourceTable() {
+            const tableContainer = document.getElementById('sourceTableContainer');
+            const totalRows = sourceImportedData.rows.length;
+
+            if (totalRows === 0) {
+                tableContainer.innerHTML = '<div class="text-center" style="padding: 20px;">没有数据</div>';
+                return;
+            }
+
+            const pageSize = getSourcePageSize();
+            const totalPages = Math.ceil(totalRows / pageSize);
+            if (srcCurrentPage > totalPages) srcCurrentPage = totalPages;
+            if (srcCurrentPage < 1) srcCurrentPage = 1;
+
+            const start = (srcCurrentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalRows);
+
+            const htmlParts = [];
+            htmlParts.push('<table class="urp-table"><thead><tr>');
+            htmlParts.push('<th>序号</th>');
+            sourceImportedData.headers.forEach(header => {
+                htmlParts.push(`<th>${header || ''}</th>`);
+            });
+            htmlParts.push('<th>用户来源</th>');
+            htmlParts.push('</tr></thead><tbody>');
+
+            for (let i = start; i < end; i++) {
+                const row = sourceImportedData.rows[i];
+                const result = srcResults[i];
+                htmlParts.push('<tr>');
+                htmlParts.push(`<td>${i + 1}</td>`);
+                row.forEach(cell => htmlParts.push(`<td>${cell}</td>`));
+                htmlParts.push(`<td>${result !== null && result !== undefined ? result : '-'}</td>`);
+                htmlParts.push('</tr>');
+            }
+            htmlParts.push('</tbody></table>');
+
+            // 分页控件（data-src-page / data-src-jump 事件委托）
+            htmlParts.push('<div class="urp-pager">');
+            htmlParts.push(`<span>共 ${totalRows} 条</span>`);
+            htmlParts.push(`<button data-src-page="1" ${srcCurrentPage === 1 ? 'disabled' : ''}>首页</button>`);
+            htmlParts.push(`<button data-src-page="${srcCurrentPage - 1}" ${srcCurrentPage === 1 ? 'disabled' : ''}>上一页</button>`);
+            htmlParts.push(`<span class="urp-pager-info">第 ${srcCurrentPage} / ${totalPages} 页（每页 ${pageSize} 条）</span>`);
+            htmlParts.push(`<button data-src-page="${srcCurrentPage + 1}" ${srcCurrentPage >= totalPages ? 'disabled' : ''}>下一页</button>`);
+            htmlParts.push(`<button data-src-page="${totalPages}" ${srcCurrentPage >= totalPages ? 'disabled' : ''}>末页</button>`);
+            htmlParts.push(`<input type="number" min="1" max="${totalPages}" data-src-jump><button data-src-jump-btn>跳转</button>`);
+            htmlParts.push('</div>');
+
+            // 保持滚动位置，避免查询过程中实时刷新导致跳动
+            const scrollTop = tableContainer.scrollTop;
+            tableContainer.innerHTML = htmlParts.join('');
+            tableContainer.scrollTop = scrollTop;
+        }
+
+        // 跳转到指定页
+        function goToSourcePage(page) {
+            const totalPages = Math.max(1, Math.ceil(sourceImportedData.rows.length / getSourcePageSize()));
+            srcCurrentPage = Math.min(Math.max(1, page), totalPages);
+            renderSourceTable();
+            document.getElementById('sourceTableContainer').scrollTop = 0;
+        }
+
+        // 分页控件事件（事件委托，只绑定一次）
+        document.getElementById('sourceTableContainer').addEventListener('click', function(e) {
+            const jumpBtn = e.target.closest('[data-src-jump-btn]');
+            if (jumpBtn) {
+                const input = this.querySelector('[data-src-jump]');
+                const page = parseInt(input && input.value);
+                if (!isNaN(page)) goToSourcePage(page);
+                return;
+            }
+            const pageBtn = e.target.closest('button[data-src-page]');
+            if (pageBtn && !pageBtn.disabled) {
+                goToSourcePage(parseInt(pageBtn.dataset.srcPage));
+            }
+        });
 
         // 文件导入表格功能
         document.getElementById('sourceFileInput').addEventListener('change', function(e) {
@@ -6794,44 +7173,12 @@ function exportRegisteredUsers() {
                 rows: dataRows
             };
             
-            // 生成表格HTML
-            let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto;">';
+            // 重置查询结果数组（下标与数据行一一对应，null=未查询）
+            srcResults = new Array(dataRows.length).fill(null);
+            srcCurrentPage = 1;
             
-            // 表头
-            tableHtml += '<thead style="background-color: #f8f9fa;">';
-            tableHtml += '<tr>';
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; width: 60px; white-space: nowrap;">序号</th>';
-            headers.forEach(header => {
-                tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 100px; white-space: nowrap;">${header}</th>`;
-            });
-            // 添加用户来源列
-            tableHtml += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; min-width: 200px; white-space: nowrap;">用户来源</th>';
-            tableHtml += '</tr>';
-            tableHtml += '</thead>';
-            
-            // 数据行
-            tableHtml += '<tbody>';
-            dataRows.forEach((row, index) => {
-                tableHtml += '<tr style="border-bottom: 1px solid #ddd;">';
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; white-space: nowrap;">${index + 1}</td>`;
-                row.forEach(cell => {
-                    tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 100px; white-space: nowrap;">${cell}</td>`;
-                });
-                // 添加用户来源列（初始为空）
-                tableHtml += '<td style="border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 200px; white-space: nowrap;">-</td>';
-                tableHtml += '</tr>';
-            });
-            tableHtml += '</tbody>';
-            tableHtml += '</table>';
-            
-            // 为表格容器添加样式，确保表格内容超出时显示滚动条
-            const tableContainer = document.getElementById('sourceTableContainer');
-            tableContainer.style.overflow = 'auto';
-            tableContainer.style.width = '100%';
-            tableContainer.style.boxSizing = 'border-box';
-            
-            // 显示表格
-            tableContainer.innerHTML = tableHtml;
+            // 分页渲染表格（替代原全量innerHTML拼接，降低大数据量时的DOM内存占用）
+            renderSourceTable();
             
             // 填充下拉列表
             const columnSelect = document.getElementById('sourceColumnSelect');
@@ -6856,113 +7203,210 @@ function exportRegisteredUsers() {
             const columnSelect = document.getElementById('sourceColumnSelect');
             const queryStatus = document.getElementById('sourceQueryStatus');
             const selectedColumn = parseInt(columnSelect.value);
-            
+
             // 检查是否选择了查询条件列
             if (isNaN(selectedColumn)) {
                 alert('请选择查询条件列');
                 return;
             }
-            
+
             // 检查是否导入了数据
             if (sourceImportedData.rows.length === 0) {
                 alert('请先导入数据');
                 return;
             }
-            
+
             // 检查是否登录并获取了token
             const token = localStorage.getItem('talk915_token');
             if (!token) {
                 alert('请先登录获取token');
                 return;
             }
-            
+
             // 显示查询状态
             queryStatus.style.display = 'block';
             queryStatus.style.backgroundColor = '#d4edda';
             queryStatus.style.color = '#155724';
             queryStatus.textContent = '正在查询数据，请稍候...';
-            
-            // 获取表格元素
-            const table = document.querySelector('#sourceTableContainer table');
-            const tbody = table.querySelector('tbody');
-            const rows = tbody.querySelectorAll('tr');
-            
-            // 统计信息
-            let totalQueries = sourceImportedData.rows.length;
+
+            // 统计信息（按数据行计数）
+            const totalQueries = sourceImportedData.rows.length;
             let successfulQueries = 0;
             let failedQueries = 0;
-            
-            // 遍历数据行进行查询
-            for (let i = 0; i < sourceImportedData.rows.length; i++) {
-                const rowData = sourceImportedData.rows[i];
+
+            // 按查询值（手机号归一化后）去重分组：同一查询值只请求一次，结果写回所有对应行
+            const groups = new Map();
+            let emptyCount = 0;
+            sourceImportedData.rows.forEach((rowData, rowIndex) => {
                 let queryValue = rowData[selectedColumn];
-                
                 if (!queryValue) {
-                    failedQueries++;
-                    continue;
+                    emptyCount++;
+                    return;
                 }
-                
                 // 处理手机号格式：去除+86或0086，并去除空格
                 queryValue = queryValue.toString().replace(/\+/g, '').replace(/\s+/g, '');
                 if (queryValue.startsWith('86')) {
                     queryValue = queryValue.substring(2);
                 }
-                
-                try {
-                    let targetId = queryValue;
-                    let isElevenDigit = /^\d{11}$/.test(queryValue);
-                    
-                    // 如果是11位数字，先查询userId
-                    if (isElevenDigit) {
-                        try {
-                            const studentPayload = {
-                                "accountName": queryValue,
-                                "user": "",
-                                "date1": "",
-                                "date2": "",
-                                "majoy": "",
-                                "accountType": "-1",
-                                "isFreeClass": "0",
-                                "isPay": "0",
-                                "source": "-1",
-                                "isStuCategory": "0",
-                                "lid": "",
-                                "cooperativeUser": 1,
-                                "classesTool": "-1",
-                                "accountStatus": "0",
-                                "currPage": 0,
-                                "pageSize": 10
-                            };
-                            
-                            const studentResponse = await fetch('https://www.talk915.com/users/studentManage/queryStudentManageList', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json, text/plain, */*',
-                                    'User-Agent': navigator.userAgent,
-                                    'Referer': 'https://www.talk915.com/admin/userManagement/student/stuManage',
-                                    'Origin': 'https://www.talk915.com',
-                                    'Sec-Fetch-Dest': 'empty',
-                                    'Sec-Fetch-Mode': 'cors',
-                                    'Sec-Fetch-Site': 'same-origin',
-                                    'token': token
-                                },
-                                body: JSON.stringify(studentPayload),
-                                credentials: 'include'
-                            });
-                            
-                            const studentData = await studentResponse.json();
-                            
-                            if (studentData.resultCode === 0 && studentData.resultData && studentData.resultData.length > 0) {
-                                targetId = studentData.resultData[0].userId.toString();
+                if (!groups.has(queryValue)) groups.set(queryValue, []);
+                groups.get(queryValue).push(rowIndex);
+            });
+            const uniqueValues = [...groups.keys()];
+            const duplicateCount = totalQueries - emptyCount - uniqueValues.length;
+
+            const concurrency = parseInt(document.getElementById('srcConcurrency').value) || 10;
+            // 实时刷新开关：默认关闭（查询过程中只更新进度文字，不重绘表格，降低资源占用）
+            const liveRefresh = document.getElementById('srcLiveRefresh').checked;
+
+            srcQueryAbort = false;
+            srcSubQueryFailures = 0;
+
+            // 顶部进度条（不遮挡表格，结果写入srcResults数组）
+            const tableResultDiv = document.getElementById('sourceTableResult');
+            const oldIndicator = document.getElementById('srcLoadingIndicator');
+            if (oldIndicator) oldIndicator.remove();
+
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.id = 'srcLoadingIndicator';
+            loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+            loadingIndicator.innerHTML = '<span id="srcProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="srcStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+            tableResultDiv.insertBefore(loadingIndicator, tableResultDiv.firstChild);
+
+            const progressText = document.getElementById('srcProgressText');
+            document.getElementById('srcStopBtn').addEventListener('click', function() {
+                srcQueryAbort = true;
+                this.disabled = true;
+                this.textContent = '正在停止...';
+            });
+
+            // 格式化来源信息（与原逐条查询逻辑一致）
+            function formatSourceInfo(recommendedData) {
+                if (!(recommendedData.resultCode === 0 && recommendedData.resultData)) return null;
+                let sourceInfo = '-';
+                // 检查resultData是否为数组
+                if (Array.isArray(recommendedData.resultData)) {
+                    const resultDataArray = recommendedData.resultData;
+                    // 如果有多个记录，按照要求格式拼接
+                    if (resultDataArray.length > 1) {
+                        const formattedRecords = resultDataArray.map(record => {
+                            const userType = record.userType || '';
+                            const talkId = record.talkId || '';
+                            const userName = record.userName || '';
+                            const userId = record.userId || '';
+                            return `${userType}-${talkId}-${userName}-${userId}`;
+                        }).join('；'); // 使用中文分号分隔
+                        sourceInfo = formattedRecords;
+                    } else if (resultDataArray.length === 1) {
+                        // 只有一个记录，使用原有格式
+                        const recommendedMsg = resultDataArray[0];
+                        if (recommendedMsg.userName) {
+                            sourceInfo = `经销商: ${recommendedMsg.userName}`;
+                            if (recommendedMsg.talkId) {
+                                sourceInfo += ` (ID: ${recommendedMsg.talkId})`;
                             }
-                        } catch (studentError) {
-                            console.error('查询userId失败:', studentError);
+                        } else {
+                            sourceInfo = '未知来源';
                         }
+                    } else {
+                        // 空数组
+                        sourceInfo = '未知来源';
                     }
-                    
-                    // 发送第三次查询请求
+                } else {
+                    // resultData不是数组，使用原有格式
+                    const recommendedMsg = recommendedData.resultData;
+                    if (recommendedMsg.userName) {
+                        sourceInfo = `经销商: ${recommendedMsg.userName}`;
+                        if (recommendedMsg.talkId) {
+                            sourceInfo += ` (ID: ${recommendedMsg.talkId})`;
+                        }
+                    } else {
+                        sourceInfo = '未知来源';
+                    }
+                }
+                return sourceInfo;
+            }
+
+            const total = uniqueValues.length;
+            let completed = 0;
+            let nextIndex = 0;
+            let lastRefreshTime = 0;
+
+            // 节流更新进度（最多约3次/秒）；默认只更新文字不重绘表格
+            const refreshProgress = (force) => {
+                const now = Date.now();
+                if (!force && now - lastRefreshTime < 300) return;
+                lastRefreshTime = now;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
+                let text = `正在查询 ${completed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}`;
+                if (duplicateCount > 0) text += `，已去重 ${duplicateCount}`;
+                if (srcSubQueryFailures > 0) text += `，失败 ${srcSubQueryFailures}`;
+                if (srcQueryAbort) text += '，正在停止...';
+                progressText.textContent = text;
+                if (liveRefresh) renderSourceTable();
+            };
+
+            // 工作池：固定N个worker持续领取下一个查询值（替代原来"逐条串行+每条500ms延时"）
+            async function worker() {
+                while (!srcQueryAbort) {
+                    const index = nextIndex;
+                    if (index >= total) return;
+                    nextIndex++;
+                    const queryValue = uniqueValues[index];
+                    const memberRows = groups.get(queryValue);
+                    let sourceInfo = '查询失败';
                     try {
+                        let targetId = queryValue;
+
+                        // 如果是11位数字，先查询userId
+                        if (/^\d{11}$/.test(queryValue)) {
+                            try {
+                                const studentPayload = {
+                                    "accountName": queryValue,
+                                    "user": "",
+                                    "date1": "",
+                                    "date2": "",
+                                    "majoy": "",
+                                    "accountType": "-1",
+                                    "isFreeClass": "0",
+                                    "isPay": "0",
+                                    "source": "-1",
+                                    "isStuCategory": "0",
+                                    "lid": "",
+                                    "cooperativeUser": 1,
+                                    "classesTool": "-1",
+                                    "accountStatus": "0",
+                                    "currPage": 0,
+                                    "pageSize": 10
+                                };
+
+                                const studentResponse = await fetch('https://www.talk915.com/users/studentManage/queryStudentManageList', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json, text/plain, */*',
+                                        'User-Agent': navigator.userAgent,
+                                        'Referer': 'https://www.talk915.com/admin/userManagement/student/stuManage',
+                                        'Origin': 'https://www.talk915.com',
+                                        'Sec-Fetch-Dest': 'empty',
+                                        'Sec-Fetch-Mode': 'cors',
+                                        'Sec-Fetch-Site': 'same-origin',
+                                        'token': token
+                                    },
+                                    body: JSON.stringify(studentPayload),
+                                    credentials: 'include'
+                                });
+
+                                const studentData = await studentResponse.json();
+
+                                if (studentData.resultCode === 0 && studentData.resultData && studentData.resultData.length > 0) {
+                                    targetId = studentData.resultData[0].userId.toString();
+                                }
+                            } catch (studentError) {
+                                // 查询userId失败时继续用原值查询
+                            }
+                        }
+
+                        // 发送来源查询请求
                         const recommendedResponse = await fetch(`https://www.talk915.com/users/studentManage/getRecommendedMsg/${targetId}`, {
                             method: 'GET',
                             headers: {
@@ -6977,102 +7421,58 @@ function exportRegisteredUsers() {
                             },
                             credentials: 'include'
                         });
-                        
+
                         // 检查响应状态
                         if (recommendedResponse.status === 403) {
                             // 无权限查询
-                            const tableRow = rows[i];
-                            const cells = tableRow.querySelectorAll('td');
-                            cells[cells.length - 1].textContent = '无权限查询';
-                            failedQueries++;
+                            sourceInfo = '无权限查询';
                         } else {
                             const recommendedData = await recommendedResponse.json();
-                            
-                            // 处理查询结果
-                            if (recommendedData.resultCode === 0 && recommendedData.resultData) {
-                                let sourceInfo = '-';
-                                
-                                // 检查resultData是否为数组
-                                if (Array.isArray(recommendedData.resultData)) {
-                                    const resultDataArray = recommendedData.resultData;
-                                    
-                                    // 如果有多个记录，按照要求格式拼接
-                                    if (resultDataArray.length > 1) {
-                                        const formattedRecords = resultDataArray.map(record => {
-                                            const userType = record.userType || '';
-                                            const talkId = record.talkId || '';
-                                            const userName = record.userName || '';
-                                            const userId = record.userId || '';
-                                            return `${userType}-${talkId}-${userName}-${userId}`;
-                                        }).join('；'); // 使用中文分号分隔
-                                        sourceInfo = formattedRecords;
-                                    } else if (resultDataArray.length === 1) {
-                                        // 只有一个记录，使用原有格式
-                                        const recommendedMsg = resultDataArray[0];
-                                        if (recommendedMsg.userName) {
-                                            sourceInfo = `经销商: ${recommendedMsg.userName}`;
-                                            if (recommendedMsg.talkId) {
-                                                sourceInfo += ` (ID: ${recommendedMsg.talkId})`;
-                                            }
-                                        } else {
-                                            sourceInfo = '未知来源';
-                                        }
-                                    } else {
-                                        // 空数组
-                                        sourceInfo = '未知来源';
-                                    }
-                                } else {
-                                    // resultData不是数组，使用原有格式
-                                    const recommendedMsg = recommendedData.resultData;
-                                    if (recommendedMsg.userName) {
-                                        sourceInfo = `经销商: ${recommendedMsg.userName}`;
-                                        if (recommendedMsg.talkId) {
-                                            sourceInfo += ` (ID: ${recommendedMsg.talkId})`;
-                                        }
-                                    } else {
-                                        sourceInfo = '未知来源';
-                                    }
-                                }
-                                
-                                // 更新表格行
-                                const tableRow = rows[i];
-                                const cells = tableRow.querySelectorAll('td');
-                                cells[cells.length - 1].textContent = sourceInfo;
-                                
-                                successfulQueries++;
-                            } else {
-                                const tableRow = rows[i];
-                                const cells = tableRow.querySelectorAll('td');
-                                cells[cells.length - 1].textContent = '查询失败';
-                                failedQueries++;
-                            }
+                            const formatted = formatSourceInfo(recommendedData);
+                            sourceInfo = formatted !== null ? formatted : '查询失败';
                         }
-                    } catch (recommendedError) {
-                        console.error('查询失败:', recommendedError);
-                        const tableRow = rows[i];
-                        const cells = tableRow.querySelectorAll('td');
-                        cells[cells.length - 1].textContent = '查询失败';
-                        failedQueries++;
+                    } catch (error) {
+                        sourceInfo = '查询失败';
                     }
-                } catch (error) {
-                    console.error('查询失败:', error);
-                    const tableRow = rows[i];
-                    const cells = tableRow.querySelectorAll('td');
-                    cells[cells.length - 1].textContent = '查询失败';
-                    failedQueries++;
+
+                    // 结果写回所有相同查询值的行
+                    const isFailed = (sourceInfo === '查询失败' || sourceInfo === '无权限查询');
+                    memberRows.forEach(rowIndex => {
+                        srcResults[rowIndex] = sourceInfo;
+                        if (isFailed) {
+                            failedQueries++;
+                        } else {
+                            successfulQueries++;
+                        }
+                    });
+                    if (isFailed) srcSubQueryFailures++;
+                    completed++;
+                    refreshProgress(false);
                 }
-                
-                // 更新查询状态
-                queryStatus.textContent = `正在查询数据，已完成 ${i + 1}/${totalQueries}...`;
-                
-                // 为了避免请求过快被服务器拒绝，添加延迟
-                await new Promise(resolve => setTimeout(resolve, 500));
             }
-            
-            // 显示查询完成状态
-            queryStatus.style.backgroundColor = '#d4edda';
-            queryStatus.style.color = '#155724';
-            queryStatus.textContent = `查询完成！总共 ${totalQueries} 条数据，成功 ${successfulQueries} 条，失败 ${failedQueries} 条。`;
+
+            try {
+                await Promise.all(Array.from({ length: Math.min(concurrency, total) }, () => worker()));
+
+                refreshProgress(true);
+                loadingIndicator.remove();
+
+                // 显示查询完成状态（手动停止时保留已完成的结果）
+                if (srcQueryAbort) {
+                    queryStatus.style.backgroundColor = '#fff3cd';
+                    queryStatus.style.color = '#856404';
+                    queryStatus.textContent = `查询已停止，已完成 ${completed}/${total}${srcSubQueryFailures > 0 ? `，失败 ${srcSubQueryFailures} 个` : ''}，已完成的结果已保留（可导出CSV）。`;
+                } else {
+                    queryStatus.style.backgroundColor = '#d4edda';
+                    queryStatus.style.color = '#155724';
+                    queryStatus.textContent = `查询完成！总共 ${totalQueries} 条数据，成功 ${successfulQueries} 条，失败 ${failedQueries + emptyCount} 条。`;
+                }
+                renderSourceTable();
+            } catch (error) {
+                loadingIndicator.remove();
+                console.error('批量查询错误:', error);
+                alert('查询失败，请重试');
+            }
         });
 
         // 导出CSV按钮点击事件
@@ -7083,36 +7483,24 @@ function exportRegisteredUsers() {
                 return;
             }
             
-            // 获取表格元素
-            const table = document.querySelector('#sourceTableContainer table');
-            if (!table) {
-                alert('请先导入数据并生成表格');
-                return;
-            }
-            
-            // 生成CSV内容
+            // 生成CSV内容（改为直接从数据数组导出，与分页渲染解耦，可导出全部数据而非仅当前页）
             let csvContent = '';
             
-            // 获取表头
-            const headers = table.querySelectorAll('thead th');
-            const headerRow = Array.from(headers).map(header => {
-                // 移除序号列的表头文本
-                return header.textContent === '序号' ? '' : header.textContent;
-            }).join(',');
+            // 表头（与原DOM导出格式一致：首列序号导出为空，末列为"用户来源"）
+            const headerRow = ['', ...sourceImportedData.headers, '用户来源'].join(',');
             csvContent += headerRow + '\n';
             
-            // 获取数据行
-            const tbody = table.querySelector('tbody');
-            const rows = tbody.querySelectorAll('tr');
-            
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const dataRow = Array.from(cells).map((cell, index) => {
+            // 数据行（从sourceImportedData.rows + srcResults数组读取）
+            sourceImportedData.rows.forEach((row, index) => {
+                const result = srcResults[index];
+                const sourceInfo = (result !== null && result !== undefined) ? result : '-';
+                const cells = ['', ...row, sourceInfo];
+                const dataRow = cells.map((cellText, cellIndex) => {
                     // 移除序号列的数据
-                    if (index === 0) return '';
+                    if (cellIndex === 0) return '';
                     // 处理包含逗号的单元格
-                    const cellText = cell.textContent.trim();
-                    return cellText.includes(',') ? `"${cellText}"` : cellText;
+                    const text = String(cellText == null ? '' : cellText).trim();
+                    return text.includes(',') ? `"${text}"` : text;
                 }).join(',');
                 csvContent += dataRow + '\n';
             });
@@ -7377,6 +7765,9 @@ function exportRegisteredUsers() {
         let loginLogUserIdColumnIndex = -1; // 默认不自动设置员工ID列
         let loginLogDelimiter = ','; // 默认分隔符
         let loginLogDb = null; // IndexedDB数据库实例
+        // 批量查询控制状态（并发池/停止标记/失败计数）
+        let llQueryAbort = false;
+        let llQueryFailures = 0;
 
         // 初始化登录日志查询功能
         function initLoginLogQuery() {
@@ -7461,7 +7852,7 @@ function exportRegisteredUsers() {
                 }
             });
             
-            // 绑定手动查询按钮事件
+            // 绑定手动查询按钮事件（并发工作池 + ID去重 + 进度条/停止按钮，替代原串行for循环+500ms延时）
             document.getElementById('loginLogManualQueryBtn').addEventListener('click', async function() {
                 const loginLogManualIdInput = document.getElementById('loginLogManualIdInput');
                 const loginLogQueryStatusMessage = document.getElementById('loginLogQueryStatusMessage');
@@ -7484,75 +7875,118 @@ function exportRegisteredUsers() {
                 // 显示加载状态
                 loginLogManualQueryBtn.disabled = true;
                 loginLogManualQueryBtn.textContent = '查询中...';
-                loginLogQueryStatusMessage.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">正在查询数据，请稍候...</div>';
                 
-                // 解析输入的ID列表
-                const ids = inputIds.split(',').map(id => id.trim()).filter(id => id);
+                // 解析输入的ID列表并去重：重复ID只查询一次
+                const allIds = inputIds.split(',').map(id => id.trim()).filter(id => id);
+                const uniqueIds = [...new Set(allIds)];
+                const duplicateCount = allIds.length - uniqueIds.length;
                 
-                // 统计信息
-                let totalQueries = ids.length;
+                const concurrency = parseInt(document.getElementById('llConcurrency').value) || 10;
+                // 实时刷新开关：默认关闭（查询过程中只更新进度文字，不重绘表格）
+                const liveRefresh = document.getElementById('llLiveRefresh').checked;
+                
+                llQueryAbort = false;
+                llQueryFailures = 0;
+                
+                // 结果占位数组（与uniqueIds一一对应，worker按索引填充；停止时保留已完成结果）
+                const manualResults = uniqueIds.map(id => ({
+                    userId: id,
+                    originalData: [id],
+                    totalCount: 0,
+                    loginTime: '查询中...',
+                    ipAddresses: [],
+                    loginDetails: []
+                }));
+                
+                // 进度条
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.id = 'llManualLoadingIndicator';
+                loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+                loadingIndicator.innerHTML = '<span id="llManualProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="llManualStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+                loginLogQueryStatusMessage.innerHTML = '';
+                loginLogQueryStatusMessage.appendChild(loadingIndicator);
+                const progressText = document.getElementById('llManualProgressText');
+                document.getElementById('llManualStopBtn').addEventListener('click', function() {
+                    llQueryAbort = true;
+                    this.disabled = true;
+                    this.textContent = '正在停止...';
+                });
+                
+                // 获取开始和结束日期
+                const startDate = document.getElementById('loginLogStartDate').value;
+                const endDate = document.getElementById('loginLogEndDate').value;
+                
+                const total = uniqueIds.length;
+                let completed = 0;
                 let successfulQueries = 0;
-                let failedQueries = 0;
+                let nextIndex = 0;
+                let lastRefreshTime = 0;
                 
-                // 存储查询结果
-                const manualResults = [];
+                // 节流更新进度（最多约3次/秒）；勾选实时刷新时用占位结果渲染表格
+                const refreshProgress = (force) => {
+                    const now = Date.now();
+                    if (!force && now - lastRefreshTime < 300) return;
+                    lastRefreshTime = now;
+                    const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
+                    let text = `正在查询 ${completed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}`;
+                    if (duplicateCount > 0) text += `，已去重 ${duplicateCount}`;
+                    if (llQueryFailures > 0) text += `，失败 ${llQueryFailures}`;
+                    if (llQueryAbort) text += '，正在停止...';
+                    progressText.textContent = text;
+                    if (liveRefresh) {
+                        loginLogEmployees = manualResults;
+                        loginLogHeaders = ['用户ID'];
+                        updateLoginLogEmployeeTable();
+                    }
+                };
                 
-                // 遍历ID进行查询
-                for (let i = 0; i < ids.length; i++) {
-                    const userId = ids[i];
-                    
-                    try {
-                        // 获取开始和结束日期
-                        const startDate = document.getElementById('loginLogStartDate').value;
-                        const endDate = document.getElementById('loginLogEndDate').value;
-                        
-                        // 构建查询请求
-                        const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json, text/plain, */*',
-                                'User-Agent': navigator.userAgent,
-                                'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
-                                'Origin': 'https://www.talk915.com',
-                                'token': token
-                            },
-                            body: JSON.stringify({
-                                "userTalkId": "",
-                                "operaStartTime": startDate,
-                                "operaEndTime": endDate,
-                                "userNo": userId,
-                                "currPage": 0,
-                                "pageSize": 10
-                            }),
-                            credentials: 'include'
-                        });
-                        
-                        // 检查响应状态
-                        if (response.status === 403) {
-                            // 无权限查询
-                            manualResults.push({
-                                userId: userId,
-                                originalData: [userId],
-                                totalCount: 0,
-                                loginTime: '无权限查询',
-                                ipAddresses: [],
-                                loginDetails: []
+                // 工作池：固定N个worker持续领取下一个ID（替代原逐条串行+500ms延时）
+                async function worker() {
+                    while (!llQueryAbort) {
+                        const index = nextIndex;
+                        if (index >= total) return;
+                        nextIndex++;
+                        const userId = uniqueIds[index];
+                        const result = manualResults[index];
+                        try {
+                            // 构建查询请求
+                            const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json, text/plain, */*',
+                                    'User-Agent': navigator.userAgent,
+                                    'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
+                                    'Origin': 'https://www.talk915.com',
+                                    'token': token
+                                },
+                                body: JSON.stringify({
+                                    "userTalkId": "",
+                                    "operaStartTime": startDate,
+                                    "operaEndTime": endDate,
+                                    "userNo": userId,
+                                    "currPage": 0,
+                                    "pageSize": 10
+                                }),
+                                credentials: 'include'
                             });
-                            failedQueries++;
-                        } else {
-                            const data = await response.json();
                             
-                            // 处理查询结果
-                            if (data.totalCount > 0 && data.resultData && data.resultData.length > 0) {
-                                const loginCount = data.totalCount;
-                                let lastLoginTime = '无登录记录';
-                                const ipSet = new Set();
-                                const loginDetails = [];
+                            // 检查响应状态
+                            if (response.status === 403) {
+                                // 无权限查询
+                                result.loginTime = '无权限查询';
+                                llQueryFailures++;
+                            } else {
+                                const data = await response.json();
                                 
-                                // 提取登录信息
-                                if (data.resultData.length > 0) {
-                                    // 按登录时间排序，获取最近登录时间
+                                // 处理查询结果
+                                if (data.totalCount > 0 && data.resultData && data.resultData.length > 0) {
+                                    const loginCount = data.totalCount;
+                                    let lastLoginTime = '无登录记录';
+                                    const ipSet = new Set();
+                                    const loginDetails = [];
+                                    
+                                    // 提取登录信息（按登录时间排序，获取最近登录时间）
                                     data.resultData.sort((a, b) => new Date(b.operaTime) - new Date(a.operaTime));
                                     lastLoginTime = data.resultData[0].operaTime;
                                     
@@ -7569,110 +8003,106 @@ function exportRegisteredUsers() {
                                             ip: log.ip || ''
                                         });
                                     });
-                                }
-                                
-                                // 如果totalCount大于10，需要再次查询获取所有记录
-                                if (data.totalCount > 10) {
-                                    try {
-                                        const fullResponse = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'Accept': 'application/json, text/plain, */*',
-                                                'User-Agent': navigator.userAgent,
-                                                'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
-                                                'Origin': 'https://www.talk915.com',
-                                                'token': token
-                                            },
-                                            body: JSON.stringify({
-                                                "userTalkId": "",
-                                                "operaStartTime": startDate,
-                                                "operaEndTime": endDate,
-                                                "userNo": userId,
-                                                "currPage": 0,
-                                                "pageSize": data.totalCount
-                                            }),
-                                            credentials: 'include'
-                                        });
-                                        
-                                        if (fullResponse.ok) {
-                                            const fullData = await fullResponse.json();
-                                            if (fullData.resultData && fullData.resultData.length > 0) {
-                                                // 按登录时间排序，获取最近登录时间
-                                                fullData.resultData.sort((a, b) => new Date(b.operaTime) - new Date(a.operaTime));
-                                                lastLoginTime = fullData.resultData[0].operaTime;
-                                                
-                                                // 收集所有登录IP和详细信息
-                                                fullData.resultData.forEach(log => {
-                                                    if (log.ip) {
-                                                        ipSet.add(log.ip);
-                                                    }
-                                                    loginDetails.push({
-                                                        userName: '',
-                                                        userNo: userId,
-                                                        talkId: log.talkId || '',
-                                                        operaTime: log.operaTime || '',
-                                                        ip: log.ip || ''
+                                    
+                                    // 如果totalCount大于10，需要再次查询获取所有记录
+                                    if (data.totalCount > 10) {
+                                        try {
+                                            const fullResponse = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Accept': 'application/json, text/plain, */*',
+                                                    'User-Agent': navigator.userAgent,
+                                                    'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
+                                                    'Origin': 'https://www.talk915.com',
+                                                    'token': token
+                                                },
+                                                body: JSON.stringify({
+                                                    "userTalkId": "",
+                                                    "operaStartTime": startDate,
+                                                    "operaEndTime": endDate,
+                                                    "userNo": userId,
+                                                    "currPage": 0,
+                                                    "pageSize": data.totalCount
+                                                }),
+                                                credentials: 'include'
+                                            });
+                                            
+                                            if (fullResponse.ok) {
+                                                const fullData = await fullResponse.json();
+                                                if (fullData.resultData && fullData.resultData.length > 0) {
+                                                    // 按登录时间排序，获取最近登录时间
+                                                    fullData.resultData.sort((a, b) => new Date(b.operaTime) - new Date(a.operaTime));
+                                                    lastLoginTime = fullData.resultData[0].operaTime;
+                                                    
+                                                    // 收集所有登录IP和详细信息
+                                                    fullData.resultData.forEach(log => {
+                                                        if (log.ip) {
+                                                            ipSet.add(log.ip);
+                                                        }
+                                                        loginDetails.push({
+                                                            userName: '',
+                                                            userNo: userId,
+                                                            talkId: log.talkId || '',
+                                                            operaTime: log.operaTime || '',
+                                                            ip: log.ip || ''
+                                                        });
                                                     });
-                                                });
+                                                }
                                             }
+                                        } catch (fullError) {
+                                            // 获取完整登录记录失败时保留首页记录
                                         }
-                                    } catch (fullError) {
-                                        console.error('获取完整登录记录失败:', fullError);
                                     }
+                                    
+                                    // 填充结果
+                                    result.totalCount = loginCount;
+                                    result.loginTime = lastLoginTime;
+                                    result.ipAddresses = Array.from(ipSet);
+                                    result.loginDetails = loginDetails;
+                                    
+                                    successfulQueries++;
+                                } else {
+                                    result.loginTime = '无登录记录';
+                                    successfulQueries++;
                                 }
-                                
-                                // 保存结果
-                                manualResults.push({
-                                    userId: userId,
-                                    originalData: [userId],
-                                    totalCount: loginCount,
-                                    loginTime: lastLoginTime,
-                                    ipAddresses: Array.from(ipSet),
-                                    loginDetails: loginDetails
-                                });
-                                
-                                successfulQueries++;
-                            } else {
-                                manualResults.push({
-                                    userId: userId,
-                                    originalData: [userId],
-                                    totalCount: 0,
-                                    loginTime: '无登录记录',
-                                    ipAddresses: [],
-                                    loginDetails: []
-                                });
-                                successfulQueries++;
                             }
+                        } catch (error) {
+                            result.loginTime = '查询失败';
+                            llQueryFailures++;
                         }
-                        
-                        // 为了避免请求过快被服务器拒绝，添加延迟
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    } catch (error) {
-                        console.error('查询失败:', error);
-                        manualResults.push({
-                            userId: userId,
-                            originalData: [userId],
-                            totalCount: 0,
-                            loginTime: '查询失败',
-                            ipAddresses: [],
-                            loginDetails: []
-                        });
-                        failedQueries++;
+                        completed++;
+                        refreshProgress(false);
                     }
                 }
                 
-                // 更新全局变量，使用手动查询结果
-                loginLogEmployees = manualResults;
-                loginLogHeaders = ['用户ID'];
-                
-                // 更新表格
-                updateLoginLogEmployeeTable();
-                
-                // 显示查询结果
-                loginLogManualQueryBtn.disabled = false;
-                loginLogManualQueryBtn.textContent = '手动查询';
-                loginLogQueryStatusMessage.innerHTML = `<div class="success-message">查询完成！总共 ${totalQueries} 条数据，成功 ${successfulQueries} 条，失败 ${failedQueries} 条。</div>`;
+                try {
+                    await Promise.all(Array.from({ length: Math.min(concurrency, total) }, () => worker()));
+                    
+                    refreshProgress(true);
+                    loadingIndicator.remove();
+                    
+                    // 更新全局变量，使用手动查询结果（停止时保留已完成的结果）
+                    loginLogEmployees = manualResults;
+                    loginLogHeaders = ['用户ID'];
+                    
+                    // 更新表格
+                    updateLoginLogEmployeeTable();
+                    
+                    // 显示查询结果
+                    if (llQueryAbort) {
+                        loginLogQueryStatusMessage.innerHTML = `<div class="success-message">查询已停止，已完成 ${completed}/${total}${llQueryFailures > 0 ? `，失败 ${llQueryFailures} 条` : ''}，已完成的结果已保留。</div>`;
+                    } else {
+                        loginLogQueryStatusMessage.innerHTML = `<div class="success-message">查询完成！总共 ${total} 条数据，成功 ${successfulQueries} 条，失败 ${llQueryFailures} 条。</div>`;
+                    }
+                } catch (error) {
+                    console.error('手动查询错误:', error);
+                    loginLogQueryStatusMessage.innerHTML = `<div class="error-message">查询失败: ${error.message}</div>`;
+                } finally {
+                    // 恢复按钮状态
+                    loginLogManualQueryBtn.disabled = false;
+                    loginLogManualQueryBtn.textContent = '手动查询';
+                }
             });
         }
         
@@ -8065,12 +8495,19 @@ function exportRegisteredUsers() {
             });
         }
         
-        // 更新员工表格
+        // 登录日志员工表当前页码
+        let llCurrentPage = 1;
+
+        // 获取每页条数
+        function getLoginLogPageSize() {
+            const sel = document.getElementById('llPageSizeSelect');
+            return parseInt(sel && sel.value) || 200;
+        }
+
+        // 更新员工表格（改为分页渲染：只重建当前页的行，一次性innerHTML替换，替代原全量逐行appendChild）
         function updateLoginLogEmployeeTable() {
             const tableBody = document.getElementById('loginLogEmployeeTableBody');
             if (!tableBody) return;
-            
-            tableBody.innerHTML = '';
             
             // 更新表头
             const tableHead = document.querySelector('#loginLogTab table thead tr');
@@ -8094,12 +8531,30 @@ function exportRegisteredUsers() {
                 });
             }
             
-            // 添加员工数据行
-            loginLogEmployees.forEach((employee, index) => {
-                const row = document.createElement('tr');
+            const totalRows = loginLogEmployees.length;
+            
+            // 无数据时清空表格并移除分页控件
+            if (totalRows === 0) {
+                tableBody.innerHTML = '';
+                const oldPager = document.getElementById('llEmployeePager');
+                if (oldPager) oldPager.remove();
+                return;
+            }
+            
+            const pageSize = getLoginLogPageSize();
+            const totalPages = Math.ceil(totalRows / pageSize);
+            if (llCurrentPage > totalPages) llCurrentPage = totalPages;
+            if (llCurrentPage < 1) llCurrentPage = 1;
+            const start = (llCurrentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalRows);
+            
+            // 只拼接当前页的行（onclick使用全局索引，保证跨页后单个查询仍指向正确员工）
+            const htmlParts = [];
+            for (let i = start; i < end; i++) {
+                const employee = loginLogEmployees[i];
                 
                 // 序号列
-                let rowHtml = `<td style="padding: 10px; border: 1px solid #ddd;">${index + 1}</td>`;
+                let rowHtml = `<td style="padding: 10px; border: 1px solid #ddd;">${i + 1}</td>`;
                 
                 // 添加动态列数据
                 employee.originalData.forEach(value => {
@@ -8112,12 +8567,52 @@ function exportRegisteredUsers() {
                     <td style="padding: 10px; border: 1px solid #ddd;">${employee.totalCount || 0}</td>
                     <td style="padding: 10px; border: 1px solid #ddd;">${employee.loginTime || ''}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; min-width: 200px; max-width: 300px; word-wrap: break-word;">${ipAddresses}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;"><button style="padding: 6px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="checkSingleLoginLogEmployee(${index})">查询</button></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><button style="width:auto;padding: 6px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="checkSingleLoginLogEmployee(${i})">查询</button></td>
                 `;
                 
-                row.innerHTML = rowHtml;
-                tableBody.appendChild(row);
-            });
+                htmlParts.push('<tr>' + rowHtml + '</tr>');
+            }
+            tableBody.innerHTML = htmlParts.join('');
+            
+            // 分页控件（data-ll-page / data-ll-jump 事件委托，复用全局.urp样式类）
+            const table = tableBody.closest('table');
+            let pager = document.getElementById('llEmployeePager');
+            if (!pager) {
+                pager = document.createElement('div');
+                pager.id = 'llEmployeePager';
+                pager.className = 'urp-pager';
+                table.parentNode.insertBefore(pager, table.nextSibling);
+                // 分页控件事件（事件委托，只绑定一次）
+                pager.addEventListener('click', function(e) {
+                    const jumpBtn = e.target.closest('[data-ll-jump-btn]');
+                    if (jumpBtn) {
+                        const input = this.querySelector('[data-ll-jump]');
+                        const page = parseInt(input && input.value);
+                        if (!isNaN(page)) goToLoginLogPage(page);
+                        return;
+                    }
+                    const pageBtn = e.target.closest('button[data-ll-page]');
+                    if (pageBtn && !pageBtn.disabled) {
+                        goToLoginLogPage(parseInt(pageBtn.dataset.llPage));
+                    }
+                });
+            }
+            pager.innerHTML = `
+                <span>共 ${totalRows} 条</span>
+                <button data-ll-page="1" ${llCurrentPage === 1 ? 'disabled' : ''}>首页</button>
+                <button data-ll-page="${llCurrentPage - 1}" ${llCurrentPage === 1 ? 'disabled' : ''}>上一页</button>
+                <span class="urp-pager-info">第 ${llCurrentPage} / ${totalPages} 页（每页 ${pageSize} 条）</span>
+                <button data-ll-page="${llCurrentPage + 1}" ${llCurrentPage >= totalPages ? 'disabled' : ''}>下一页</button>
+                <button data-ll-page="${totalPages}" ${llCurrentPage >= totalPages ? 'disabled' : ''}>末页</button>
+                <input type="number" min="1" max="${totalPages}" data-ll-jump><button data-ll-jump-btn>跳转</button>
+            `;
+        }
+        
+        // 跳转到指定页
+        function goToLoginLogPage(page) {
+            const totalPages = Math.max(1, Math.ceil(loginLogEmployees.length / getLoginLogPageSize()));
+            llCurrentPage = Math.min(Math.max(1, page), totalPages);
+            updateLoginLogEmployeeTable();
         }
         
         // 单个员工查询
@@ -8272,7 +8767,7 @@ function exportRegisteredUsers() {
             }
         };
         
-        // 批量查询登录日志
+        // 批量查询登录日志（并发工作池 + 进度条 + 停止按钮 + 失败计数聚合，替代原串行for循环）
         async function loginLogBatchQuery() {
             const queryBtn = document.getElementById('loginLogQueryBtn');
             const queryStatusMessage = document.getElementById('loginLogQueryStatusMessage');
@@ -8310,152 +8805,239 @@ function exportRegisteredUsers() {
                     return;
                 }
                 
-                // 逐个查询员工登录日志
-                let successCount = 0;
-                let errorCount = 0;
+                // ID去重：同一userId只请求一次，结果同步回写到所有相同userId的员工对象
+                const groups = new Map();
+                loginLogEmployees.forEach((employee, idx) => {
+                    const uid = employee.userId;
+                    if (!uid) return;
+                    if (!groups.has(uid)) groups.set(uid, []);
+                    groups.get(uid).push(idx);
+                });
+                const uniqueIds = [...groups.keys()];
+                const duplicateCount = loginLogEmployees.length - uniqueIds.length;
                 
-                for (let i = 0; i < loginLogEmployees.length; i++) {
-                    const employee = loginLogEmployees[i];
+                const concurrency = parseInt(document.getElementById('llConcurrency').value) || 10;
+                // 实时刷新开关：默认关闭（查询过程中只更新进度文字，不重绘表格）
+                const liveRefresh = document.getElementById('llLiveRefresh').checked;
+                
+                llQueryAbort = false;
+                llQueryFailures = 0;
+                
+                // 顶部进度条
+                const oldIndicator = document.getElementById('llLoadingIndicator');
+                if (oldIndicator) oldIndicator.remove();
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.id = 'llLoadingIndicator';
+                loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+                loadingIndicator.innerHTML = '<span id="llProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="llStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+                queryStatusMessage.innerHTML = '';
+                queryStatusMessage.appendChild(loadingIndicator);
+                const progressText = document.getElementById('llProgressText');
+                document.getElementById('llStopBtn').addEventListener('click', function() {
+                    llQueryAbort = true;
+                    this.disabled = true;
+                    this.textContent = '正在停止...';
+                });
+                
+                const total = uniqueIds.length;
+                let completed = 0;
+                let nextIndex = 0;
+                let lastRefreshTime = 0;
+                let activeUserCount = 0;
+                
+                // 节流更新进度（最多约3次/秒）
+                const refreshProgress = (force) => {
+                    const now = Date.now();
+                    if (!force && now - lastRefreshTime < 300) return;
+                    lastRefreshTime = now;
+                    const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
+                    let text = `正在查询 ${completed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}`;
+                    if (duplicateCount > 0) text += `，已去重 ${duplicateCount}`;
+                    if (llQueryFailures > 0) text += `，失败 ${llQueryFailures}`;
+                    if (llQueryAbort) text += '，正在停止...';
+                    progressText.textContent = text;
+                    if (liveRefresh) updateLoginLogEmployeeTable();
+                };
+                
+                // 处理单个员工查询结果（提取自原串行循环体，保持原逻辑：totalCount>10时二次全量请求）
+                async function processEmployee(employee) {
+                    const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/plain, */*',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
+                            'Origin': 'https://www.talk915.com',
+                            'token': token
+                        },
+                        body: JSON.stringify({
+                            "userTalkId": "",
+                            "operaStartTime": startDate,
+                            "operaEndTime": endDate,
+                            "userNo": employee.userId,
+                            "currPage": 0,
+                            "pageSize": 10
+                        }),
+                        credentials: 'include'
+                    });
                     
-                    // 更新进度信息
-                    queryStatusMessage.innerHTML = `<div class="success-message">正在查询 ${i + 1}/${loginLogEmployees.length}：${employee.name}</div>`;
+                    if (!response.ok) {
+                        // 失败：保留对象结构，标记失败
+                        employee.totalCount = 0;
+                        employee.loginTime = '';
+                        employee.ipAddresses = [];
+                        employee.loginDetails = [];
+                        return false;
+                    }
                     
-                    try {
-                        const response = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json, text/plain, */*',
-                                'User-Agent': navigator.userAgent,
-                                'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
-                                'Origin': 'https://www.talk915.com',
-                                'token': token
-                            },
-                            body: JSON.stringify({
-                                "userTalkId": "",
-                                "operaStartTime": startDate,
-                                "operaEndTime": endDate,
-                                "userNo": employee.userId,
-                                "currPage": 0,
-                                "pageSize": 10
-                            }),
-                            credentials: 'include'
-                        });
+                    const data = await response.json();
+                    let loginTime = '';
+                    let ipAddresses = [];
+                    
+                    if (data.totalCount > 0 && data.resultData && data.resultData.length > 0) {
+                        // 获取最近一条记录的登录时间
+                        loginTime = data.resultData[0].operaTime;
                         
-                        if (response.ok) {
-                            const data = await response.json();
-                            let loginTime = '';
-                            let ipAddresses = [];
-                            
-                            if (data.totalCount > 0 && data.resultData && data.resultData.length > 0) {
-                                // 获取最近一条记录的登录时间
-                                loginTime = data.resultData[0].operaTime;
+                        // 提取IP地址并去重
+                        const ips = data.resultData.map(item => item.ip || '').filter(ip => ip);
+                        ipAddresses = [...new Set(ips)];
+                        
+                        // 存储详细的登录记录
+                        let loginDetails = data.resultData.map(item => ({
+                            userName: employee.name || '',
+                            userNo: employee.userId || '',
+                            talkId: item.talkId || '',
+                            operaTime: item.operaTime || '',
+                            ip: item.ip || ''
+                        }));
+                        
+                        // 如果totalCount大于10，需要再次查询获取所有记录
+                        if (data.totalCount > 10) {
+                            try {
+                                const fullResponse = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json, text/plain, */*',
+                                        'User-Agent': navigator.userAgent,
+                                        'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
+                                        'Origin': 'https://www.talk915.com',
+                                        'token': token
+                                    },
+                                    body: JSON.stringify({
+                                        "userTalkId": "",
+                                        "operaStartTime": startDate,
+                                        "operaEndTime": endDate,
+                                        "userNo": employee.userId,
+                                        "currPage": 0,
+                                        "pageSize": data.totalCount
+                                    }),
+                                    credentials: 'include'
+                                });
                                 
-                                // 提取IP地址并去重
-                                const ips = data.resultData.map(item => item.ip || '').filter(ip => ip);
-                                ipAddresses = [...new Set(ips)];
-                                
-                                // 存储详细的登录记录
-                                let loginDetails = data.resultData.map(item => ({
-                                    userName: employee.name || '',
-                                    userNo: employee.userId || '',
-                                    talkId: item.talkId || '',
-                                    operaTime: item.operaTime || '',
-                                    ip: item.ip || ''
-                                }));
-                                
-                                // 如果totalCount大于10，需要再次查询获取所有记录
-                                if (data.totalCount > 10) {
-                                    try {
-                                        const fullResponse = await fetch('https://www.talk915.com/record/adminOperationLog/queryLoginLogList', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'Accept': 'application/json, text/plain, */*',
-                                                'User-Agent': navigator.userAgent,
-                                                'Referer': 'https://www.talk915.com/admin/operationRecord/log/loginLog',
-                                                'Origin': 'https://www.talk915.com',
-                                                'token': token
-                                            },
-                                            body: JSON.stringify({
-                                                "userTalkId": "",
-                                                "operaStartTime": startDate,
-                                                "operaEndTime": endDate,
-                                                "userNo": employee.userId,
-                                                "currPage": 0,
-                                                "pageSize": data.totalCount
-                                            }),
-                                            credentials: 'include'
-                                        });
+                                if (fullResponse.ok) {
+                                    const fullData = await fullResponse.json();
+                                    if (fullData.resultData && fullData.resultData.length > 0) {
+                                        // 重新提取所有IP地址并去重
+                                        const fullIps = fullData.resultData.map(item => item.ip || '').filter(ip => ip);
+                                        ipAddresses = [...new Set(fullIps)];
                                         
-                                        if (fullResponse.ok) {
-                                            const fullData = await fullResponse.json();
-                                            if (fullData.resultData && fullData.resultData.length > 0) {
-                                                // 重新提取所有IP地址并去重
-                                                const fullIps = fullData.resultData.map(item => item.ip || '').filter(ip => ip);
-                                                ipAddresses = [...new Set(fullIps)];
-                                                
-                                                // 存储完整的详细登录记录
-                                                loginDetails = fullData.resultData.map(item => ({
-                                                    userName: employee.name || '',
-                                                    userNo: employee.userId || '',
-                                                    talkId: item.talkId || '',
-                                                    operaTime: item.operaTime || '',
-                                                    ip: item.ip || ''
-                                                }));
-                                            }
-                                        }
-                                    } catch (fullError) {
-                                        console.error(`获取${employee.name}完整记录错误:`, fullError);
+                                        // 存储完整的详细登录记录
+                                        loginDetails = fullData.resultData.map(item => ({
+                                            userName: employee.name || '',
+                                            userNo: employee.userId || '',
+                                            talkId: item.talkId || '',
+                                            operaTime: item.operaTime || '',
+                                            ip: item.ip || ''
+                                        }));
                                     }
                                 }
-                                
-                                // 更新员工的详细登录记录
-                                employee.loginDetails = loginDetails;
-                            } else {
-                                // 如果没有登录记录，清空详细登录记录
-                                employee.loginDetails = [];
+                            } catch (fullError) {
+                                // 二次全量请求失败时保留首次10条结果
                             }
-                            
-                            // 更新员工数据
-                            employee.totalCount = data.totalCount;
-                            employee.loginTime = loginTime;
-                            employee.ipAddresses = ipAddresses;
-                            
-                            successCount++;
-                        } else {
-                            errorCount++;
                         }
-                    } catch (error) {
-                        console.error(`查询${employee.name}错误:`, error);
-                        errorCount++;
+                        
+                        // 更新员工的详细登录记录
+                        employee.loginDetails = loginDetails;
+                    } else {
+                        // 如果没有登录记录，清空详细登录记录
+                        employee.loginDetails = [];
+                    }
+                    
+                    // 更新员工数据
+                    employee.totalCount = data.totalCount;
+                    employee.loginTime = loginTime;
+                    employee.ipAddresses = ipAddresses;
+                    return true;
+                }
+                
+                // 工作池：固定N个worker持续领取下一个userId
+                async function worker() {
+                    while (!llQueryAbort) {
+                        const index = nextIndex;
+                        if (index >= total) return;
+                        nextIndex++;
+                        const uid = uniqueIds[index];
+                        const memberIndexes = groups.get(uid);
+                        // 以第一个员工作为请求对象，请求成功后把字段同步给所有相同userId的员工
+                        const firstEmployee = loginLogEmployees[memberIndexes[0]];
+                        try {
+                            const ok = await processEmployee(firstEmployee);
+                            if (ok) {
+                                // 把结果字段同步给所有相同userId的员工
+                                const { totalCount, loginTime, ipAddresses, loginDetails } = firstEmployee;
+                                memberIndexes.forEach(idx => {
+                                    const emp = loginLogEmployees[idx];
+                                    emp.totalCount = totalCount;
+                                    emp.loginTime = loginTime;
+                                    emp.ipAddresses = ipAddresses;
+                                    emp.loginDetails = loginDetails;
+                                    if (totalCount > 0) activeUserCount++;
+                                });
+                            } else {
+                                llQueryFailures++;
+                                const { totalCount, loginTime, ipAddresses, loginDetails } = firstEmployee;
+                                memberIndexes.forEach(idx => {
+                                    const emp = loginLogEmployees[idx];
+                                    emp.totalCount = totalCount;
+                                    emp.loginTime = loginTime;
+                                    emp.ipAddresses = ipAddresses;
+                                    emp.loginDetails = loginDetails;
+                                });
+                            }
+                        } catch (error) {
+                            llQueryFailures++;
+                        }
+                        completed++;
+                        refreshProgress(false);
                     }
                 }
                 
+                await Promise.all(Array.from({ length: Math.min(concurrency, total) }, () => worker()));
+                
+                refreshProgress(true);
+                loadingIndicator.remove();
+                
                 // 保存更新后的员工数据
                 try {
-                    // 保存数据到IndexedDB
                     const saved = await saveLoginLogDataToIndexedDB();
-                    
                     if (!saved) {
-                        // 存储失败时，显示警告信息
-                        document.getElementById('loginLogQueryStatusMessage').innerHTML = '<div class="error-message">数据存储失败，可能是因为数据量过大。功能仍可正常使用，但刷新页面后数据会丢失。</div>';
+                        queryStatusMessage.innerHTML = '<div class="error-message">数据存储失败，可能是因为数据量过大。功能仍可正常使用，但刷新页面后数据会丢失。</div>';
                     }
                 } catch (e) {
                     console.error('数据存储失败:', e);
-                    // 存储失败时，仍然更新表格
-                    // 显示警告信息
-                    document.getElementById('loginLogQueryStatusMessage').innerHTML = '<div class="error-message">数据存储失败，可能是因为数据量过大。功能仍可正常使用，但刷新页面后数据会丢失。</div>';
                 }
                 
                 // 更新表格
                 updateLoginLogEmployeeTable();
                 
-                // 统计活跃用户数（有登录记录的用户）
-                const activeUserCount = loginLogEmployees.filter(emp => emp.totalCount > 0).length;
-                
                 // 显示查询结果
-                queryStatusMessage.innerHTML = `<div class="success-message">查询完成：成功 ${successCount} 个，失败 ${errorCount} 个，活跃用户 ${activeUserCount} 个</div>`;
+                if (llQueryAbort) {
+                    queryStatusMessage.innerHTML = `<div class="error-message">查询已停止，已完成 ${completed}/${total}${llQueryFailures > 0 ? `，失败 ${llQueryFailures} 个` : ''}，已完成的结果已保留。</div>`;
+                } else {
+                    queryStatusMessage.innerHTML = `<div class="success-message">查询完成：成功 ${total - llQueryFailures} 个，失败 ${llQueryFailures} 个，活跃用户 ${activeUserCount} 个</div>`;
+                }
             } catch (error) {
                 console.error('批量查询错误:', error);
                 queryStatusMessage.innerHTML = `<div class="error-message">批量查询失败: ${error.message}</div>`;
@@ -10606,41 +11188,114 @@ function exportRegisteredUsers() {
             displayImportedTable(data);
         }
         
+        // 分页渲染状态（数据量大时只渲染当前页，避免一次性创建数万DOM节点导致内存占用过高）
+        function getUserRegPackagePageSize() {
+            return parseInt(document.getElementById('userRegPackagePageSizeSelect').value) || 200;
+        }
+        let userRegPackageCurrentPage = 1;
+
         // 显示导入的表格
         function displayImportedTable(data) {
             if (data.length === 0) {
                 return;
             }
-            
-            const headers = [...data[0], '注册日期', '套餐课时', '剩余课时', '套餐数量', '购买套餐', '用户来源', '跟进业务员', '跟进经销商', '最初推荐人'];
-            const rows = data.slice(1);
-            
-            let html = '<table class="table table-bordered table-striped" style="width: 100%; border-collapse: collapse;">';
-            html += '<thead><tr>';
-            headers.forEach(header => {
-                html += `<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">${header}</th>`;
-            });
-            html += '</tr></thead>';
-            html += '<tbody>';
-            
-            rows.forEach(row => {
-                html += '<tr>';
-                row.forEach(cell => {
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${cell}</td>`;
-                });
-                // 添加八列空数据
-                html += '<td style="padding: 6px; border: 1px solid #ddd;"></td><td style="padding: 6px; border: 1px solid #ddd;"></td><td style="padding: 6px; border: 1px solid #ddd;"></td><td style="padding: 6px; border: 1px solid #ddd;"></td>';
-                html += '<td style="padding: 6px; border: 1px solid #ddd;"></td><td style="padding: 6px; border: 1px solid #ddd;"></td><td style="padding: 6px; border: 1px solid #ddd;"></td><td style="padding: 6px; border: 1px solid #ddd;"></td>';
-                html += '</tr>';
-            });
-            
-            html += '</tbody></table>';
-            const tableContainer = document.getElementById('userRegPackageTableContainer');
-            tableContainer.style.overflow = 'auto';
-            tableContainer.style.width = '100%';
-            tableContainer.style.boxSizing = 'border-box';
-            tableContainer.innerHTML = html;
+            userRegPackageCurrentPage = 1;
+            renderUserRegPackageTable();
         }
+
+        // 分页渲染表格（导入数据 + 查询结果共用，查询过程中结果会实时填充）
+        function renderUserRegPackageTable() {
+            const tableContainer = document.getElementById('userRegPackageTableContainer');
+            const totalRows = Math.max(0, userRegPackageImportedData.length - 1);
+
+            if (totalRows === 0) {
+                tableContainer.innerHTML = '<div class="text-center" style="padding: 20px;">没有数据</div>';
+                return;
+            }
+
+            const pageSize = getUserRegPackagePageSize();
+            const totalPages = Math.ceil(totalRows / pageSize);
+            if (userRegPackageCurrentPage > totalPages) userRegPackageCurrentPage = totalPages;
+            if (userRegPackageCurrentPage < 1) userRegPackageCurrentPage = 1;
+
+            const start = (userRegPackageCurrentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalRows);
+            const idColumnIndex = parseInt(document.getElementById('userRegPackageColumnSelect').value) || 0;
+
+            // 结果映射（查询过程中可能只有部分结果）
+            const resultMap = new Map();
+            userRegPackageData.forEach(result => resultMap.set(result.id, result));
+
+            const htmlParts = [];
+            htmlParts.push('<table class="urp-table"><thead><tr>');
+            userRegPackageImportedData[0].forEach(header => {
+                htmlParts.push(`<th>${header || ''}</th>`);
+            });
+            htmlParts.push('<th>注册日期</th><th>套餐课时</th><th>剩余课时</th><th>套餐数量</th><th>购买套餐</th><th>用户来源</th><th>跟进业务员</th><th>跟进经销商</th><th>最初推荐人</th>');
+            htmlParts.push('</tr></thead><tbody>');
+
+            for (let i = start + 1; i <= end; i++) {
+                const row = userRegPackageImportedData[i];
+                const result = resultMap.get(row[idColumnIndex]);
+
+                htmlParts.push('<tr>');
+                row.forEach(cell => htmlParts.push(`<td>${cell}</td>`));
+                if (result) {
+                    htmlParts.push(`<td>${result.createTime}</td>`);
+                    htmlParts.push(`<td>${result.totalInitialPoint}</td>`);
+                    htmlParts.push(`<td>${result.balance}</td>`);
+                    htmlParts.push(`<td>${result.packageCount || 0}</td>`);
+                    htmlParts.push(`<td>${result.packageList.replace(/；/g, '；<br>')}</td>`);
+                    htmlParts.push(`<td>${result.channelName || ''}</td>`);
+                    htmlParts.push(`<td>${result.followSales || ''}</td>`);
+                    htmlParts.push(`<td>${result.followDealer || ''}</td>`);
+                    htmlParts.push(`<td>${result.referrerInfo || ''}</td>`);
+                } else {
+                    htmlParts.push('<td>未查询到</td><td>未查询到</td><td>未查询到</td><td>未查询到</td><td>未查询到</td><td>未查询到</td><td>未查询到</td><td>未查询到</td><td>未查询到</td>');
+                }
+                htmlParts.push('</tr>');
+            }
+            htmlParts.push('</tbody></table>');
+
+            // 分页控件
+            htmlParts.push('<div class="urp-pager">');
+            htmlParts.push(`<span>共 ${totalRows} 条</span>`);
+            htmlParts.push(`<button data-urp-page="1" ${userRegPackageCurrentPage === 1 ? 'disabled' : ''}>首页</button>`);
+            htmlParts.push(`<button data-urp-page="${userRegPackageCurrentPage - 1}" ${userRegPackageCurrentPage === 1 ? 'disabled' : ''}>上一页</button>`);
+            htmlParts.push(`<span class="urp-pager-info">第 ${userRegPackageCurrentPage} / ${totalPages} 页（每页 ${pageSize} 条）</span>`);
+            htmlParts.push(`<button data-urp-page="${userRegPackageCurrentPage + 1}" ${userRegPackageCurrentPage >= totalPages ? 'disabled' : ''}>下一页</button>`);
+            htmlParts.push(`<button data-urp-page="${totalPages}" ${userRegPackageCurrentPage >= totalPages ? 'disabled' : ''}>末页</button>`);
+            htmlParts.push(`<input type="number" min="1" max="${totalPages}" data-urp-jump><button data-urp-jump-btn>跳转</button>`);
+            htmlParts.push('</div>');
+
+            // 保持滚动位置，避免查询过程中实时刷新导致跳动
+            const scrollTop = tableContainer.scrollTop;
+            tableContainer.innerHTML = htmlParts.join('');
+            tableContainer.scrollTop = scrollTop;
+        }
+
+        // 跳转到指定页
+        function goToUserRegPackagePage(page) {
+            const totalPages = Math.max(1, Math.ceil(Math.max(0, userRegPackageImportedData.length - 1) / getUserRegPackagePageSize()));
+            userRegPackageCurrentPage = Math.min(Math.max(1, page), totalPages);
+            renderUserRegPackageTable();
+            document.getElementById('userRegPackageTableContainer').scrollTop = 0;
+        }
+
+        // 分页控件事件（事件委托，只绑定一次）
+        document.getElementById('userRegPackageTableContainer').addEventListener('click', function(e) {
+            const jumpBtn = e.target.closest('[data-urp-jump-btn]');
+            if (jumpBtn) {
+                const input = this.querySelector('[data-urp-jump]');
+                const page = parseInt(input && input.value);
+                if (!isNaN(page)) goToUserRegPackagePage(page);
+                return;
+            }
+            const pageBtn = e.target.closest('button[data-urp-page]');
+            if (pageBtn && !pageBtn.disabled) {
+                goToUserRegPackagePage(parseInt(pageBtn.dataset.urpPage));
+            }
+        });
         
         // 开始查询按钮点击事件
         document.getElementById('userRegPackageQueryBtn').addEventListener('click', function() {
@@ -10665,90 +11320,143 @@ function exportRegisteredUsers() {
             queryUserRegPackageInfoInParallel(ids);
         });
         
-        // 并行查询用户注册时间和套餐信息
+        // 批量查询控制状态
+        let userRegPackageQueryAbort = false;
+        let userRegPackageSubQueryFailures = 0;
+
+        // 并行查询用户注册时间和套餐信息（并发工作池 + 分页渲染，降低资源占用并提速）
         async function queryUserRegPackageInfoInParallel(ids) {
             // 检查复选框状态
             const queryRegisterTime = document.getElementById('queryRegisterTime').checked;
             const queryPackage = document.getElementById('queryPackage').checked;
             const queryUserSource = document.getElementById('queryUserSource').checked;
-            
+
             // 确保至少选择一个查询选项
             if (!queryRegisterTime && !queryPackage && !queryUserSource) {
                 alert('请至少选择一个查询选项');
                 return;
             }
-            
+
             const token = await getToken();
             if (!token) {
                 alert('请先登录');
                 return;
             }
-            
-            // 减少并发请求数量，改为5个
-            const batchSize = 5;
-            const batches = [];
-            for (let i = 0; i < ids.length; i += batchSize) {
-                batches.push(ids.slice(i, i + batchSize));
-            }
-            
-            let completedBatches = 0;
-            let allResults = [];
-            
-            // 在表格容器上方显示加载指示器，不隐藏表格
-            const tableContainer = document.getElementById('userRegPackageTableContainer');
+
+            // ID去重：重复ID只查询一次，结果会填充到所有相同ID的行
+            const uniqueIds = [...new Set(ids)];
+            const duplicateCount = ids.length - uniqueIds.length;
+
+            // 排除关键字只读取一次，避免每个请求都访问DOM
+            const excludeKeywords = document.getElementById('excludeKeywords')?.value.split('\n').filter(keyword => keyword.trim() !== '') || [];
+            excludeKeywords.push('公开课'); // 默认排除包含"公开课"的套餐
+
+            const concurrency = parseInt(document.getElementById('userRegPackageConcurrency').value) || 10;
+            // 实时刷新开关：默认关闭（查询过程中只更新进度文字，不重绘表格，进一步降低资源占用）
+            const liveRefresh = document.getElementById('userRegPackageLiveRefresh').checked;
+
+            userRegPackageQueryAbort = false;
+            userRegPackageSubQueryFailures = 0;
+            userRegPackageData = [];
+            userRegPackageCurrentPage = 1;
+
+            // 顶部进度条（不遮挡表格，结果实时填充到当前页）
+            const tableResultDiv = document.getElementById('userRegPackageTableResult');
+            const oldIndicator = document.getElementById('userRegPackageLoadingIndicator');
+            if (oldIndicator) oldIndicator.remove();
+
             const loadingIndicator = document.createElement('div');
             loadingIndicator.id = 'userRegPackageLoadingIndicator';
-            loadingIndicator.style.position = 'absolute';
-            loadingIndicator.style.top = '0';
-            loadingIndicator.style.left = '0';
-            loadingIndicator.style.width = '100%';
-            loadingIndicator.style.height = '100%';
-            loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-            loadingIndicator.style.display = 'flex';
-            loadingIndicator.style.alignItems = 'center';
-            loadingIndicator.style.justifyContent = 'center';
-            loadingIndicator.style.zIndex = '10';
-            loadingIndicator.innerHTML = '<div class="text-center">查询中，请稍候...</div>';
-            
-            // 确保表格容器有相对定位
-            const tableResultDiv = document.getElementById('userRegPackageTableResult');
-            tableResultDiv.style.position = 'relative';
-            tableResultDiv.appendChild(loadingIndicator);
-            
-            try {
-                // 串行处理批次，避免同时发送太多请求
-                for (const batch of batches) {
-                    const promises = batch.map(id => queryUserRegPackageInfo(id, token, queryRegisterTime, queryPackage, queryUserSource));
-                    const results = await Promise.all(promises);
-                    allResults = allResults.concat(results);
-                    completedBatches++;
-                    
-                    // 更新进度
-                    const progress = Math.round((completedBatches / batches.length) * 100);
-                    loadingIndicator.innerHTML = `<div class="text-center">查询中，请稍候... ${progress}%</div>`;
-                    
-                    // 批次之间添加延迟，避免服务器压力过大
-                    if (completedBatches < batches.length) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
+            loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+            loadingIndicator.innerHTML = '<span id="userRegPackageProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="userRegPackageStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+            tableResultDiv.insertBefore(loadingIndicator, tableResultDiv.firstChild);
+
+            const progressText = document.getElementById('userRegPackageProgressText');
+            document.getElementById('userRegPackageStopBtn').addEventListener('click', function() {
+                userRegPackageQueryAbort = true;
+                this.disabled = true;
+                this.textContent = '正在停止...';
+            });
+
+            const total = uniqueIds.length;
+            let completed = 0;
+            let nextIndex = 0;
+            let lastRefreshTime = 0;
+
+            // 节流更新进度（最多约3次/秒）；默认只更新文字不重绘表格
+            const refreshProgress = (force) => {
+                const now = Date.now();
+                if (!force && now - lastRefreshTime < 300) return;
+                lastRefreshTime = now;
+                const percent = Math.round((completed / total) * 100);
+                let text = `正在查询 ${completed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}`;
+                if (duplicateCount > 0) text += `，已去重 ${duplicateCount}`;
+                if (userRegPackageSubQueryFailures > 0) text += `，子查询失败 ${userRegPackageSubQueryFailures}`;
+                if (userRegPackageQueryAbort) text += '，正在停止...';
+                progressText.textContent = text;
+                if (liveRefresh) renderUserRegPackageTable();
+            };
+
+            // 工作池：固定N个worker持续领取下一个ID，流水线无空闲
+            // （替代原来"5个一批+每批固定延时500ms"的模式，更快且对服务器更平稳）
+            async function worker() {
+                while (!userRegPackageQueryAbort) {
+                    const index = nextIndex;
+                    if (index >= total) return;
+                    nextIndex++;
+                    try {
+                        const result = await queryUserRegPackageInfo(uniqueIds[index], token, queryRegisterTime, queryPackage, queryUserSource, excludeKeywords);
+                        userRegPackageData.push(result);
+                    } catch (error) {
+                        console.error('查询失败:', uniqueIds[index], error);
                     }
+                    completed++;
+                    refreshProgress(false);
                 }
-                
-                // 移除加载指示器
-                tableResultDiv.removeChild(loadingIndicator);
-                userRegPackageData = allResults;
-                displayUserRegPackageResults(allResults);
+            }
+
+            try {
+                const workerCount = Math.min(concurrency, total);
+                await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+                refreshProgress(true);
+                loadingIndicator.remove();
+
+                const statusDiv = document.getElementById('userRegPackageQueryStatus');
+                if (userRegPackageQueryAbort) {
+                    // 手动停止：保留已完成的结果
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.backgroundColor = '#fff3cd';
+                    statusDiv.style.border = '1px solid #ffeeba';
+                    statusDiv.textContent = `查询已停止，已完成 ${completed}/${total}${userRegPackageSubQueryFailures > 0 ? `，子查询失败 ${userRegPackageSubQueryFailures} 次` : ''}，已完成的结果已保留（可导出CSV）`;
+                } else {
+                    statusDiv.style.display = 'none';
+                }
+                renderUserRegPackageTable();
             } catch (error) {
                 console.error('查询失败:', error);
-                // 移除加载指示器
-                tableResultDiv.removeChild(loadingIndicator);
+                loadingIndicator.remove();
                 alert('查询失败，请重试');
             }
         }
         
-        // 查询单个用户的注册时间和套餐信息
-        function queryUserRegPackageInfo(id, token, queryRegisterTime = true, queryPackage = true, queryUserSource = true) {
-            return new Promise((resolve, reject) => {
-                // 首先查询用户注册时间
+        // 查询单个用户的注册时间和套餐信息（子查询并行执行，替代原来的串行回调链）
+        async function queryUserRegPackageInfo(id, token, queryRegisterTime = true, queryPackage = true, queryUserSource = true, excludeKeywords = null) {
+            const emptyResult = () => ({
+                id: id,
+                userId: '',
+                createTime: '',
+                balance: 0,
+                totalInitialPoint: 0,
+                packageCount: 0,
+                packageList: '',
+                channelName: '',
+                followSales: '',
+                followDealer: '',
+                referrerInfo: ''
+            });
+
+            try {
                 const isPhone = id.length === 11 && /^\d+$/.test(id);
                 const payload = {
                     accountName: isPhone ? id : '',
@@ -10768,330 +11476,143 @@ function exportRegisteredUsers() {
                     currPage: 0,
                     pageSize: 10
                 };
-                
-                fetch('https://www.talk915.com/users/studentManage/queryStudentManageList', {
+
+                const response = await fetch('https://www.talk915.com/users/studentManage/queryStudentManageList', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'token': token
                     },
                     body: JSON.stringify(payload)
-                }).then(response => response.json())
-                  .then(data => {
-                      if (data.resultCode === 0 && data.resultData && data.resultData.length > 0) {
-                          const userInfo = data.resultData[0];
-                          let createTime = '';
-                          if (queryRegisterTime && userInfo.createTime) {
-                              // 处理时区问题，确保日期显示正确
-                              const date = new Date(userInfo.createTime);
-                              // 使用 toISOString() 确保获取正确的日期部分，不受本地时区影响
-                              createTime = date.toISOString().split('T')[0];
-                          }
-                          
-                          let totalBalance = 0;
-                          let totalInitialPoint = 0;
-                          let packageList = [];
-                          
-                          // 强制执行套餐查询，对所有用户ID或手机号都查询套餐信息
-                          if (queryPackage) {
-                              fetch(`https://www.talk915.com/users/studentManage/queryPackageList/${userInfo.userId}`, {
-                                  method: 'GET',
-                                  headers: {
-                                      'token': token
-                                  }
-                              }).then(response => response.json())
-                                .then(packageData => {
-                                    if (packageData.resultCode === 0 && packageData.resultData) {
-                                        // 获取排除关键字列表
-                                        const excludeKeywords = document.getElementById('excludeKeywords')?.value.split('\n').filter(keyword => keyword.trim() !== '') || [];
-                                        excludeKeywords.push('公开课'); // 默认排除包含"公开课"的套餐
-                                        
-                                        packageData.resultData.forEach(pkg => {
-                                            // 检查套餐名是否包含任何排除关键字
-                                            const shouldExclude = excludeKeywords.some(keyword => pkg.productName.includes(keyword));
-                                            
-                                            if (!shouldExclude) {
-                                                totalBalance += pkg.balance || 0;
-                                                totalInitialPoint += pkg.initialPoint || 0;
-                                            }
-                                            
-                                            let pkgCreateTime = '';
-                                            if (pkg.createTime) {
-                                                // 处理时区问题，确保日期显示正确
-                                                const date = new Date(pkg.createTime);
-                                                pkgCreateTime = date.toISOString().split('T')[0];
-                                            }
-                                            
-                                            // 标记排除的套餐
-                                            const excludeMark = shouldExclude ? ' [排除]' : '';
-                                            packageList.push(`${pkgCreateTime}-${pkg.productName}${excludeMark} ${pkg.initialPoint || 0}/${pkg.balance || 0}`);
-                                        });
-                                    }
-                                    
-                                    // 处理用户来源查询
-                                    handleUserSourceQuery();
-                                })
-                                .catch(error => {
-                                    console.error('查询套餐信息失败:', error);
-                                    // 即使套餐查询失败，也要继续查询用户来源
-                                    handleUserSourceQuery();
-                                });
-                          } else {
-                              // 不需要查询套餐信息，直接处理用户来源查询
-                              handleUserSourceQuery();
-                          }
-                          
-                          // 处理用户来源查询的函数
-                          function handleUserSourceQuery() {
-                              if (queryUserSource) {
-                                        // 查询用户来源
-                                        fetch(`https://www.talk915.com/users/studentManage/querySpreadLinkName/${userInfo.userId}`, {
-                                            method: 'GET',
-                                            headers: {
-                                                'token': token
-                                            }
-                                        }).then(response => response.json())
-                                          .then(sourceData => {
-                                          const channelName = sourceData.resultCode === 0 && sourceData.resultData ? sourceData.resultData.channelName : '';
-                                          
-                                          // 查询跟进业务员
-                                          fetch('https://www.talk915.com/users/studentManage/viewUserBelong', {
-                                              method: 'POST',
-                                              headers: {
-                                                  'Content-Type': 'application/json',
-                                                  'token': token
-                                              },
-                                              body: JSON.stringify({
-                                                  userId: userInfo.userId,
-                                                  viewType: 2
-                                              })
-                                          }).then(response => response.json())
-                                            .then(salesData => {
-                                                const followSales = salesData.resultCode === 0 && salesData.resultData ? salesData.resultData.followUser : '';
-                                                
-                                                // 查询跟进经销商
-                                                fetch('https://www.talk915.com/users/studentManage/viewUserBelong', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'token': token
-                                                    },
-                                                    body: JSON.stringify({
-                                                        userId: userInfo.userId,
-                                                        viewType: 1
-                                                    })
-                                                }).then(response => response.json())
-                                                  .then(dealerData => {
-                                                      const followDealer = dealerData.resultCode === 0 && dealerData.resultData ? dealerData.resultData.followUser : '';
-                                                      
-                                                      // 查询最初推荐人
-                                                      fetch(`https://www.talk915.com/users/studentManage/getRecommendedMsg/${userInfo.userId}`, {
-                                                          method: 'GET',
-                                                          headers: {
-                                                              'token': token
-                                                          }
-                                                      }).then(response => response.json())
-                                                        .then(referrerData => {
-                                                            let referrerInfo = '';
-                                                            if (referrerData.resultCode === 0 && referrerData.resultData && referrerData.resultData.length > 0) {
-                                                                // 处理多条推荐人记录，用中文分号分隔
-                                                                referrerInfo = referrerData.resultData.map(referrer => {
-                                                                    return `${referrer.userType}-${referrer.userType}-${referrer.userName}-${referrer.userId}`;
-                                                                }).join('；');
-                                                            }
-                                                            
-                                                            resolve({
-                                                                id: id,
-                                                                userId: userInfo.userId,
-                                                                createTime: createTime,
-                                                                balance: totalBalance,
-                                                                totalInitialPoint: totalInitialPoint,
-                                                                packageCount: packageList.length,
-                                                                packageList: packageList.join('；'),
-                                                                channelName: channelName,
-                                                                followSales: followSales,
-                                                                followDealer: followDealer,
-                                                                referrerInfo: referrerInfo
-                                                            });
-                                                        })
-                                                        .catch(error => {
-                                                            console.error('查询最初推荐人失败:', error);
-                                                            resolve({
-                                                                id: id,
-                                                                userId: userInfo.userId,
-                                                                createTime: createTime,
-                                                                balance: totalBalance,
-                                                                totalInitialPoint: totalInitialPoint,
-                                                                packageCount: packageList.length,
-                                                                packageList: packageList.join('；'),
-                                                                channelName: channelName,
-                                                                followSales: followSales,
-                                                                followDealer: followDealer,
-                                                                referrerInfo: ''
-                                                            });
-                                                        });
-                                                  })
-                                                  .catch(error => {
-                                                      console.error('查询跟进经销商失败:', error);
-                                                      resolve({
-                                                          id: id,
-                                                          userId: userInfo.userId,
-                                                          createTime: createTime,
-                                                          balance: totalBalance,
-                                                          totalInitialPoint: totalInitialPoint,
-                                                          packageCount: packageList.length,
-                                                          packageList: packageList.join('；'),
-                                                          channelName: channelName,
-                                                          followSales: followSales,
-                                                          followDealer: '',
-                                                          referrerInfo: ''
-                                                      });
-                                                  });
-                                            })
-                                            .catch(error => {
-                                                console.error('查询跟进业务员失败:', error);
-                                                resolve({
-                                                    id: id,
-                                                    userId: userInfo.userId,
-                                                    createTime: createTime,
-                                                    balance: totalBalance,
-                                                    totalInitialPoint: totalInitialPoint,
-                                                    packageCount: packageList.length,
-                                                    packageList: packageList.join('；'),
-                                                    channelName: channelName,
-                                                    followSales: '',
-                                                    followDealer: '',
-                                                    referrerInfo: ''
-                                                });
-                                            });
-                                      })
-                                      .catch(error => {
-                                          console.error('查询用户来源失败:', error);
-                                          resolve({
-                                              id: id,
-                                              userId: userInfo.userId,
-                                              createTime: createTime,
-                                              balance: totalBalance,
-                                              totalInitialPoint: totalInitialPoint,
-                                              packageCount: packageList.length,
-                                              packageList: packageList.join('；'),
-                                              channelName: '',
-                                              followSales: '',
-                                              followDealer: '',
-                                              referrerInfo: ''
-                                          });
-                                      });
-                                    } else {
-                                        // 不需要查询用户来源信息，直接返回结果
-                                        resolve({
-                                            id: id,
-                                            userId: userInfo.userId,
-                                            createTime: createTime,
-                                            balance: totalBalance,
-                                            totalInitialPoint: totalInitialPoint,
-                                            packageCount: packageList.length,
-                                            packageList: packageList.join('；'),
-                                            channelName: '',
-                                            followSales: '',
-                                            followDealer: '',
-                                            referrerInfo: ''
-                                        });
-                              }
-                          }
-                      } else {
-                          resolve({
-                              id: id,
-                              userId: '',
-                              createTime: '',
-                              balance: 0,
-                              totalInitialPoint: 0,
-                              packageCount: 0,
-                              packageList: '',
-                              channelName: '',
-                              followSales: '',
-                              followDealer: '',
-                              referrerInfo: ''
-                          });
-                      }
-                  })
-                  .catch(error => {
-                      console.error('查询用户信息失败:', error);
-                      resolve({
-                          id: id,
-                          userId: '',
-                          createTime: '',
-                          balance: 0,
-                          totalInitialPoint: 0,
-                          packageCount: 0,
-                          packageList: '',
-                          channelName: '',
-                          followSales: '',
-                          followDealer: '',
-                          referrerInfo: ''
-                      });
-                  });
-            });
-        }
-        
-        // 显示查询结果，将结果填充到导入的表格中
-        function displayUserRegPackageResults(results) {
-            if (results.length === 0) {
-                const tableContainer = document.getElementById('userRegPackageTableContainer');
-                tableContainer.innerHTML = '<div class="text-center" style="padding: 20px;">没有查询到数据</div>';
-                return;
-            }
-            
-            // 创建结果映射，方便根据ID查找结果
-            const resultMap = {};
-            results.forEach(result => {
-                resultMap[result.id] = result;
-            });
-            
-            // 重新构建表格，填充查询结果
-            const headers = [...userRegPackageImportedData[0], '注册日期', '套餐课时', '剩余课时', '套餐数量', '购买套餐', '用户来源', '跟进业务员', '跟进经销商', '最初推荐人'];
-            const rows = userRegPackageImportedData.slice(1);
-            const idColumnIndex = parseInt(document.getElementById('userRegPackageColumnSelect').value);
-            
-            let html = '<table class="table table-bordered table-striped" style="width: 100%; border-collapse: collapse;">';
-            html += '<thead><tr>';
-            headers.forEach(header => {
-                html += `<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">${header}</th>`;
-            });
-            html += '</tr></thead>';
-            html += '<tbody>';
-            
-            rows.forEach(row => {
-                const id = row[idColumnIndex];
-                const result = resultMap[id];
-                
-                html += '<tr>';
-                row.forEach(cell => {
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${cell}</td>`;
                 });
-                // 填充查询结果
-                if (result) {
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.createTime}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.totalInitialPoint}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.balance}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.packageCount || 0}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.packageList.replace(/；/g, '；<br>')}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.channelName || ''}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.followSales || ''}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.followDealer || ''}</td>`;
-                    html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.referrerInfo || ''}</td>`;
-                } else {
-                    html += '<td style="padding: 6px; border: 1px solid #ddd;">未查询到</td><td style="padding: 6px; border: 1px solid #ddd;">未查询到</td><td style="padding: 6px; border: 1px solid #ddd;">未查询到</td><td style="padding: 6px; border: 1px solid #ddd;">未查询到</td>';
-                    html += '<td style="padding: 6px; border: 1px solid #ddd;">未查询到</td><td style="padding: 6px; border: 1px solid #ddd;">未查询到</td><td style="padding: 6px; border: 1px solid #ddd;">未查询到</td><td style="padding: 6px; border: 1px solid #ddd;">未查询到</td>';
+                const data = await response.json();
+
+                if (!(data.resultCode === 0 && data.resultData && data.resultData.length > 0)) {
+                    return emptyResult();
                 }
-                html += '</tr>';
-            });
-            
-            html += '</tbody></table>';
-            const tableContainer = document.getElementById('userRegPackageTableContainer');
-            tableContainer.style.overflow = 'auto';
-            tableContainer.style.width = '100%';
-            tableContainer.style.boxSizing = 'border-box';
-            tableContainer.innerHTML = html;
+
+                const userInfo = data.resultData[0];
+                let createTime = '';
+                if (queryRegisterTime && userInfo.createTime) {
+                    // 处理时区问题，确保日期显示正确
+                    const date = new Date(userInfo.createTime);
+                    createTime = date.toISOString().split('T')[0];
+                }
+
+                if (!queryPackage && !queryUserSource) {
+                    return {
+                        id: id,
+                        userId: userInfo.userId,
+                        createTime: createTime,
+                        balance: 0,
+                        totalInitialPoint: 0,
+                        packageCount: 0,
+                        packageList: '',
+                        channelName: '',
+                        followSales: '',
+                        followDealer: '',
+                        referrerInfo: ''
+                    };
+                }
+
+                // 排除关键字：批量查询时由外部传入（只读一次DOM），单次查询时再读取
+                if (excludeKeywords === null) {
+                    excludeKeywords = document.getElementById('excludeKeywords')?.value.split('\n').filter(keyword => keyword.trim() !== '') || [];
+                    excludeKeywords.push('公开课');
+                }
+
+                const getJson = async (url, options) => {
+                    try {
+                        const resp = await fetch(url, options);
+                        return await resp.json();
+                    } catch (error) {
+                        // 失败只计数聚合显示（进度条/完成状态），不逐条写console，避免上万条日志占用内存
+                        userRegPackageSubQueryFailures++;
+                        return null;
+                    }
+                };
+
+                // 并行发起所有子查询（原来逐个串行等待，单个用户耗时为各请求之和）
+                const [packageData, sourceData, salesData, dealerData, referrerData] = await Promise.all([
+                    queryPackage
+                        ? getJson(`https://www.talk915.com/users/studentManage/queryPackageList/${userInfo.userId}`, { method: 'GET', headers: { 'token': token } })
+                        : Promise.resolve(null),
+                    queryUserSource
+                        ? getJson(`https://www.talk915.com/users/studentManage/querySpreadLinkName/${userInfo.userId}`, { method: 'GET', headers: { 'token': token } })
+                        : Promise.resolve(null),
+                    queryUserSource
+                        ? getJson('https://www.talk915.com/users/studentManage/viewUserBelong', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'token': token },
+                            body: JSON.stringify({ userId: userInfo.userId, viewType: 2 })
+                        })
+                        : Promise.resolve(null),
+                    queryUserSource
+                        ? getJson('https://www.talk915.com/users/studentManage/viewUserBelong', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'token': token },
+                            body: JSON.stringify({ userId: userInfo.userId, viewType: 1 })
+                        })
+                        : Promise.resolve(null),
+                    queryUserSource
+                        ? getJson(`https://www.talk915.com/users/studentManage/getRecommendedMsg/${userInfo.userId}`, { method: 'GET', headers: { 'token': token } })
+                        : Promise.resolve(null)
+                ]);
+
+                let totalBalance = 0;
+                let totalInitialPoint = 0;
+                const packageList = [];
+                if (queryPackage && packageData && packageData.resultCode === 0 && packageData.resultData) {
+                    packageData.resultData.forEach(pkg => {
+                        // 检查套餐名是否包含任何排除关键字
+                        const shouldExclude = excludeKeywords.some(keyword => pkg.productName.includes(keyword));
+
+                        if (!shouldExclude) {
+                            totalBalance += pkg.balance || 0;
+                            totalInitialPoint += pkg.initialPoint || 0;
+                        }
+
+                        let pkgCreateTime = '';
+                        if (pkg.createTime) {
+                            const date = new Date(pkg.createTime);
+                            pkgCreateTime = date.toISOString().split('T')[0];
+                        }
+
+                        // 标记排除的套餐
+                        const excludeMark = shouldExclude ? ' [排除]' : '';
+                        packageList.push(`${pkgCreateTime}-${pkg.productName}${excludeMark} ${pkg.initialPoint || 0}/${pkg.balance || 0}`);
+                    });
+                }
+
+                const channelName = queryUserSource && sourceData && sourceData.resultCode === 0 && sourceData.resultData ? sourceData.resultData.channelName : '';
+                const followSales = queryUserSource && salesData && salesData.resultCode === 0 && salesData.resultData ? salesData.resultData.followUser : '';
+                const followDealer = queryUserSource && dealerData && dealerData.resultCode === 0 && dealerData.resultData ? dealerData.resultData.followUser : '';
+
+                let referrerInfo = '';
+                if (queryUserSource && referrerData && referrerData.resultCode === 0 && referrerData.resultData && referrerData.resultData.length > 0) {
+                    // 处理多条推荐人记录，用中文分号分隔
+                    referrerInfo = referrerData.resultData.map(referrer => {
+                        return `${referrer.userType}-${referrer.userType}-${referrer.userName}-${referrer.userId}`;
+                    }).join('；');
+                }
+
+                return {
+                    id: id,
+                    userId: userInfo.userId,
+                    createTime: createTime,
+                    balance: totalBalance,
+                    totalInitialPoint: totalInitialPoint,
+                    packageCount: packageList.length,
+                    packageList: packageList.join('；'),
+                    channelName: channelName,
+                    followSales: followSales,
+                    followDealer: followDealer,
+                    referrerInfo: referrerInfo
+                };
+            } catch (error) {
+                console.error('查询用户信息失败:', error);
+                return emptyResult();
+            }
         }
         
         // 手动输入ID查询
@@ -11165,22 +11686,22 @@ function exportRegisteredUsers() {
             }
             
             // 创建结果映射，方便根据ID查找结果
-            const resultMap = {};
+            const resultMap = new Map();
             userRegPackageData.forEach(result => {
-                resultMap[result.id] = result;
+                resultMap.set(result.id, result);
             });
-            
+
             // 构建CSV内容
             const headers = [...userRegPackageImportedData[0], '注册日期', '套餐课时', '剩余课时', '套餐数量', '购买套餐', '用户来源', '跟进业务员', '跟进经销商', '最初推荐人'];
             const rows = userRegPackageImportedData.slice(1);
-            const idColumnIndex = parseInt(document.getElementById('userRegPackageColumnSelect').value);
-            
-            let csvContent = headers.join(',') + '\n';
-            
+            const idColumnIndex = parseInt(document.getElementById('userRegPackageColumnSelect').value) || 0;
+
+            const csvLines = [headers.join(',')];
+
             rows.forEach(row => {
                 const id = row[idColumnIndex];
-                const result = resultMap[id];
-                
+                const result = resultMap.get(id);
+
                 const csvRow = [...row];
                 if (result) {
                     csvRow.push(result.createTime);
@@ -11201,9 +11722,12 @@ function exportRegisteredUsers() {
                     csvRow.push('未查询到');
                     csvRow.push('未查询到');
                     csvRow.push('未查询到');
+                    csvRow.push('未查询到');
                 }
-                csvContent += csvRow.join(',') + '\n';
+                csvLines.push(csvRow.join(','));
             });
+
+            const csvContent = csvLines.join('\n');
             
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -11214,12 +11738,22 @@ function exportRegisteredUsers() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            // 释放Blob占用的内存
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
         
         // ========== 用户约课查询功能 ==========
         
         let userCourseQueryData = []; // [{userId, status, totalCount, message}]
         let courseQueryInitialized = false;
+        let cqCurrentPage = 1; // 批量结果当前页码（从1开始）
+        let cqQueryAbort = false; // 批量查询停止标志
+        let cqFailCount = 0; // 批量查询失败计数（聚合计数，不逐条打印）
+
+        // 读取每页条数（结果表格分页渲染）
+        function cqGetPageSize() {
+            return parseInt(document.getElementById('cqPageSizeSelect').value) || 200;
+        }
         
         function initUserCourseQuery() {
             if (courseQueryInitialized) return;
@@ -11305,56 +11839,90 @@ function exportRegisteredUsers() {
             });
         }
         
-        // 渲染查询结果表格
+        // 渲染查询结果表格（分页渲染，避免万级数据全量重绘；复用全局.urp表格/分页样式）
         function renderCourseQueryResults() {
             const container = document.getElementById('courseQueryResultContainer');
             const section = document.getElementById('courseQueryResultSection');
-            
+
             if (userCourseQueryData.length === 0) {
                 section.style.display = 'none';
                 return;
             }
-            
+
             section.style.display = 'block';
-            
-            let html = `
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px;">
-                    <thead style="background-color: #f5f5f5; position: sticky; top: 0;">
-                        <tr>
-                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">序号</th>
-                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">用户ID</th>
-                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">查询状态</th>
-                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">约课数量</th>
-                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">返回信息</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            userCourseQueryData.forEach((item, index) => {
-                const statusColor = item.status === 'success' ? '#28a745' : 
-                                   item.status === 'failed' ? '#dc3545' : 
+
+            const totalRows = userCourseQueryData.length;
+            const pageSize = cqGetPageSize();
+            const totalPages = Math.ceil(totalRows / pageSize);
+            if (cqCurrentPage > totalPages) cqCurrentPage = totalPages;
+            if (cqCurrentPage < 1) cqCurrentPage = 1;
+            const start = (cqCurrentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalRows);
+
+            const htmlParts = [];
+            htmlParts.push('<table class="urp-table" style="font-size: 13px; min-width: 500px;"><thead><tr>');
+            htmlParts.push('<th>序号</th><th>用户ID</th><th>查询状态</th><th>约课数量</th><th>返回信息</th>');
+            htmlParts.push('</tr></thead><tbody>');
+
+            for (let i = start; i < end; i++) {
+                const item = userCourseQueryData[i];
+                const statusColor = item.status === 'success' ? '#28a745' :
+                                   item.status === 'failed' ? '#dc3545' :
                                    item.status === 'querying' ? '#ffc107' : '#666';
-                const statusText = item.status === 'success' ? '✓ 查询成功' : 
-                                  item.status === 'failed' ? '✗ 查询失败' : 
+                const statusText = item.status === 'success' ? '✓ 查询成功' :
+                                  item.status === 'failed' ? '✗ 查询失败' :
                                   item.status === 'querying' ? '查询中...' : '待查询';
-                
                 const countColor = item.totalCount > 0 ? '#007bff' : '#999';
-                
-                html += `
-                    <tr>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd;">${index + 1}</td>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd; font-family: monospace;">${item.userId}</td>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${statusText}</td>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${countColor}; font-weight: bold;">${item.totalCount !== null ? item.totalCount : '-'}</td>
-                        <td style="padding: 6px 8px; border: 1px solid #ddd; color: ${statusColor};">${item.message || '-'}</td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            container.innerHTML = html;
+
+                htmlParts.push('<tr>');
+                htmlParts.push(`<td>${i + 1}</td>`);
+                htmlParts.push(`<td style="font-family: monospace;">${item.userId}</td>`);
+                htmlParts.push(`<td style="color: ${statusColor};">${statusText}</td>`);
+                htmlParts.push(`<td style="color: ${countColor}; font-weight: bold;">${item.totalCount !== null ? item.totalCount : '-'}</td>`);
+                htmlParts.push(`<td style="color: ${statusColor};">${item.message || '-'}</td>`);
+                htmlParts.push('</tr>');
+            }
+            htmlParts.push('</tbody></table>');
+
+            // 分页控件
+            htmlParts.push('<div class="urp-pager">');
+            htmlParts.push(`<span>共 ${totalRows} 条</span>`);
+            htmlParts.push(`<button data-cq-page="1" ${cqCurrentPage === 1 ? 'disabled' : ''}>首页</button>`);
+            htmlParts.push(`<button data-cq-page="${cqCurrentPage - 1}" ${cqCurrentPage === 1 ? 'disabled' : ''}>上一页</button>`);
+            htmlParts.push(`<span class="urp-pager-info">第 ${cqCurrentPage} / ${totalPages} 页（每页 ${pageSize} 条）</span>`);
+            htmlParts.push(`<button data-cq-page="${cqCurrentPage + 1}" ${cqCurrentPage >= totalPages ? 'disabled' : ''}>下一页</button>`);
+            htmlParts.push(`<button data-cq-page="${totalPages}" ${cqCurrentPage >= totalPages ? 'disabled' : ''}>末页</button>`);
+            htmlParts.push(`<input type="number" min="1" max="${totalPages}" data-cq-jump><button data-cq-jump-btn>跳转</button>`);
+            htmlParts.push('</div>');
+
+            // 保持滚动位置
+            const scrollTop = container.scrollTop;
+            container.innerHTML = htmlParts.join('');
+            container.scrollTop = scrollTop;
         }
+
+        // 跳转到指定页
+        function goToCourseQueryPage(page) {
+            const totalPages = Math.max(1, Math.ceil(userCourseQueryData.length / cqGetPageSize()));
+            cqCurrentPage = Math.min(Math.max(1, page), totalPages);
+            renderCourseQueryResults();
+            document.getElementById('courseQueryResultContainer').scrollTop = 0;
+        }
+
+        // 分页控件事件（事件委托，只绑定一次）
+        document.getElementById('courseQueryResultContainer').addEventListener('click', function(e) {
+            const jumpBtn = e.target.closest('[data-cq-jump-btn]');
+            if (jumpBtn) {
+                const input = this.querySelector('[data-cq-jump]');
+                const page = parseInt(input && input.value);
+                if (!isNaN(page)) goToCourseQueryPage(page);
+                return;
+            }
+            const pageBtn = e.target.closest('button[data-cq-page]');
+            if (pageBtn && !pageBtn.disabled) {
+                goToCourseQueryPage(parseInt(pageBtn.dataset.cqPage));
+            }
+        });
         
         // 设置状态信息
         function setCourseQueryStatus(message, isError) {
@@ -11388,6 +11956,7 @@ function exportRegisteredUsers() {
             }
             
             userCourseQueryData = [{ userId, status: 'querying', totalCount: null, message: '' }];
+            cqCurrentPage = 1;
             renderCourseQueryResults();
             
             try {
@@ -11499,21 +12068,65 @@ function exportRegisteredUsers() {
                     return;
                 }
                 
-                // 初始化数据
-                userCourseQueryData = userIds.map(id => ({
+                // ID去重：重复ID只查询一次（结果与导出均只保留唯一ID）
+                const uniqueIds = [...new Set(userIds)];
+                const duplicateCount = userIds.length - uniqueIds.length;
+
+                // 初始化数据（结构不变：[{userId,status,totalCount,message}]）
+                userCourseQueryData = uniqueIds.map(id => ({
                     userId: id,
                     status: 'querying',
                     totalCount: null,
                     message: ''
                 }));
+                cqCurrentPage = 1;
                 renderCourseQueryResults();
+
+                const concurrency = parseInt(document.getElementById('cqConcurrency').value) || 10;
+                // 实时刷新开关：默认关闭，查询过程中只更新进度文字不重绘表格
+                const liveRefresh = document.getElementById('cqLiveRefresh').checked;
+                cqQueryAbort = false;
+                cqFailCount = 0;
                 
+                // 顶部进度条 + 停止按钮（width:auto 避免被全局 button{width:100%} 拉伸）
+                const resultSection = document.getElementById('courseQueryResultSection');
+                const oldIndicator = document.getElementById('cqLoadingIndicator');
+                if (oldIndicator) oldIndicator.remove();
+
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.id = 'cqLoadingIndicator';
+                loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+                loadingIndicator.innerHTML = '<span id="cqProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="cqStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+                resultSection.insertBefore(loadingIndicator, resultSection.firstChild);
+
+                const progressText = document.getElementById('cqProgressText');
+                document.getElementById('cqStopBtn').addEventListener('click', function() {
+                    cqQueryAbort = true;
+                    this.disabled = true;
+                    this.textContent = '正在停止...';
+                });
+
+                const total = uniqueIds.length;
+                let completed = 0;
                 let successCount = 0;
-                let failCount = 0;
-                
-                for (let i = 0; i < userCourseQueryData.length; i++) {
-                    const item = userCourseQueryData[i];
-                    
+                let nextIndex = 0;
+                let lastRefreshTime = 0;
+
+                // 节流更新进度（最多约3次/秒）；默认只更新文字不重绘表格
+                const refreshProgress = (force) => {
+                    const now = Date.now();
+                    if (!force && now - lastRefreshTime < 300) return;
+                    lastRefreshTime = now;
+                    const percent = Math.round((completed / total) * 100);
+                    let text = `正在查询 ${completed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}，成功 ${successCount}${cqFailCount > 0 ? `，失败 ${cqFailCount}` : ''}`;
+                    if (duplicateCount > 0) text += `，已去重 ${duplicateCount}`;
+                    if (cqQueryAbort) text += '，正在停止...';
+                    progressText.textContent = text;
+                    if (liveRefresh) renderCourseQueryResults();
+                };
+
+                // 查询单个用户（接口URL与参数与原来完全一致）
+                async function queryOne(userId) {
                     try {
                         const response = await fetch('https://www.talk915.com/datebook/adminQuerySchedule/queryScheduleList', {
                             method: 'POST',
@@ -11567,37 +12180,66 @@ function exportRegisteredUsers() {
                                 needAudit: '',
                                 status: 0,
                                 cancelStatus: '',
-                                userId: item.userId,
+                                userId: userId,
                                 currPage: 0,
                                 pageSize: 1
                             }),
                             credentials: 'include'
                         });
-                        
+
                         const data = await response.json();
-                        
+
                         if (response.ok && data.resultCode === 0) {
-                            item.status = 'success';
-                            item.totalCount = data.totalCount || 0;
-                            item.message = data.resultMessage || '操作成功';
-                            successCount++;
-                        } else {
-                            item.status = 'failed';
-                            item.totalCount = null;
-                            item.message = data.resultMessage || '查询失败';
-                            failCount++;
+                            return { status: 'success', totalCount: data.totalCount || 0, message: data.resultMessage || '操作成功' };
                         }
+                        return { status: 'failed', totalCount: null, message: data.resultMessage || '查询失败' };
                     } catch (error) {
-                        item.status = 'failed';
-                        item.totalCount = null;
-                        item.message = error.message || '请求异常';
-                        failCount++;
+                        return { status: 'failed', totalCount: null, message: error.message || '请求异常' };
                     }
-                    
-                    renderCourseQueryResults();
                 }
-                
-                setCourseQueryStatus(`批量查询完成！共 ${userCourseQueryData.length} 条，成功 ${successCount} 条，失败 ${failCount} 条`, failCount > 0);
+
+                // 工作池：固定N个worker持续领取下一个ID，流水线无空闲（替代原串行逐个+逐条重绘）
+                async function worker() {
+                    while (!cqQueryAbort) {
+                        const index = nextIndex;
+                        if (index >= total) return;
+                        nextIndex++;
+                        const item = userCourseQueryData[index];
+                        const r = await queryOne(item.userId);
+                        item.status = r.status;
+                        item.totalCount = r.totalCount;
+                        item.message = r.message;
+                        if (r.status === 'success') successCount++; else cqFailCount++;
+                        completed++;
+                        refreshProgress(false);
+                    }
+                }
+
+                try {
+                    const workerCount = Math.min(concurrency, total);
+                    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+                    // 停止后把未查询到的条目标记为待查询，避免一直显示"查询中"
+                    if (cqQueryAbort) {
+                        userCourseQueryData.forEach(item => {
+                            if (item.status === 'querying') item.status = 'pending';
+                        });
+                    }
+
+                    refreshProgress(true);
+                    loadingIndicator.remove();
+
+                    if (cqQueryAbort) {
+                        // 手动停止：保留已完成的结果（可导出Excel）
+                        setCourseQueryStatus(`查询已停止，已完成 ${completed}/${total}，成功 ${successCount} 条${cqFailCount > 0 ? `，失败 ${cqFailCount} 条` : ''}，已完成的结果已保留（可导出Excel）`, cqFailCount > 0);
+                    } else {
+                        setCourseQueryStatus(`批量查询完成！共 ${total} 条，成功 ${successCount} 条，失败 ${cqFailCount} 条${duplicateCount > 0 ? `（已去重 ${duplicateCount} 条）` : ''}`, cqFailCount > 0);
+                    }
+                    renderCourseQueryResults();
+                } catch (error) {
+                    loadingIndicator.remove();
+                    setCourseQueryStatus('批量查询出错: ' + error.message, true);
+                }
                 fileInput.value = '';
             } catch (error) {
                 alert('导入失败: ' + error.message);
@@ -11670,6 +12312,7 @@ function exportRegisteredUsers() {
         const courseClearPageSize = 50; // 每页显示条数
         let courseClearIsQuerying = false; // 是否正在批量查询
         let courseClearQueryMode = 'single'; // 'single' | 'batch'，决定渲染方式
+        let ccqQueryAbort = false; // 批量查询停止标志
         
         // HTML转义，防止内容破坏表格结构
         function escapeClearHtml(str) {
@@ -12325,8 +12968,9 @@ function exportRegisteredUsers() {
             renderClearQueryResults();
         }
         
-        // 批量查询：从IndexedDB分批读取，并发查询，结果写回IndexedDB，分页渲染
-        // 优化点：1)数据不全部驻留内存 2)并发查询(5路) 3)分页渲染避免O(n²)重绘 4)动态间隔调整
+        // 批量查询：并发工作池查询，结果逐条写回IndexedDB，完成/停止/翻页时才重绘当前页
+        // 优化点：1)数据不全部驻留内存 2)并发工作池(并发数可选) 3)分页渲染避免O(n²)重绘
+        //        4)不做ID去重：IndexedDB按rowId逐行存储并回显原始行，去重会破坏行号与原始数据的对应关系
         async function batchClearQuery() {
             const colSelect = document.getElementById('clearQueryUserIdColumn');
             const token = localStorage.getItem('talk915_token');
@@ -12354,100 +12998,109 @@ function exportRegisteredUsers() {
             }
             
             courseClearIsQuerying = true;
+            ccqQueryAbort = false;
             const batchBtn = document.getElementById('clearQueryBatchBtn');
             batchBtn.disabled = true;
             batchBtn.textContent = '查询中...';
-            
-            const BATCH_SIZE = 5; // 并发查询数
+
+            const concurrency = parseInt(document.getElementById('ccqConcurrency').value) || 10;
+            // 实时刷新开关：默认关闭，查询过程中只更新进度文字不重绘表格
+            const liveRefresh = document.getElementById('ccqLiveRefresh').checked;
+
             const total = courseClearTotalRows;
             let processed = 0;
             let successCount = 0;
             let failCount = 0;
-            
-            // 动态间隔调整
-            let currentDelay = 300;
-            const minDelay = 100;
-            const maxDelay = 3000;
-            let consecutiveSuccess = 0;
-            let consecutiveFailures = 0;
-            
-            setClearQueryStatus(`开始批量查询，共 ${total} 条数据，并发数 ${BATCH_SIZE}...`, false);
+            let nextIndex = 0;
+            let lastRefreshTime = 0;
+
+            // 顶部进度条 + 停止按钮（width:auto 避免被全局 button{width:100%} 拉伸）
+            const section = document.getElementById('clearQueryResultSection');
+            const oldIndicator = document.getElementById('ccqLoadingIndicator');
+            if (oldIndicator) oldIndicator.remove();
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.id = 'ccqLoadingIndicator';
+            loadingIndicator.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#e8f6f8;border:1px solid #bee5eb;border-radius:4px;font-size:13px;color:#0c5460;box-sizing:border-box;max-width:100%;overflow:hidden;';
+            loadingIndicator.innerHTML = '<span id="ccqProgressText" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">准备查询...</span><button id="ccqStopBtn" style="width:auto;flex-shrink:0;padding:4px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">停止查询</button>';
+            section.insertBefore(loadingIndicator, section.firstChild);
+            section.style.display = 'block';
+
+            const progressText = document.getElementById('ccqProgressText');
+            document.getElementById('ccqStopBtn').addEventListener('click', function() {
+                ccqQueryAbort = true;
+                this.disabled = true;
+                this.textContent = '正在停止...';
+            });
+
             courseClearCurrentPage = 0;
             await renderClearQueryBatchPage();
-            
+
+            // 节流更新进度（最多约3次/秒）；默认只更新文字不重绘表格
+            const refreshProgress = (force) => {
+                const now = Date.now();
+                if (!force && now - lastRefreshTime < 300) return;
+                lastRefreshTime = now;
+                const percent = Math.round((processed / total) * 100);
+                const text = `正在查询 ${processed}/${total}（${percent}%），并发 ${Math.min(concurrency, total)}，成功 ${successCount}${failCount > 0 ? `，失败 ${failCount}` : ''}${ccqQueryAbort ? '，正在停止...' : ''}`;
+                progressText.textContent = text;
+                setClearQueryStatus(text, failCount > 0);
+                if (liveRefresh) renderClearQueryBatchPage();
+            };
+
             try {
-                for (let start = 0; start < total; start += BATCH_SIZE) {
-                    const rowIds = [];
-                    for (let i = start; i < Math.min(start + BATCH_SIZE, total); i++) rowIds.push(i);
-                    
-                    const records = await getCourseClearRecordsByIds(rowIds);
-                    
-                    // 标记本批为查询中
-                    await batchUpdateCourseClearResults(records.map(r => ({
-                        rowId: r.rowId, status: 'querying', timeDiffCollect: null, message: '查询中...'
-                    })));
-                    await renderClearQueryBatchPage();
-                    
-                    // 并发查询
-                    const results = await Promise.all(records.map(rec => {
-                        const userId = (rec.originalData[courseClearUserIdColumnIndex] || '').toString().trim();
-                        if (!userId) {
-                            return Promise.resolve({ status: 'failed', timeDiffCollect: null, message: 'ID为空' });
-                        }
-                        return queryClearSingleApi(userId, token);
-                    }));
-                    
-                    // 统计 + 收集更新
-                    const updates = [];
-                    for (let j = 0; j < records.length; j++) {
-                        const r = results[j];
-                        if (r.status === 'success') {
-                            successCount++;
-                            consecutiveSuccess++;
-                            consecutiveFailures = 0;
-                        } else {
+                // 工作池：固定N个worker持续领取下一个rowId，流水线无空闲
+                async function worker() {
+                    while (!ccqQueryAbort) {
+                        const rowId = nextIndex;
+                        if (rowId >= total) return;
+                        nextIndex++;
+                        try {
+                            const records = await getCourseClearRecordsByIds([rowId]);
+                            const rec = records && records[0];
+                            if (rec) {
+                                const userId = (rec.originalData[courseClearUserIdColumnIndex] || '').toString().trim();
+                                const result = userId
+                                    ? await queryClearSingleApi(userId, token)
+                                    : { status: 'failed', timeDiffCollect: null, message: 'ID为空' };
+                                // 结果立即写回IndexedDB，停止后已完成部分仍可导出
+                                await batchUpdateCourseClearResults([{
+                                    rowId: rec.rowId,
+                                    status: result.status,
+                                    timeDiffCollect: result.timeDiffCollect,
+                                    message: result.message
+                                }]);
+                                if (result.status === 'success') successCount++; else failCount++;
+                            } else {
+                                failCount++;
+                            }
+                        } catch (error) {
+                            // 单条失败聚合计数，不逐条打印
                             failCount++;
-                            consecutiveFailures++;
-                            consecutiveSuccess = 0;
                         }
-                        updates.push({
-                            rowId: records[j].rowId,
-                            status: r.status,
-                            timeDiffCollect: r.timeDiffCollect,
-                            message: r.message
-                        });
-                    }
-                    
-                    await batchUpdateCourseClearResults(updates);
-                    processed += records.length;
-                    
-                    // 动态调整间隔
-                    if (consecutiveSuccess >= 10) {
-                        currentDelay = Math.max(minDelay, currentDelay - 50);
-                        consecutiveSuccess = 0;
-                    }
-                    if (consecutiveFailures >= 3) {
-                        currentDelay = Math.min(maxDelay, currentDelay + 200);
-                        consecutiveFailures = 0;
-                    }
-                    
-                    // 刷新当前页显示
-                    await renderClearQueryBatchPage();
-                    setClearQueryStatus(`正在查询 ${processed}/${total}，成功 ${successCount}，失败 ${failCount}，当前间隔 ${currentDelay}ms`, failCount > 0);
-                    
-                    // 批次间隔（最后一批不需要）
-                    if (currentDelay > 0 && start + BATCH_SIZE < total) {
-                        await new Promise(r => setTimeout(r, currentDelay));
+                        processed++;
+                        refreshProgress(false);
                     }
                 }
-                
+
+                const workerCount = Math.min(concurrency, total);
+                await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+                refreshProgress(true);
                 await renderClearQueryBatchPage();
-                setClearQueryStatus(`批量查询完成！共 ${total} 条，成功 ${successCount} 条，失败 ${failCount} 条`, failCount > 0);
+
+                if (ccqQueryAbort) {
+                    // 手动停止：已完成的结果保留在IndexedDB（可导出CSV）
+                    setClearQueryStatus(`查询已停止，已完成 ${processed}/${total}，成功 ${successCount}，失败 ${failCount}，已完成的结果已保留（可导出CSV）`, failCount > 0);
+                } else {
+                    setClearQueryStatus(`批量查询完成！共 ${total} 条，成功 ${successCount} 条，失败 ${failCount} 条`, failCount > 0);
+                }
             } catch (error) {
                 console.error('批量查询错误:', error);
                 setClearQueryStatus(`批量查询出错: ${error.message}`, true);
             } finally {
                 courseClearIsQuerying = false;
+                const indicator = document.getElementById('ccqLoadingIndicator');
+                if (indicator) indicator.remove();
                 batchBtn.disabled = false;
                 batchBtn.textContent = '批量查询';
             }
