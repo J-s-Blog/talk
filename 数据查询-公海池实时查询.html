@@ -8403,6 +8403,7 @@
         // 用当日领取记录 footfallStats 判断每人今天是否在公海池领取过用户。
         // 两类账号（emp+数字 全职 / empxgs+数字 兼职）分别按相同维度统计：
         //   系统总账号数、今日活跃账号数（当日领取用户数>0）、已达领取上限账号数（当日领取数>=单日领取上限）、当日未领取名单。
+        //   全职顾问（emp+数字）中单日领取新用户上限为0的账号：只列出名单，不参与活跃/未领取统计；兼职顾问仍全量统计。
         // 另统计注销用户总数（与"注销用户列表"口径一致）。
         function buildStaffSummaryStatsHtml(staffSummary, specialHoldData, footfallStats) {
             const stats = (footfallStats && typeof footfallStats === 'object') ? footfallStats : {};
@@ -8411,7 +8412,8 @@
             const red = v => `<span style="color: red; font-weight: bold;">${v}</span>`;
 
             // 按账号正则聚合一个类别的统计
-            function buildCategory(regex) {
+            // excludeZeroLimit 为 true 时（全职顾问）：单日领取新用户上限为0的账号只列入 zeroLimitList，不参与活跃/未领取统计
+            function buildCategory(regex, excludeZeroLimit) {
                 const seen = new Set();
                 const accounts = [];
                 if (holdList.length > 0) {
@@ -8445,15 +8447,19 @@
                 }
                 accounts.sort((a, b) => num(a.staffTalkId) - num(b.staffTalkId));
                 const total = accounts.length;
-                const activeList = accounts.filter(a => a.received > 0);
+                // 上限有效：单日领取新用户上限>0 的账号才参与活跃/未领取统计
+                const hasLimit = a => !isNaN(a.limit) && a.limit > 0;
+                const activeList = accounts.filter(a => (!excludeZeroLimit || hasLimit(a)) && a.received > 0);
                 // 已达上限：配置了有效单日领取上限（>0）且当日实际领取数达到上限
-                const reachedList = accounts.filter(a => !isNaN(a.limit) && a.limit > 0 && a.received >= a.limit);
-                const inactiveList = accounts.filter(a => !(a.received > 0));
-                return { total, activeList, reachedList, inactiveList };
+                const reachedList = accounts.filter(a => hasLimit(a) && a.received >= a.limit);
+                const inactiveList = accounts.filter(a => (!excludeZeroLimit || hasLimit(a)) && !(a.received > 0));
+                // 上限为0的账号名单（仅全职顾问统计时列出，不参与活跃/未领取统计）
+                const zeroLimitList = excludeZeroLimit ? accounts.filter(a => !hasLimit(a)) : [];
+                return { total, activeList, reachedList, inactiveList, zeroLimitList };
             }
 
-            const empCat = buildCategory(/^emp\d+$/);        // 全职顾问
-            const xgsCat = buildCategory(/^empxgs\d+$/);     // 兼职顾问
+            const empCat = buildCategory(/^emp\d+$/, true);        // 全职顾问（上限为0的只列出，不参与统计）
+            const xgsCat = buildCategory(/^empxgs\d+$/);           // 兼职顾问
 
             const nameText = list => list.length > 0
                 ? list.map(a => `${a.staffName}（${a.staffTalkId}）`).join('、')
@@ -8464,10 +8470,14 @@
                 .reduce((sum, item) => sum + (parseInt(item.canceledUserCount, 10) || 0), 0);
 
             let html = `<strong>统计：</strong>`;
-            // 全职顾问
+            // 全职顾问（上限为0的只列出名单，不参与活跃/未领取统计）
             html += `<br>全职顾问：共 ${red(empCat.total)} 个，`
                 + `活跃 ${red(empCat.activeList.length)} 个，已达上限 ${red(empCat.reachedList.length)} 个；`
-                + `未领取 ${red(empCat.inactiveList.length)} 人：${nameText(empCat.inactiveList)}<br>`;
+                + `未领取 ${red(empCat.inactiveList.length)} 人：${nameText(empCat.inactiveList)}`;
+            if (empCat.zeroLimitList.length > 0) {
+                html += `；上限为0（不计入统计）${red(empCat.zeroLimitList.length)} 人：${nameText(empCat.zeroLimitList)}`;
+            }
+            html += `<br>`;
             // 兼职顾问（当日未领取名单过长，不展示明细，仅显示人数）
             html += `兼职顾问：共 ${red(xgsCat.total)} 个，`
                 + `活跃 ${red(xgsCat.activeList.length)} 个，已达上限 ${red(xgsCat.reachedList.length)} 个，`
