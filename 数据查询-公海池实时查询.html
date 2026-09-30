@@ -373,6 +373,11 @@
             min-width: 70px; /* 是否成交 */
             text-align: center;
         }
+        #staffFollowUpTable th:nth-child(13),
+        #staffFollowUpTable td:nth-child(13) {
+            min-width: 90px; /* 最近跟进记录 */
+            text-align: center;
+        }
         #staffFollowUpTable td.sfu-sea { /* 公海池跟进列表行标识 */
             background-color: #fff8e1;
         }
@@ -3610,6 +3615,7 @@
                             <th>待续课课时</th>
                             <th>是否试听</th>
                             <th>是否成交</th>
+                            <th>最近跟进记录</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -12985,6 +12991,23 @@
         function sfuContinuedText(item) {
             return item._continued != null ? item._continued : '-';
         }
+        // 最近跟进记录显示文本（contactType 状态映射）
+        function sfuContactTypeText(contactType) {
+            const map = {
+                '1': '已加微信',
+                '2': '微信申请',
+                '3': '无人接听',
+                '4': '多次未接',
+                '5': '接听挂断',
+                '6': '暂无需求',
+                '7': '内部员工',
+                '99': '无跟进记录'
+            };
+            if (contactType === null || contactType === undefined || contactType === '') {
+                return '-';
+            }
+            return map[String(contactType)] || String(contactType);
+        }
 
         // 渲染表格
         function renderStaffFollowUpTable(mergedData) {
@@ -12992,7 +13015,7 @@
             tbody.innerHTML = '';
 
             if (!mergedData || mergedData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#999;padding:20px;">暂无数据</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#999;padding:20px;">暂无数据</td></tr>';
                 return;
             }
 
@@ -13012,6 +13035,7 @@
                     <td>${sfuContinuedText(item)}</td>
                     <td>${sfuTrialText(item.teacherType)}</td>
                     <td>${sfuDealText(item.isDeal)}</td>
+                    <td>${sfuContactTypeText(item.contactType)}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -13123,7 +13147,7 @@
                 return;
             }
             const staffInfo = document.getElementById('sfuStaffInfo').value.trim() || 'advisor';
-            const headers = ['序号', '类别', '用户ID', '注册时间', '近登时间', '推荐码', '总课时', '剩余课时', '已约消耗课时', '待续课课时', '是否试听', '是否成交'];
+            const headers = ['序号', '类别', '用户ID', '注册时间', '近登时间', '推荐码', '总课时', '剩余课时', '已约消耗课时', '待续课课时', '是否试听', '是否成交', '最近跟进记录'];
             let csvContent = '\ufeff' + headers.join(',') + '\n';
             data.forEach((item, index) => {
                 const row = [
@@ -13138,7 +13162,8 @@
                     item._attended != null ? item._attended : '',
                     item._continued != null ? item._continued : '',
                     `"${sfuTrialText(item.teacherType).replace(/"/g, '""')}"`,
-                    `"${sfuDealText(item.isDeal).replace(/"/g, '""')}"`
+                    `"${sfuDealText(item.isDeal).replace(/"/g, '""')}"`,
+                    `"${sfuContactTypeText(item.contactType).replace(/"/g, '""')}"`
                 ];
                 csvContent += row.join(',') + '\n';
             });
@@ -13191,14 +13216,15 @@
                 '已约消耗课时': item._attended != null ? item._attended : '',
                 '待续课课时': item._continued != null ? item._continued : '',
                 '是否试听': sfuTrialText(item.teacherType),
-                '是否成交': sfuDealText(item.isDeal)
+                '是否成交': sfuDealText(item.isDeal),
+                '最近跟进记录': sfuContactTypeText(item.contactType)
             }));
         }
 
         // 写出 Excel 文件（复用单条/批量导出）
         function writeSfuExcelFile(fileName, mergedData) {
             const exportData = buildSfuExportRows(mergedData);
-            const ws = XLSX.utils.json_to_sheet(exportData, { header: ['序号', '类别', '用户ID', '注册时间', '近登时间', '推荐码', '总课时', '剩余课时', '已约消耗课时', '待续课课时', '是否试听', '是否成交'] });
+            const ws = XLSX.utils.json_to_sheet(exportData, { header: ['序号', '类别', '用户ID', '注册时间', '近登时间', '推荐码', '总课时', '剩余课时', '已约消耗课时', '待续课课时', '是否试听', '是否成交', '最近跟进记录'] });
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '顾问跟进列表');
             XLSX.writeFile(wb, fileName);
