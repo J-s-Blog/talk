@@ -403,6 +403,68 @@
             background-color: #e8f5e9;
         }
 
+        /* 用户跟进状态查询表格列宽度 */
+        #userFollowStatusTable th:nth-child(1),
+        #userFollowStatusTable td:nth-child(1) {
+            min-width: 40px; /* 序号 */
+            text-align: right;
+        }
+        #userFollowStatusTable th:nth-child(2),
+        #userFollowStatusTable td:nth-child(2) {
+            min-width: 90px; /* 用户ID */
+            text-align: right;
+        }
+        #userFollowStatusTable th:nth-child(3),
+        #userFollowStatusTable td:nth-child(3) {
+            min-width: 90px; /* 顾问 */
+        }
+        #userFollowStatusTable th:nth-child(4),
+        #userFollowStatusTable td:nth-child(4) {
+            min-width: 90px; /* 顾问empID */
+        }
+        #userFollowStatusTable th:nth-child(5),
+        #userFollowStatusTable td:nth-child(5) {
+            min-width: 90px; /* 推荐码 */
+        }
+        #userFollowStatusTable th:nth-child(6),
+        #userFollowStatusTable td:nth-child(6) {
+            min-width: 150px; /* 备注 */
+        }
+        #userFollowStatusTable th:nth-child(7),
+        #userFollowStatusTable td:nth-child(7) {
+            min-width: 150px; /* 沟通时间 */
+        }
+        #userFollowStatusTable th:nth-child(8),
+        #userFollowStatusTable td:nth-child(8) {
+            min-width: 90px; /* 沟通状态 */
+            text-align: center;
+        }
+        #userFollowStatusTable th:nth-child(9),
+        #userFollowStatusTable td:nth-child(9) {
+            min-width: 150px; /* 课时 */
+        }
+        #userFollowStatusTable th:nth-child(10),
+        #userFollowStatusTable td:nth-child(10) {
+            min-width: 70px; /* 试听 */
+            text-align: center;
+        }
+        #userFollowStatusTable th:nth-child(11),
+        #userFollowStatusTable td:nth-child(11) {
+            min-width: 70px; /* 成交 */
+            text-align: center;
+        }
+        #userFollowStatusTable tr.ufs-sea td { /* 公海池跟进列表行标识 */
+            background-color: #fff8e1;
+        }
+        #userFollowStatusTable tr.ufs-bind td { /* 绑定跟进列表行标识 */
+            background-color: #e8f5e9;
+        }
+
+        /* 批量导入表格：多条记录结果换行显示 */
+        #ufsBatchImportTable td {
+            white-space: pre-line;
+        }
+
         /* 用户评价表格列宽度 */
         #userEvaluationTable {
             table-layout: fixed;
@@ -2487,6 +2549,7 @@
                     <option value="employeeManagement">员工管理</option>
                     <option value="batchAssign">批量用户分配</option>
                     <option value="staffFollowUp">查询顾问跟进列表</option>
+                    <option value="userFollowStatus">用户跟进状态查询</option>
                     <option value="userEvaluation">用户评价</option>
                     <option value="userEvaluationSum">综合评价数据</option>
                 </select>
@@ -2502,6 +2565,7 @@
                 <button class="tab-button" data-tab="employeeManagement">员工管理</button>
                 <button class="tab-button" data-tab="batchAssign">批量用户分配</button>
                 <button class="tab-button" data-tab="staffFollowUp">查询顾问跟进列表</button>
+                <button class="tab-button" data-tab="userFollowStatus">用户跟进状态查询</button>
                 <button class="tab-button" data-tab="userEvaluation">用户评价</button>
                 <button class="tab-button" data-tab="userEvaluationSum">综合评价数据</button>
             </div>
@@ -3700,6 +3764,101 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 用户跟进状态查询Tab -->
+    <div id="userFollowStatus" class="tab-content">
+        <h2>用户跟进状态查询</h2>
+
+        <!-- 查询条件 -->
+        <div class="date-conditions" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div class="form-group inline">
+                <label for="ufsUserInfo" style="margin-bottom: 5px; display: block;">用户ID:</label>
+                <input type="text" id="ufsUserInfo" placeholder="请输入用户ID" style="width: 180px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <!-- 关键：这一层 width:100% 会强制换行占满整行，按钮全部落在这一行 -->
+            <div style="width:100%; display: flex; gap: 10px;">
+                <button type="button" id="queryUserFollowStatusBtn" style="padding: 8px 20px; width: auto;">查询</button>
+                <button type="button" id="exportUserFollowStatusExcelBtn" style="padding: 8px 20px; width: auto; display: none; background-color: #17a2b8;">导出Excel</button>
+            </div>
+        </div>
+
+        <p style="font-size: 13px; color: #666; margin: 8px 0 0 0;">
+            说明：输入用户ID后将同时查询该用户的「公海池跟进列表」与「绑定跟进列表」并合并展示。行背景色：<span style="background-color:#fff8e1; padding:1px 5px; border-radius:3px;">黄色=公海池跟进列表</span>，<span style="background-color:#e8f5e9; padding:1px 5px; border-radius:3px;">绿色=绑定跟进列表</span>。
+        </p>
+
+        <!-- 汇总信息 -->
+        <div id="userFollowStatusSummary" style="display: none; margin-bottom: 20px; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                <div><strong>用户ID:</strong> <span id="ufsUserInfoDisplay">-</span></div>
+                <div><strong>公海池跟进:</strong> <span id="ufsSeaCount">0</span> 条</div>
+                <div><strong>绑定跟进:</strong> <span id="ufsBindCount">0</span> 条</div>
+                <div><strong>合计:</strong> <span id="ufsTotalCount">0</span> 条</div>
+            </div>
+        </div>
+
+        <!-- 结果表格 -->
+        <div id="userFollowStatusResult" style="display: none;">
+            <div id="userFollowStatusStatus" style="margin-bottom: 15px;"></div>
+            <div class="table-container">
+                <table id="userFollowStatusTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>用户ID</th>
+                            <th>顾问</th>
+                            <th>顾问empID</th>
+                            <th>推荐码</th>
+                            <th>备注</th>
+                            <th>沟通时间</th>
+                            <th>沟通状态</th>
+                            <th>课时</th>
+                            <th>试听</th>
+                            <th>成交</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 批量查询区域 -->
+        <div class="batch-ufs-section" style="margin-top: 25px; padding: 15px; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #ddd;">
+            <h3 style="margin-top: 0;">批量查询</h3>
+            <p style="font-size: 13px; color: #666; margin: 5px 0 12px 0;">
+                导入 用户ID 列表（支持 .txt / .csv / .xlsx），依次查询每个用户，查询结果（顾问、顾问empID、推荐码、备注、沟通时间、沟通状态、课时、试听、成交）将直接合并到下方导入表格的新增列中，可一键导出Excel。
+            </p>
+
+            <!-- 文件选择 -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <input type="file" id="ufsBatchFile" accept=".txt,.csv,.xlsx,.xls" style="display: none;">
+                <button type="button" id="ufsBatchImportBtn" style="padding: 8px 20px; width: auto; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">批量查询</button>
+                <span id="ufsBatchFileName" style="font-size: 13px; color: #666;"></span>
+            </div>
+
+            <!-- 导入数据列表与列选择 -->
+            <div id="ufsBatchImportSection" style="display: none; margin-top: 15px;">
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                    <label style="font-weight: bold; color: #555;">选择 用户ID 所在列：</label>
+                    <select id="ufsBatchColumnSelect" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></select>
+                    <label style="font-size: 13px; color: #666;"><input type="checkbox" id="ufsBatchHasHeader"> 首行为表头</label>
+                    <span id="ufsBatchValidation" style="font-size: 13px;"></span>
+                </div>
+                <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+                    <button type="button" id="ufsBatchStartBtn" style="padding: 8px 20px; width: auto; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">开始批量查询</button>
+                    <button type="button" id="ufsBatchClearBtn" style="padding: 8px 20px; width: auto; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">清空</button>
+                </div>
+                <div class="table-container" style="max-height: 300px; overflow: auto; border: 1px solid #ddd;">
+                    <table id="ufsBatchImportTable" class="data-table" style="width: 100%;">
+                        <thead><tr></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 进度 -->
+            <div id="ufsBatchProgress" style="display: none; margin-top: 15px;"></div>
         </div>
     </div>
 
@@ -7477,25 +7636,26 @@
                         element.textContent = timeString;
                     });
                     
-                    // 显示导出按钮
-                    document.getElementById('exportExcelBtn').style.display = 'flex';
-                    
                     // 存储数据以便导出
                     window.seaPoolData = data.resultData;
-                    
+
                     // ========== 最后更新已分配数据并计算新增 ==========
                     console.log('步骤4: 更新已分配数据并计算新增...');
                     const allocatedCount = data.totalCount || 0;
                     document.getElementById('allocatedCount').textContent = allocatedCount;
-                    
+
                     // 计算今日公海池新增 = 公海池已分配 + 公海池待分配（使用之前已获取的待分配数量）
                     const todayNewCount = allocatedCount + unallocatedCount;
                     document.getElementById('todayNewCount').textContent = todayNewCount;
                     console.log(`已分配: ${allocatedCount}, 待分配: ${unallocatedCount}, 新增: ${todayNewCount}`);
-                    
-                    // 查询待分配用户数据（用于详情展示）
+
+                    // 查询待分配用户数据（用于详情展示和导出），完成后才显示导出按钮，避免导出时待分配数据尚未加载
                     console.log('步骤5: 查询待分配用户详情...');
-                    await queryUnallocatedUsers();
+                    window.unallocatedUsersLoading = queryUnallocatedUsers();
+                    await window.unallocatedUsersLoading;
+
+                    // 待分配数据就绪后显示导出按钮
+                    document.getElementById('exportExcelBtn').style.display = 'flex';
                 } else {
                     statusMessage.innerHTML = ``;
                     resultStatus.innerHTML = `<div class="error-message">查询失败: ${data.resultMessage || '未知错误'}</div>`;
@@ -8122,6 +8282,15 @@
                 { header: '是否成交', key: 'isDeal', width: 12 }
             ];
             
+            // 确保待分配用户数据已就绪：若查询仍在进行则等待，缺失或为空则实时补查，避免导出文件缺少待分配数据
+            if (window.unallocatedUsersLoading && typeof window.unallocatedUsersLoading.then === 'function') {
+                await window.unallocatedUsersLoading;
+            }
+            if (!Array.isArray(window.unallocatedUserData) || window.unallocatedUserData.length === 0) {
+                console.log('导出时待分配用户数据缺失，实时补查...');
+                await queryUnallocatedUsers();
+            }
+
             // 填充待分配用户列表数据
             const unallocatedData = window.unallocatedUserData || [];
             unallocatedData.forEach((item, index) => {
@@ -13671,6 +13840,654 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '批量查询汇总');
             XLSX.writeFile(wb, `顾问跟进批量查询汇总_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
+
+        // ==================== 用户跟进状态查询 Tab ====================
+        let ufsMergedData = [];      // 当前展示/导出的合并数据
+        let ufsExportMode = 'single'; // 导出模式：single 单个查询 / batch 批量查询
+
+        // 构建 querySeaPoolFollow 请求 payload（与顾问跟进列表一致，查询条件改为 userInfo，staffInfo 留空）
+        function buildUserFollowStatusPayload(userInfo, listType, pageSize) {
+            if (listType === 1) {
+                // 公海池跟进列表
+                return {
+                    "listType": 1,
+                    "sortType": 1,
+                    "userBindType": 1,
+                    "sortItem": 3,
+                    "seaNotDealNum": "",
+                    "contactType": "",
+                    "finalActiveStartTime": "",
+                    "finalActiveEndTime": "",
+                    "packagePast": "",
+                    "seaNotInteractNum": "",
+                    "shareUserId": "",
+                    "getTrialClass": "",
+                    "bindNotDealNum": "",
+                    "bindNotInteractNum": "",
+                    "remarkByAgent": "",
+                    "userInfo": userInfo,
+                    "staffInfo": "",
+                    "isAudition": "",
+                    "isDeal": "",
+                    "receiveStartTime": "",
+                    "receiveEndTime": "",
+                    "createStartTime": "",
+                    "createEndTime": "",
+                    "mobileArea": "",
+                    "teachCourse": "",
+                    "feedbackType": "",
+                    "salesmanTalkId": "",
+                    "isHasShareUserId": "",
+                    "changeReason": "",
+                    "currPage": 0,
+                    "pageSize": pageSize
+                };
+            } else {
+                // 绑定跟进列表
+                return {
+                    "listType": 2,
+                    "sortType": 1,
+                    "sortItem": 3,
+                    "packagePast": "",
+                    "finalActiveStartTime": "",
+                    "finalActiveEndTime": "",
+                    "seaNotDealNum": "",
+                    "contactType": "",
+                    "seaNotInteractNum": "",
+                    "shareUserId": "",
+                    "getTrialClass": "",
+                    "bindNotDealNum": "",
+                    "bindNotInteractNum": "",
+                    "remarkByAgent": "",
+                    "userInfo": userInfo,
+                    "staffInfo": "",
+                    "isAudition": "",
+                    "isDeal": "",
+                    "receiveStartTime": "",
+                    "receiveEndTime": "",
+                    "createStartTime": "",
+                    "createEndTime": "",
+                    "mobileArea": "",
+                    "teachCourse": "",
+                    "feedbackType": "",
+                    "salesmanTalkId": "",
+                    "isHasShareUserId": "",
+                    "currPage": 0,
+                    "pageSize": pageSize
+                };
+            }
+        }
+
+        // 查询单个列表（先 pageSize=1 取 totalCount，再用 totalCount 作为 pageSize 查全部）
+        async function fetchUserFollowStatusList(token, userInfo, listType) {
+            const headers = {
+                'Content-Type': 'application/json;charset=UTF-8',
+                'Accept': 'application/json, text/plain, */*',
+                'User-Agent': navigator.userAgent,
+                'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                'Origin': 'https://www.talk915.com',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'token': token
+            };
+
+            // 第一步：pageSize=1，取 totalCount
+            const probePayload = buildUserFollowStatusPayload(userInfo, listType, 1);
+            const probeResp = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(probePayload),
+                credentials: 'include'
+            });
+            const probeData = await probeResp.json();
+            if (!probeResp.ok || probeData.resultCode !== 0) {
+                return { success: false, message: probeData.resultMessage || '未知错误', totalCount: 0, list: [] };
+            }
+
+            const totalCount = probeData.totalCount || 0;
+            if (totalCount <= 0) {
+                return { success: true, totalCount: 0, list: [] };
+            }
+
+            // 第二步：pageSize=totalCount，一次性查全部
+            const fullPayload = buildUserFollowStatusPayload(userInfo, listType, totalCount);
+            const fullResp = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(fullPayload),
+                credentials: 'include'
+            });
+            const fullData = await fullResp.json();
+            if (!fullResp.ok || fullData.resultCode !== 0) {
+                return { success: false, message: fullData.resultMessage || '未知错误', totalCount: totalCount, list: [] };
+            }
+
+            return { success: true, totalCount: fullData.totalCount || 0, list: fullData.resultData || [] };
+        }
+
+        // 沟通状态文本（1.已加微信 2.微信申请 3.无人接听 4.多次未接 5.接听挂断 6.暂无需求 7.内部员工）
+        function ufsContactTypeText(contactType) {
+            const map = {
+                '1': '已加微信',
+                '2': '微信申请',
+                '3': '无人接听',
+                '4': '多次未接',
+                '5': '接听挂断',
+                '6': '暂无需求',
+                '7': '内部员工',
+                '99': '无跟进记录'
+            };
+            if (contactType === null || contactType === undefined || contactType === '') {
+                return '-';
+            }
+            return map[String(contactType)] || String(contactType);
+        }
+
+        // 试听文本（参考公海池查询字段定义：getTrialClass 空-未试课，1/2-已试课；回退 teacherType）
+        function ufsTrialText(item) {
+            if (item && 'getTrialClass' in item) {
+                const v = item.getTrialClass;
+                if (v === null || v === undefined || v === '') return '未试课';
+                if (Number(v) === 1 || Number(v) === 2) return '已试课';
+                return '-';
+            }
+            const t = item ? item.teacherType : null;
+            if (t === '' || t === null || t === undefined) return '未试课';
+            if (String(t) === '1') return '已试课';
+            return '-';
+        }
+
+        // 成交文本（参考公海池查询字段定义：isDeal 0-未成交，1-已成交）
+        function ufsDealText(val) {
+            if (val === null || val === undefined || val === '') return '-';
+            if (Number(val) === 0) return '未成交';
+            if (Number(val) === 1) return '已成交';
+            return '-';
+        }
+
+        // 课时文本：tpackageList → 套餐类型（剩余课时/总课时），多条用换行分隔
+        // productType=0 → 次/周卡，productType=1 → 月卡
+        function ufsPackageText(tpackageList) {
+            if (!Array.isArray(tpackageList) || tpackageList.length === 0) return '-';
+            const names = { '0': '次/周卡', '1': '月卡' };
+            const parts = [];
+            tpackageList.forEach(pkg => {
+                if (!pkg) return;
+                const name = names[String(pkg.productType)] || ('套餐' + (pkg.productType != null ? String(pkg.productType) : ''));
+                const total = parseFloat(pkg.initialPoint) || 0;
+                const remain = parseFloat(pkg.balance) || 0;
+                parts.push(`${name}（${remain}/${total}）`);
+            });
+            return parts.length > 0 ? parts.join('\n') : '-';
+        }
+
+        // 渲染结果表格
+        function renderUserFollowStatusTable(data) {
+            const tbody = document.querySelector('#userFollowStatusTable tbody');
+            tbody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;padding:20px;">暂无数据</td></tr>';
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.className = item._category === '公海池跟进列表' ? 'ufs-sea' : 'ufs-bind';
+                const pkgText = ufsPackageText(item.tpackageList).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.userId != null ? item.userId : ''}</td>
+                    <td>${item.staffName || ''}</td>
+                    <td>${item.staffTalkId || ''}</td>
+                    <td>${item.teachCourse || ''}</td>
+                    <td>${item.remarkByAgent || ''}</td>
+                    <td>${item.interactTime || ''}</td>
+                    <td>${ufsContactTypeText(item.contactType)}</td>
+                    <td>${pkgText}</td>
+                    <td>${ufsTrialText(item)}</td>
+                    <td>${ufsDealText(item.isDeal)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 更新汇总信息
+        function renderUfsSummary(userInfo, seaCount, bindCount) {
+            document.getElementById('userFollowStatusSummary').style.display = 'block';
+            document.getElementById('ufsUserInfoDisplay').textContent = userInfo;
+            document.getElementById('ufsSeaCount').textContent = seaCount;
+            document.getElementById('ufsBindCount').textContent = bindCount;
+            document.getElementById('ufsTotalCount').textContent = seaCount + bindCount;
+        }
+
+        // 构建导出行数据（单个/批量导出复用）
+        function buildUfsExportRows(mergedData) {
+            return mergedData.map((item, index) => ({
+                '序号': index + 1,
+                '用户ID': item.userId != null ? item.userId : '',
+                '顾问': item.staffName || '',
+                '顾问empID': item.staffTalkId || '',
+                '推荐码': item.teachCourse || '',
+                '备注': item.remarkByAgent || '',
+                '沟通时间': item.interactTime || '',
+                '沟通状态': ufsContactTypeText(item.contactType),
+                '课时': ufsPackageText(item.tpackageList),
+                '试听': ufsTrialText(item),
+                '成交': ufsDealText(item.isDeal)
+            }));
+        }
+
+        const ufsExportHeaders = ['序号', '用户ID', '顾问', '顾问empID', '推荐码', '备注', '沟通时间', '沟通状态', '课时', '试听', '成交'];
+
+        // 写出 Excel 文件（单个查询明细）
+        function writeUfsExcelFile(fileName, mergedData) {
+            const exportData = buildUfsExportRows(mergedData);
+            const ws = XLSX.utils.json_to_sheet(exportData, { header: ufsExportHeaders });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '用户跟进状态');
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // 写出批量查询 Excel（导入表格 + 查询结果列 合并导出）
+        function writeUfsBatchExcelFile(fileName) {
+            const colSelect = document.getElementById('ufsBatchColumnSelect');
+            const selectedCol = parseInt(colSelect.value) || 0;
+            const hasHeader = document.getElementById('ufsBatchHasHeader').checked;
+            const origHeader = [];
+            for (let c = 0; c < ufsBatchMaxCols; c++) {
+                origHeader.push(hasHeader ? (ufsBatchRawRows[0][c] || `列${c + 1}`) : `列${c + 1}`);
+            }
+            const dataRows = hasHeader ? ufsBatchRawRows.slice(1) : ufsBatchRawRows;
+            const aoa = [origHeader.concat(ufsResultHeaders)];
+            dataRows.forEach(row => {
+                const userId = String(row[selectedCol] || '').trim();
+                const cells = ufsRecordsToCells(ufsBatchResults[userId]);
+                const fullRow = [];
+                for (let c = 0; c < ufsBatchMaxCols; c++) {
+                    fullRow.push(row[c] != null ? row[c] : '');
+                }
+                aoa.push(fullRow.concat(cells));
+            });
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '用户跟进状态');
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // 查询按钮事件（单个用户ID）
+        document.getElementById('queryUserFollowStatusBtn').addEventListener('click', async function() {
+            const queryBtn = this;
+            const userInfo = document.getElementById('ufsUserInfo').value.trim();
+            const statusDiv = document.getElementById('userFollowStatusStatus');
+            const token = localStorage.getItem('talk915_token');
+
+            if (!userInfo) {
+                statusDiv.innerHTML = '<div class="error-message">请输入用户ID</div>';
+                document.getElementById('userFollowStatusResult').style.display = 'block';
+                return;
+            }
+            if (!token) {
+                statusDiv.innerHTML = '<div class="error-message">请先登录获取token</div>';
+                document.getElementById('userFollowStatusResult').style.display = 'block';
+                return;
+            }
+
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
+            ufsExportMode = 'single';
+            ufsMergedData = [];
+            statusDiv.innerHTML = '<div class="success-message">正在查询公海池跟进列表...</div>';
+            document.getElementById('userFollowStatusResult').style.display = 'block';
+            document.getElementById('userFollowStatusSummary').style.display = 'none';
+            document.getElementById('exportUserFollowStatusExcelBtn').style.display = 'none';
+
+            try {
+                // 1) 公海池跟进列表（listType=1）
+                const seaResult = await fetchUserFollowStatusList(token, userInfo, 1);
+                if (!seaResult.success) {
+                    statusDiv.innerHTML = `<div class="error-message">公海池跟进列表查询失败: ${seaResult.message}</div>`;
+                    return;
+                }
+                const seaList = seaResult.list.map(item => ({ ...item, _category: '公海池跟进列表' }));
+                statusDiv.innerHTML = `<div class="success-message">公海池跟进列表查询完成（${seaList.length} 条），正在查询绑定跟进列表...</div>`;
+
+                // 2) 绑定跟进列表（listType=2）
+                const bindResult = await fetchUserFollowStatusList(token, userInfo, 2);
+                if (!bindResult.success) {
+                    // 绑定列表失败时仍展示已查到的公海池数据
+                    ufsMergedData = seaList;
+                    renderUserFollowStatusTable(ufsMergedData);
+                    renderUfsSummary(userInfo, seaList.length, 0);
+                    statusDiv.innerHTML = `<div class="error-message">绑定跟进列表查询失败: ${bindResult.message}（已展示公海池跟进 ${seaList.length} 条）</div>`;
+                    if (ufsMergedData.length > 0) {
+                        document.getElementById('exportUserFollowStatusExcelBtn').style.display = 'inline-block';
+                    }
+                    return;
+                }
+                const bindList = bindResult.list.map(item => ({ ...item, _category: '绑定跟进列表' }));
+
+                // 3) 合并并渲染
+                ufsMergedData = seaList.concat(bindList);
+                renderUserFollowStatusTable(ufsMergedData);
+                renderUfsSummary(userInfo, seaList.length, bindList.length);
+                statusDiv.innerHTML = `<div class="success-message">查询成功！公海池跟进 ${seaList.length} 条，绑定跟进 ${bindList.length} 条，合计 ${ufsMergedData.length} 条</div>`;
+
+                if (ufsMergedData.length > 0) {
+                    document.getElementById('exportUserFollowStatusExcelBtn').style.display = 'inline-block';
+                }
+            } catch (error) {
+                console.error('用户跟进状态查询错误:', error);
+                statusDiv.innerHTML = '<div class="error-message">网络请求出错: ' + error.message + '</div>';
+            } finally {
+                queryBtn.disabled = false;
+                queryBtn.textContent = '查询';
+            }
+        });
+
+        // 导出Excel（单个查询 → 明细；批量查询 → 导入表格+结果列合并导出）
+        document.getElementById('exportUserFollowStatusExcelBtn').addEventListener('click', function() {
+            const dateStr = new Date().toISOString().split('T')[0];
+            if (ufsExportMode === 'batch') {
+                writeUfsBatchExcelFile(`用户跟进状态批量查询_${dateStr}.xlsx`);
+            } else {
+                if (!ufsMergedData || ufsMergedData.length === 0) {
+                    alert('没有数据可导出');
+                    return;
+                }
+                const userInfo = document.getElementById('ufsUserInfo').value.trim() || 'user';
+                writeUfsExcelFile(`用户跟进状态查询_${userInfo}_${dateStr}.xlsx`, ufsMergedData);
+            }
+        });
+
+        // 回车触发查询
+        document.getElementById('ufsUserInfo').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('queryUserFollowStatusBtn').click();
+            }
+        });
+
+        // ==================== 用户跟进状态 批量查询 ====================
+        let ufsBatchRawRows = [];     // 解析后的原始行（二维数组）
+        let ufsBatchMaxCols = 0;      // 最大列数
+        let ufsBatchValidList = [];   // 去重后的有效用户ID列表
+        let ufsBatchResults = {};     // userId → 查询到的记录数组（公海池+绑定合并）
+
+        // 批量表追加的结果列
+        const ufsResultHeaders = ['来源', '顾问', '顾问empID', '推荐码', '备注', '沟通时间', '沟通状态', '课时', '试听', '成交'];
+
+        // 单条记录 → 结果列的值（首列为数据来源）
+        function ufsRecordToCells(r) {
+            if (!r) return new Array(ufsResultHeaders.length).fill('');
+            const contact = ufsContactTypeText(r.contactType);
+            const deal = ufsDealText(r.isDeal);
+            return [
+                r._category === '绑定跟进列表' ? '绑定列表' : '跟进列表',
+                r.staffName || '',
+                r.staffTalkId || '',
+                r.teachCourse || '',
+                r.remarkByAgent || '',
+                r.interactTime || '',
+                contact === '-' ? '' : contact,
+                (Array.isArray(r.tpackageList) && r.tpackageList.length > 0) ? ufsPackageText(r.tpackageList) : '',
+                ufsTrialText(r),
+                deal === '-' ? '' : deal
+            ];
+        }
+
+        // 记录列表 → 每列多条记录用换行合并（一个用户一行）；无记录时来源列备注清楚
+        function ufsRecordsToCells(records) {
+            const cells = new Array(ufsResultHeaders.length).fill('');
+            if (!records || records.length === 0) {
+                cells[0] = '无跟进记录';
+                return cells;
+            }
+            const perRecord = records.map(ufsRecordToCells);
+            for (let c = 0; c < ufsResultHeaders.length; c++) {
+                const vals = perRecord.map(arr => arr[c]).filter(v => v !== '' && v != null);
+                cells[c] = vals.join('\n');
+            }
+            return cells;
+        }
+
+        // 用户ID有效性：非空纯数字
+        function isValidUfsUserId(val) {
+            if (val === null || val === undefined) return false;
+            const s = String(val).trim();
+            return s !== '' && /^\d+$/.test(s);
+        }
+
+        // 填充列选择下拉
+        function populateUfsBatchColumnSelect() {
+            const colSelect = document.getElementById('ufsBatchColumnSelect');
+            colSelect.innerHTML = '';
+            let bestCol = 0;
+            let bestCount = -1;
+            for (let c = 0; c < ufsBatchMaxCols; c++) {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = `第${c + 1}列`;
+                colSelect.appendChild(opt);
+                // 默认选中有效用户ID数量最多的列
+                let cnt = 0;
+                ufsBatchRawRows.forEach(r => { if (isValidUfsUserId(r[c])) cnt++; });
+                if (cnt > bestCount) { bestCount = cnt; bestCol = c; }
+            }
+            colSelect.value = bestCol;
+        }
+
+        // 渲染导入预览表 + 校验
+        function renderUfsBatchImportTable() {
+            const hasHeader = document.getElementById('ufsBatchHasHeader').checked;
+            const colSelect = document.getElementById('ufsBatchColumnSelect');
+            const selectedCol = parseInt(colSelect.value) || 0;
+            const thead = document.querySelector('#ufsBatchImportTable thead tr');
+            const tbody = document.querySelector('#ufsBatchImportTable tbody');
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (ufsBatchRawRows.length === 0) return;
+
+            for (let c = 0; c < ufsBatchMaxCols; c++) {
+                const th = document.createElement('th');
+                th.textContent = hasHeader ? (ufsBatchRawRows[0][c] || `列${c + 1}`) : `列${c + 1}`;
+                thead.appendChild(th);
+            }
+            // 追加查询结果列表头
+            ufsResultHeaders.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                thead.appendChild(th);
+            });
+
+            const dataRows = hasHeader ? ufsBatchRawRows.slice(1) : ufsBatchRawRows;
+            dataRows.forEach(row => {
+                const tr = document.createElement('tr');
+                for (let c = 0; c < ufsBatchMaxCols; c++) {
+                    const td = document.createElement('td');
+                    td.textContent = row[c] != null ? row[c] : '';
+                    tr.appendChild(td);
+                }
+                // 追加查询结果单元格
+                ufsResultHeaders.forEach(() => {
+                    const td = document.createElement('td');
+                    td.className = 'ufs-result-cell';
+                    tr.appendChild(td);
+                });
+                fillUfsRowResultCells(tr, String(row[selectedCol] || '').trim());
+                tbody.appendChild(tr);
+            });
+
+            updateUfsBatchValidation();
+        }
+
+        // 填充某一行的查询结果列
+        function fillUfsRowResultCells(tr, userId) {
+            const cells = ufsRecordsToCells(ufsBatchResults[userId]);
+            const resultTds = tr.querySelectorAll('td.ufs-result-cell');
+            resultTds.forEach((td, i) => { td.textContent = cells[i] || ''; });
+        }
+
+        // 查询完某用户后，更新导入表格中该用户所有行的结果列
+        function updateUfsBatchRowResults(userId) {
+            const colSelect = document.getElementById('ufsBatchColumnSelect');
+            const selectedCol = parseInt(colSelect.value) || 0;
+            document.querySelectorAll('#ufsBatchImportTable tbody tr').forEach(tr => {
+                const td = tr.cells[selectedCol];
+                if (td && String(td.textContent || '').trim() === userId) {
+                    fillUfsRowResultCells(tr, userId);
+                }
+            });
+        }
+
+        // 更新校验统计
+        function updateUfsBatchValidation() {
+            const colSelect = document.getElementById('ufsBatchColumnSelect');
+            const selectedCol = parseInt(colSelect.value) || 0;
+            const hasHeader = document.getElementById('ufsBatchHasHeader').checked;
+            const dataRows = hasHeader ? ufsBatchRawRows.slice(1) : ufsBatchRawRows;
+            let valid = 0, invalid = 0;
+            const seen = new Set();
+            ufsBatchValidList = [];
+            dataRows.forEach(row => {
+                const userId = String(row[selectedCol] || '').trim();
+                if (isValidUfsUserId(userId)) {
+                    valid++;
+                    if (!seen.has(userId)) {
+                        seen.add(userId);
+                        ufsBatchValidList.push(userId);
+                    }
+                } else {
+                    invalid++;
+                }
+            });
+            document.getElementById('ufsBatchValidation').innerHTML =
+                `有效 <strong style="color:#155724">${valid}</strong> 条，无效 <strong style="color:#dc3545">${invalid}</strong> 条，去重后 <strong>${ufsBatchValidList.length}</strong> 个用户ID`;
+        }
+
+        // 重置批量区域
+        function resetUfsBatchArea() {
+            ufsBatchRawRows = [];
+            ufsBatchMaxCols = 0;
+            ufsBatchValidList = [];
+            ufsBatchResults = {};
+            document.getElementById('ufsBatchFileName').textContent = '';
+            document.getElementById('ufsBatchImportSection').style.display = 'none';
+            document.getElementById('ufsBatchProgress').style.display = 'none';
+            document.getElementById('ufsBatchProgress').innerHTML = '';
+            document.querySelector('#ufsBatchImportTable thead tr').innerHTML = '';
+            document.querySelector('#ufsBatchImportTable tbody').innerHTML = '';
+            document.getElementById('ufsBatchFile').value = '';
+        }
+
+        // 批量查询按钮 → 触发文件选择
+        document.getElementById('ufsBatchImportBtn').addEventListener('click', function() {
+            document.getElementById('ufsBatchFile').click();
+        });
+
+        // 文件选择后解析（复用 parseSfuBatchFile）
+        document.getElementById('ufsBatchFile').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('ufsBatchFileName').textContent = file.name;
+            try {
+                const rows = await parseSfuBatchFile(file);
+                if (!rows || rows.length === 0) {
+                    alert('未解析到有效数据');
+                    resetUfsBatchArea();
+                    document.getElementById('ufsBatchFileName').textContent = file.name + '（无数据）';
+                    return;
+                }
+                ufsBatchRawRows = rows;
+                ufsBatchMaxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
+                ufsBatchResults = {}; // 新导入文件，清空之前的查询结果
+                document.getElementById('exportUserFollowStatusExcelBtn').style.display = 'none';
+                document.getElementById('ufsBatchProgress').style.display = 'none';
+                document.getElementById('ufsBatchProgress').innerHTML = '';
+                document.getElementById('ufsBatchHasHeader').checked = false;
+                populateUfsBatchColumnSelect();
+                document.getElementById('ufsBatchImportSection').style.display = 'block';
+                renderUfsBatchImportTable();
+            } catch (err) {
+                alert('文件解析失败: ' + err.message);
+                resetUfsBatchArea();
+                document.getElementById('ufsBatchFileName').textContent = file.name + '（解析失败）';
+            }
+        });
+
+        // 列选择/表头切换 → 重新渲染与校验
+        document.getElementById('ufsBatchColumnSelect').addEventListener('change', renderUfsBatchImportTable);
+        document.getElementById('ufsBatchHasHeader').addEventListener('change', renderUfsBatchImportTable);
+
+        // 清空
+        document.getElementById('ufsBatchClearBtn').addEventListener('click', resetUfsBatchArea);
+
+        // 开始批量查询
+        document.getElementById('ufsBatchStartBtn').addEventListener('click', async function() {
+            const startBtn = this;
+            const token = localStorage.getItem('talk915_token');
+            if (!token) {
+                alert('请先登录获取token');
+                return;
+            }
+            if (ufsBatchValidList.length === 0) {
+                alert('没有有效的用户ID（需为纯数字），请检查所选列');
+                return;
+            }
+
+            startBtn.disabled = true;
+            document.getElementById('ufsBatchClearBtn').disabled = true;
+            const progress = document.getElementById('ufsBatchProgress');
+            progress.style.display = 'block';
+            ufsBatchResults = {};
+            ufsExportMode = 'batch';
+            ufsMergedData = [];
+            // 批量查询不使用顶部单次查询区域，若之前展示过则隐藏
+            document.getElementById('userFollowStatusResult').style.display = 'none';
+            document.getElementById('userFollowStatusSummary').style.display = 'none';
+            document.getElementById('exportUserFollowStatusExcelBtn').style.display = 'none';
+            renderUfsBatchImportTable(); // 清空结果列，准备回填
+
+            for (let i = 0; i < ufsBatchValidList.length; i++) {
+                const userId = ufsBatchValidList[i];
+                progress.innerHTML = `<div class="success-message">正在查询 (${i + 1}/${ufsBatchValidList.length}): <strong>${userId}</strong> ...</div>`;
+                try {
+                    const records = [];
+
+                    // 公海池跟进列表
+                    const seaResult = await fetchUserFollowStatusList(token, userId, 1);
+                    if (!seaResult.success) {
+                        progress.innerHTML = `<div class="error-message">(${i + 1}/${ufsBatchValidList.length}) ${userId} 公海池跟进列表查询失败: ${seaResult.message}</div>`;
+                    } else {
+                        seaResult.list.forEach(it => records.push({ ...it, _category: '公海池跟进列表' }));
+                    }
+
+                    // 绑定跟进列表
+                    const bindResult = await fetchUserFollowStatusList(token, userId, 2);
+                    if (!bindResult.success) {
+                        progress.innerHTML = `<div class="error-message">(${i + 1}/${ufsBatchValidList.length}) ${userId} 绑定跟进列表查询失败: ${bindResult.message}</div>`;
+                    } else {
+                        bindResult.list.forEach(it => records.push({ ...it, _category: '绑定跟进列表' }));
+                    }
+
+                    // 结果合并到导入表格中该用户所在行
+                    ufsBatchResults[userId] = records;
+                    updateUfsBatchRowResults(userId);
+                } catch (err) {
+                    console.error('批量查询错误', userId, err);
+                    progress.innerHTML = `<div class="error-message">(${i + 1}/${ufsBatchValidList.length}) ${userId} 查询异常: ${err.message}</div>`;
+                }
+            }
+
+            const recordCount = Object.values(ufsBatchResults).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
+            progress.innerHTML = `<div class="success-message">批量查询完成！共处理 ${ufsBatchValidList.length} 个用户ID，获取 ${recordCount} 条记录，结果已合并到上方导入表格中。可点击「导出Excel」按钮导出。</div>`;
+            if (ufsBatchValidList.length > 0) {
+                document.getElementById('exportUserFollowStatusExcelBtn').style.display = 'inline-block';
+            }
+            startBtn.disabled = false;
+            document.getElementById('ufsBatchClearBtn').disabled = false;
         });
 
         // ==================== 用户评价 Tab ====================
