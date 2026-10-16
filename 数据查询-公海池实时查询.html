@@ -1573,6 +1573,21 @@
             #unallocatedTable td:nth-child(3) {
                 min-width: 60px; /* 注册时间 */
             }
+
+            #unallocatedTable th:nth-child(6),
+            #unallocatedTable td:nth-child(6) {
+                min-width: 45px; /* 来源类型 */
+            }
+
+            #unallocatedTable th:nth-child(7),
+            #unallocatedTable td:nth-child(7) {
+                min-width: 50px; /* 来源名称 */
+            }
+
+            #unallocatedTable th:nth-child(8),
+            #unallocatedTable td:nth-child(8) {
+                min-width: 45px; /* 推荐码 */
+            }
             
             /* 关键字管理区域 */
             .keyword-management {
@@ -2811,6 +2826,9 @@
                                             <th>注册时间</th>
                                             <th>是否试听</th>
                                             <th>是否成交</th>
+                                            <th>来源类型</th>
+                                            <th>来源名称</th>
+                                            <th>推荐码</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -5453,6 +5471,9 @@
                     console.log('========== 开始渲染待分配用户列表 ==========');
                     renderUnallocatedList(userData);
                     console.log('========== 待分配用户列表渲染完成 ==========');
+
+                    // 异步查询每个待分配用户的来源信息并回填表格（不阻塞主查询流程）
+                    fillUnallocatedUserSources(userData);
                 } else {
                     console.log('>>> 待分配用户数据查询失败，resultCode:', data.resultCode, ', message:', data.resultMessage);
                 }
@@ -5541,13 +5562,31 @@
                     isDealCell.textContent = '未成交';
                 }
                 row.appendChild(isDealCell);
-                
+
+                // 来源信息单元格（来源类型/来源名称/推荐码），由来源查询异步回填
+                const userId = String(item.userId || item.user_id || '');
+                const sourceFields = ['sourceType', 'sourceName', 'sourceTalkId'];
+                const cachedSource = window.unallocatedSourceCache ? window.unallocatedSourceCache.get(userId) : null;
+                sourceFields.forEach(field => {
+                    const cell = document.createElement('td');
+                    if (cachedSource) {
+                        cell.textContent = field === 'sourceType' ? (cachedSource.userType || '-')
+                            : field === 'sourceName' ? (cachedSource.userName || '-')
+                            : (cachedSource.talkId || '-');
+                    } else {
+                        cell.textContent = '...';
+                        cell.dataset.userId = userId;
+                        cell.dataset.field = field;
+                    }
+                    row.appendChild(cell);
+                });
+
                 // 将行添加到表格中
                 tbody.appendChild(row);
             });
             
             console.log('待分配用户列表渲染完成，最终行数:', tbody.children.length);
-            
+
             // 5. 切换到待分配用户列表Tab
             //console.log('切换到待分配用户列表Tab');
             //const unallocatedTabButton = document.querySelector('[data-tab="unallocated"]');
@@ -5556,6 +5595,96 @@
             //} else {
             //    console.error('找不到待分配用户列表Tab按钮');
             //}
+        }
+
+        // 待分配用户来源信息缓存（userId -> {userType, userName, talkId}），避免自动刷新时重复查询
+        window.unallocatedSourceCache = window.unallocatedSourceCache || new Map();
+        // 正在查询中的userId集合，防止并发重复请求
+        window.unallocatedSourceInflight = window.unallocatedSourceInflight || new Set();
+
+        // 查询单个用户来源信息（与"Talk915用户信息查询"工具-用户来源查询tab-手动输入ID查询使用同一接口）
+        async function fetchUserSourceInfo(userId) {
+            const token = localStorage.getItem('talk915_token');
+            if (!token) return null;
+            const response = await fetch(`https://www.talk915.com/users/studentManage/getRecommendedMsg/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*',
+                    'User-Agent': navigator.userAgent,
+                    'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                    'Origin': 'https://www.talk915.com',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'token': token
+                },
+                credentials: 'include'
+            });
+            if (response.status === 403) {
+                return { userType: '无权限', userName: '-', talkId: '-' };
+            }
+            const data = await response.json();
+            if (!(response.ok && data.resultCode === 0 && data.resultData)) return null;
+            // resultData 可能为数组（多个来源，用中文分号拼接）或单对象；空数组视为未知来源
+            const records = (Array.isArray(data.resultData) ? data.resultData : [data.resultData])
+                .filter(r => r && (r.userName || r.talkId || r.userType));
+            if (records.length === 0) {
+                return { userType: '未知来源', userName: '-', talkId: '-' };
+            }
+            return {
+                userType: records.map(r => r.userType || '-').join('；'),
+                userName: records.map(r => r.userName || '-').join('；'),
+                talkId: records.map(r => r.talkId || '-').join('；')
+            };
+        }
+
+        // 批量查询待分配用户来源并回填表格（并发限制+间隔，避免请求过快被限流；已缓存/查询中的用户跳过）
+        async function fillUnallocatedUserSources(data) {
+            const pendingIds = [...new Set((data || [])
+                .map(item => String(item.userId || item.user_id || ''))
+                .filter(id => id && !window.unallocatedSourceCache.has(id) && !window.unallocatedSourceInflight.has(id)))];
+            if (pendingIds.length === 0) return;
+            console.log(`>>> 开始查询待分配用户来源，本次需查询 ${pendingIds.length} 人`);
+            pendingIds.forEach(id => window.unallocatedSourceInflight.add(id));
+
+            const fillCells = (userId, info, failed) => {
+                if (!failed) window.unallocatedSourceCache.set(userId, info);
+                window.unallocatedSourceInflight.delete(userId);
+                document.querySelectorAll(`#unallocatedTable td[data-user-id="${userId}"]`).forEach(cell => {
+                    const field = cell.dataset.field;
+                    cell.textContent = failed ? '查询失败'
+                        : field === 'sourceType' ? (info.userType || '-')
+                        : field === 'sourceName' ? (info.userName || '-')
+                        : (info.talkId || '-');
+                });
+            };
+
+            const CONCURRENCY = 5;
+            let cursor = 0;
+            const worker = async () => {
+                while (cursor < pendingIds.length) {
+                    const id = pendingIds[cursor++];
+                    try {
+                        const info = await fetchUserSourceInfo(id);
+                        if (info) {
+                            fillCells(id, info, false);
+                        } else {
+                            fillCells(id, null, true);
+                        }
+                    } catch (error) {
+                        console.error('查询待分配用户来源失败:', id, error);
+                        fillCells(id, null, true);
+                    }
+                    // 请求间隔，避免被服务器限流
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            };
+            const workers = [];
+            for (let i = 0; i < Math.min(CONCURRENCY, pendingIds.length); i++) {
+                workers.push(worker());
+            }
+            await Promise.all(workers);
+            console.log('>>> 待分配用户来源查询全部完成');
         }
         
         // 全局关键字存储
