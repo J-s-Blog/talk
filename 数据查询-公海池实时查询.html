@@ -8662,6 +8662,20 @@
             const canceledTotal = Object.values(staffSummary)
                 .reduce((sum, item) => sum + (parseInt(item.canceledUserCount, 10) || 0), 0);
 
+            // 未达上限ID：今日活跃（已领取用户）且未达单日领取上限的账号，取 staffTalkId 中的数字（emp53 → 53），
+            // 全职+兼职合并、去重、按数字升序，方便复制后直接提醒
+            const notReachedIds = [];
+            const idSeen = new Set();
+            [...empCat.activeList, ...xgsCat.activeList].forEach(a => {
+                if (!(a.limit > 0) || a.received >= a.limit) return;
+                const idNum = (a.staffTalkId || '').toString().replace(/\D/g, '');
+                if (!idNum || idSeen.has(idNum)) return;
+                idSeen.add(idNum);
+                notReachedIds.push(idNum);
+            });
+            notReachedIds.sort((x, y) => parseInt(x, 10) - parseInt(y, 10));
+            const notReachedIdsText = notReachedIds.length > 0 ? notReachedIds.join('、') : '无';
+
             let html = `<strong>统计：</strong>`;
             // 全职顾问（上限为0的只列出名单，不参与活跃/未领取统计）
             html += `<br>全职顾问：共 ${red(empCat.total)} 个，`
@@ -8677,7 +8691,59 @@
                 + `未领取 ${red(xgsCat.inactiveList.length)} 人。<br>`;
             // 注销用户
             html += `注销用户数：${red(canceledTotal)} 人。`;
+            // 未达上限ID（方便复制提醒）
+            html += `<br>未达上限ID：${red(notReachedIdsText)}`;
+
+            // 生成纯文本版统计文案（供一键复制，格式与页面展示一致）
+            const plainLines = [];
+            plainLines.push('统计：');
+            let empPlain = `全职顾问：共 ${empCat.total} 个，活跃 ${empCat.activeList.length} 个，已达上限 ${empCat.reachedList.length} 个；`
+                + `未领取 ${empCat.inactiveList.length} 人：${nameText(empCat.inactiveList)}`;
+            if (empCat.zeroLimitList.length > 0) {
+                empPlain += `；上限为0（不计入统计）${empCat.zeroLimitList.length} 人：${nameText(empCat.zeroLimitList)}`;
+            }
+            plainLines.push(empPlain);
+            plainLines.push(`兼职顾问：共 ${xgsCat.total} 个，活跃 ${xgsCat.activeList.length} 个，已达上限 ${xgsCat.reachedList.length} 个，未领取 ${xgsCat.inactiveList.length} 人。`);
+            plainLines.push(`注销用户数：${canceledTotal} 人。`);
+            plainLines.push(`未达上限ID：${notReachedIdsText}`);
+            window.__staffStatsPlainText = plainLines.join('\n');
+
+            // 复制按钮（复制纯文本统计文案）
+            html += `<br><button type="button" onclick="copyStaffSummaryStats(this)" `
+                + `style="margin-top: 8px; min-height: 36px; padding: 0 14px; font-size: 13px; color: #fff; background-color: #007bff; border: none; border-radius: 4px;">复制统计文案</button>`;
             return html;
+        }
+
+        // 一键复制顾问统计文案（纯文本），优先使用剪贴板API，失败时退回 execCommand 方案（兼容非HTTPS/移动端环境）
+        function copyStaffSummaryStats(btn) {
+            const text = window.__staffStatsPlainText || '';
+            if (!text) { alert('暂无统计文案可复制，请先查询数据'); return; }
+            const flash = () => {
+                if (!btn) return;
+                const original = btn.textContent;
+                btn.textContent = '已复制';
+                setTimeout(() => { btn.textContent = original; }, 1500);
+            };
+            const fallbackCopy = () => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    flash();
+                } catch (e) {
+                    alert('复制失败，请长按统计文案手动复制');
+                }
+                document.body.removeChild(ta);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(flash).catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
         }
 
         // 填充保有量配置表格
