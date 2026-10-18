@@ -403,7 +403,7 @@
             </div>
             <div class="date-range" id="dateRangeWrap">
                 <select id="weeklyTypeSel" title="报告类型（默认周报）">
-                    <option value="2" selected>周报</option>
+                    <option value="0" selected>周报</option>
                     <option value="1">日报</option>
                     <option value="">全部</option>
                 </select>
@@ -641,13 +641,14 @@ async function ensureLogin(force = false) {
 // 当前已加载清单的时间范围标识，用于判断是否需要按新范围重新抓取
 let listRangeKey = '';
 
-// 报告类型：weeklyType=2 周报（默认）、1 日报、空 全部（跟随下拉框选择）
+// 报告类型：weeklyType=0 周报（默认，即原接口写死的值）、1 日报、空 全部（跟随下拉框选择）
+// 注：经实测 weeklyType=2 在本接口并非周报（返回空），故周报取 0
 function getWeeklyType() {
     return document.getElementById('weeklyTypeSel').value;
 }
 function weeklyTypeLabel() {
     const t = getWeeklyType();
-    return t === '1' ? '日报' : (t === '2' ? '周报' : '周报/日报');
+    return t === '1' ? '日报' : (t === '0' ? '周报' : '周报/日报');
 }
 
 function getRangeKey() {
@@ -970,7 +971,7 @@ function downloadExcel() {
     }
 
     // 文件名/工作表名按报告类型命名（周报默认与原逻辑一致）
-    const fileLabel = getWeeklyType() === '1' ? '日报' : (getWeeklyType() === '2' ? '周报' : '汇总');
+    const fileLabel = getWeeklyType() === '1' ? '日报' : (getWeeklyType() === '0' ? '周报' : '汇总');
     XLSX.utils.book_append_sheet(wb, ws, fileLabel === '汇总' ? '汇总' : `${fileLabel}汇总`);
     const filename = `大学堂${fileLabel}_${formatDate(new Date())}.xlsx`;
     XLSX.writeFile(wb, filename);
