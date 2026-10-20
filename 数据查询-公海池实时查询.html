@@ -4855,7 +4855,10 @@
                         Object.keys(footfallStats).forEach(staffName => {
                             if (!staffSummary[staffName]) {
                                 const stats = footfallStats[staffName];
-                                let staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                                // 优先用领取记录本身的empID，其次注销用户列表，最后保有量配置
+                                let staffTalkId = (window.footfallStaffTalkIdMap && window.footfallStaffTalkIdMap[staffName])
+                                    || canceledUserList.find(u => u.staffName === staffName)?.staffTalkId
+                                    || '-';
                                 // 注销用户列表查不到时，按姓名从保有量配置回填真实empID
                                 if (staffTalkId === '-' && specialHoldData && specialHoldData.length > 0) {
                                     const holdByStaff = specialHoldData.find(h => h.staffName === staffName && h.staffTalkId && h.staffTalkId !== '-');
@@ -5000,7 +5003,10 @@
                     Object.keys(footfallStats).forEach(staffName => {
                         if (!staffSummary[staffName]) {
                             const stats = footfallStats[staffName];
-                            let staffTalkId = canceledUserList.find(u => u.staffName === staffName)?.staffTalkId || '-';
+                            // 优先用领取记录本身的empID，其次注销用户列表，最后保有量配置
+                            let staffTalkId = (window.footfallStaffTalkIdMap && window.footfallStaffTalkIdMap[staffName])
+                                || canceledUserList.find(u => u.staffName === staffName)?.staffTalkId
+                                || '-';
                             // 注销用户列表查不到时，按姓名从保有量配置回填真实empID
                             if (staffTalkId === '-' && specialHoldData && specialHoldData.length > 0) {
                                 const holdByStaff = specialHoldData.find(h => h.staffName === staffName && h.staffTalkId && h.staffTalkId !== '-');
@@ -9022,9 +9028,9 @@
                         "changeReason": "",
                         "status": 0,
                         "currPage": 0,
-                        "pageSize": 500
+                        "pageSize": 5000
                     };
-                    
+
                     const response = await fetch('https://www.talk915.com/users/adminSeaPool/querySeaPoolFootfallRecord', {
                         method: 'POST',
                         headers: {
@@ -9069,6 +9075,16 @@
                 window.changeReason9Records = nineRecords;
                 // 自拓子tab数据源：转介绍明细（领取记录中changeReason=9）
                 window.referralRecords = nineRecords;
+
+                // 顾问姓名→empID 映射（取自领取记录本身，优先级最高；用于补充仅出现在流水中的顾问empID）
+                const footfallStaffTalkIdMap = {};
+                allRecords.forEach(r => {
+                    const name = r.staffName || '未知';
+                    if (name !== '未知' && r.staffTalkId && r.staffTalkId !== '-' && !footfallStaffTalkIdMap[name]) {
+                        footfallStaffTalkIdMap[name] = r.staffTalkId;
+                    }
+                });
+                window.footfallStaffTalkIdMap = footfallStaffTalkIdMap;
 
                 // 按staffName统计领取记录：changeReason=2为领取（phone为空的注销不计入实际领取）、changeReason=9为转介绍
                 // 口径：领取记录流水总数 = 当日实际领取用户数 + 转介绍 + 注销用户数
