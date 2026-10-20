@@ -2757,6 +2757,7 @@
                                 <option value="poolUserList">公海池用户列表</option>
                                 <option value="unallocated">待分配用户列表</option>
                                 <option value="canceledUsers">注销用户列表</option>
+                                <option value="selfExpand">自拓</option>
                             </select>
                         </div>
                         <!-- 桌面端按钮 -->
@@ -2768,6 +2769,7 @@
                                 <button class="sub-tab-button" data-tab="poolUserList">公海池用户列表</button>
                                 <button class="sub-tab-button" data-tab="unallocated">待分配用户列表</button>
                                 <button class="sub-tab-button" data-tab="canceledUsers">注销用户列表</button>
+                                <button class="sub-tab-button" data-tab="selfExpand">自拓</button>
                             </div>
                         </div>
                         
@@ -2894,6 +2896,28 @@
                                             <th>顾问empID</th>
                                             <th>推荐码</th>
                                             <th>用户ID</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 自拓列表（转介绍 + 推荐码获客明细，标注类型） -->
+                        <div id="selfExpand" class="sub-tab-content">
+                            <div class="table-container">
+                                <table id="selfExpandTable" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>序号</th>
+                                            <th>类型</th>
+                                            <th>用户ID</th>
+                                            <th>用户姓名</th>
+                                            <th>手机号</th>
+                                            <th>顾问姓名</th>
+                                            <th>顾问empID</th>
+                                            <th>推荐码</th>
+                                            <th>时间</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -5164,6 +5188,69 @@
                 `;
                 poolUserListTable.appendChild(row);
             });
+
+            // 6. 填充自拓列表（转介绍 + 推荐码获客明细，标注类型）
+            renderSelfExpandTable();
+        }
+
+        // 自拓列表：合并转介绍明细（领取记录changeReason=9）与推荐码获客明细（listType=2查询结果），按时间倒序
+        function renderSelfExpandTable() {
+            const tbody = document.querySelector('#selfExpandTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const referralRecords = window.referralRecords || [];
+            const courseCodeRecords = window.courseCodeUserData || [];
+
+            const rows = [];
+            referralRecords.forEach(r => {
+                rows.push({
+                    type: '转介绍',
+                    userId: (r.userId !== undefined && r.userId !== null) ? r.userId : '-',
+                    userName: r.userName || '-',
+                    phone: r.phone || '-',
+                    staffName: r.staffName || '-',
+                    staffTalkId: r.staffTalkId || '-',
+                    teachCourse: r.teachCourse || '-',
+                    time: r.createTime || '-'
+                });
+            });
+            courseCodeRecords.forEach(r => {
+                rows.push({
+                    type: '推荐码获客',
+                    userId: (r.userId !== undefined && r.userId !== null) ? r.userId : '-',
+                    userName: r.userName || '-',
+                    phone: r.phone || '-',
+                    staffName: r.staffName || '-',
+                    staffTalkId: r.staffTalkId || '-',
+                    teachCourse: r.teachCourse || '-',
+                    time: r.createTime || '-'
+                });
+            });
+            rows.sort((a, b) => String(b.time).localeCompare(String(a.time)));
+
+            rows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${row.type}</td>
+                    <td>${row.userId}</td>
+                    <td>${row.userName}</td>
+                    <td>${row.phone}</td>
+                    <td>${row.staffName}</td>
+                    <td>${row.staffTalkId}</td>
+                    <td>${row.teachCourse}</td>
+                    <td>${row.time}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (rows.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="9" style="text-align:center;color:#999;">暂无自拓数据（转介绍/推荐码获客）</td>';
+                tbody.appendChild(tr);
+            }
+            console.log(`自拓列表渲染完成：转介绍${referralRecords.length}条 + 推荐码获客${courseCodeRecords.length}条，共${rows.length}条`);
         }
 
         // 顾问公海数据汇总：表头下第一行插入汇总行（仅汇总：单日领取新用户上限、当日实际领取用户数、转介绍、划转、注销用户数、推荐码获客、公海池用户数，其余列不计算）
@@ -8707,6 +8794,50 @@
                 });
             });
 
+            // 创建自拓列表sheet（与"自拓"子tab一致：转介绍明细 + 推荐码获客明细，标注类型，按时间倒序）
+            const selfExpandSheet = workbook.addWorksheet('自拓列表');
+            selfExpandSheet.columns = [
+                { header: '序号', key: 'index', width: 10 },
+                { header: '类型', key: 'type', width: 12 },
+                { header: '用户ID', key: 'userId', width: 15 },
+                { header: '用户姓名', key: 'userName', width: 15 },
+                { header: '手机号', key: 'phone', width: 15 },
+                { header: '顾问姓名', key: 'staffName', width: 15 },
+                { header: '顾问empID', key: 'staffTalkId', width: 15 },
+                { header: '推荐码', key: 'teachCourse', width: 20 },
+                { header: '时间', key: 'time', width: 22 }
+            ];
+
+            const selfExpandRows = [];
+            (window.referralRecords || []).forEach(r => {
+                selfExpandRows.push({
+                    type: '转介绍',
+                    userId: (r.userId !== undefined && r.userId !== null) ? r.userId : '-',
+                    userName: r.userName || '-',
+                    phone: r.phone || '-',
+                    staffName: r.staffName || '-',
+                    staffTalkId: r.staffTalkId || '-',
+                    teachCourse: r.teachCourse || '-',
+                    time: r.createTime || '-'
+                });
+            });
+            (window.courseCodeUserData || []).forEach(r => {
+                selfExpandRows.push({
+                    type: '推荐码获客',
+                    userId: (r.userId !== undefined && r.userId !== null) ? r.userId : '-',
+                    userName: r.userName || '-',
+                    phone: r.phone || '-',
+                    staffName: r.staffName || '-',
+                    staffTalkId: r.staffTalkId || '-',
+                    teachCourse: r.teachCourse || '-',
+                    time: r.createTime || '-'
+                });
+            });
+            selfExpandRows.sort((a, b) => String(b.time).localeCompare(String(a.time)));
+            selfExpandRows.forEach((row, index) => {
+                selfExpandSheet.addRow({ index: index + 1, ...row });
+            });
+
             // 生成Excel文件
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -8936,6 +9067,8 @@
                     })));
                 }
                 window.changeReason9Records = nineRecords;
+                // 自拓子tab数据源：转介绍明细（领取记录中changeReason=9）
+                window.referralRecords = nineRecords;
 
                 // 按staffName统计领取记录：changeReason=2为领取（phone为空的注销不计入实际领取）、changeReason=9为转介绍
                 // 口径：领取记录流水总数 = 当日实际领取用户数 + 转介绍 + 注销用户数
