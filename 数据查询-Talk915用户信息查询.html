@@ -6818,8 +6818,8 @@ function exportRegisteredUsers() {
             manualQueryBtn.textContent = '查询中...';
             manualResultContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">正在查询数据，请稍候...</div>';
             
-            // 解析输入的ID列表
-            const ids = inputIds.split(',').map(id => id.trim()).filter(id => id);
+            // 解析输入的ID列表（兼容中英文逗号）
+            const ids = inputIds.split(/[,，]/).map(id => id.trim()).filter(id => id);
             
             try {
                 // 使用并行查询和批量处理函数
@@ -7544,8 +7544,8 @@ function exportRegisteredUsers() {
             sourceManualQueryBtn.textContent = '查询中...';
             sourceManualResultContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">正在查询数据，请稍候...</div>';
             
-            // 解析输入的ID列表
-            const ids = inputIds.split(',').map(id => id.trim()).filter(id => id);
+            // 解析输入的ID列表（兼容中英文逗号）
+            const ids = inputIds.split(/[,，]/).map(id => id.trim()).filter(id => id);
             
             // 统计信息
             let totalQueries = ids.length;
@@ -7876,8 +7876,8 @@ function exportRegisteredUsers() {
                 loginLogManualQueryBtn.disabled = true;
                 loginLogManualQueryBtn.textContent = '查询中...';
                 
-                // 解析输入的ID列表并去重：重复ID只查询一次
-                const allIds = inputIds.split(',').map(id => id.trim()).filter(id => id);
+                // 解析输入的ID列表并去重：重复ID只查询一次（兼容中英文逗号）
+                const allIds = inputIds.split(/[,，]/).map(id => id.trim()).filter(id => id);
                 const uniqueIds = [...new Set(allIds)];
                 const duplicateCount = allIds.length - uniqueIds.length;
                 
@@ -9572,7 +9572,8 @@ function exportRegisteredUsers() {
             // 处理手动查询按钮点击
             async function handleReferrerDataManualQuery() {
                 const manualIdInput = document.getElementById('referrerDataManualIdInput');
-                const ids = manualIdInput.value.split(',').map(id => id.trim()).filter(id => id !== '');
+                // 兼容中英文逗号
+                const ids = manualIdInput.value.split(/[,，]/).map(id => id.trim()).filter(id => id !== '');
                 if (ids.length === 0) {
                     alert('请输入推荐人ID');
                     return;
@@ -10198,7 +10199,8 @@ function exportRegisteredUsers() {
             // 处理手动查询
             async function handleStaffDealManualQuery() {
                 const input = document.getElementById('staffDealManualIdInput');
-                const staffIds = input.value.split(',').map(id => id.trim()).filter(id => id !== '');
+                // 兼容中英文逗号
+                const staffIds = input.value.split(/[,，]/).map(id => id.trim()).filter(id => id !== '');
                 
                 if (staffIds.length === 0) {
                     showStaffDealStatus('请输入员工ID或姓名', 'error');
@@ -11617,65 +11619,88 @@ function exportRegisteredUsers() {
         
         // 手动输入ID查询
         document.getElementById('userRegPackageManualQueryBtn').addEventListener('click', async function() {
+            const manualQueryBtn = document.getElementById('userRegPackageManualQueryBtn');
+
             // 检查复选框状态
             const queryRegisterTime = document.getElementById('queryRegisterTime').checked;
             const queryPackage = document.getElementById('queryPackage').checked;
             const queryUserSource = document.getElementById('queryUserSource').checked;
-            
+
             // 确保至少选择一个查询选项
             if (!queryRegisterTime && !queryPackage && !queryUserSource) {
                 alert('请至少选择一个查询选项');
                 return;
             }
-            
-            const id = document.getElementById('userRegPackageManualIdInput').value.trim();
-            if (!id) {
+
+            // 解析输入的ID列表（兼容中英文逗号）
+            const inputIds = document.getElementById('userRegPackageManualIdInput').value.trim();
+            if (!inputIds) {
                 alert('请输入用户ID或手机号');
                 return;
             }
-            
+            const ids = inputIds.split(/[,，]/).map(id => id.trim()).filter(id => id);
+
             const token = await getToken();
             if (!token) {
                 alert('请先登录');
                 return;
             }
-            
+
             const manualResultContainer = document.getElementById('userRegPackageManualResultContainer');
-            manualResultContainer.innerHTML = '<div class="text-center">查询中，请稍候...</div>';
-            
-            queryUserRegPackageInfo(id, token, queryRegisterTime, queryPackage, queryUserSource).then(result => {
-                let html = '<table class="table table-bordered table-striped" style="width: 100%; border-collapse: collapse;">';
-                html += '<thead><tr>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">用户ID/手机号</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">注册日期</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">套餐课时</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">剩余课时</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">套餐数量</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">购买套餐</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">用户来源</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">跟进业务员</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">跟进经销商</th>';
-                html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">最初推荐人</th>';
-                html += '</tr></thead>';
-                html += '<tbody>';
-                html += '<tr>';
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.id}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.createTime}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.totalInitialPoint}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.balance}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.packageCount || 0}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.packageList.replace(/；/g, '；<br>')}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.channelName || ''}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.followSales || ''}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.followDealer || ''}</td>`;
-                html += `<td style="padding: 6px; border: 1px solid #ddd;">${result.referrerInfo || ''}</td>`;
-                html += '</tr>';
-                html += '</tbody></table>';
-                manualResultContainer.innerHTML = html;
-            }).catch(error => {
-                console.error('查询失败:', error);
-                manualResultContainer.innerHTML = '<div class="text-center text-danger">查询失败，请重试</div>';
-            });
+            manualQueryBtn.disabled = true;
+            manualQueryBtn.textContent = '查询中...';
+
+            // 生成表格骨架，逐个ID填充结果行
+            let html = '<table class="table table-bordered table-striped" style="width: 100%; border-collapse: collapse;">';
+            html += '<thead><tr>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">用户ID/手机号</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">注册日期</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">套餐课时</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">剩余课时</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">套餐数量</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">购买套餐</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">用户来源</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">跟进业务员</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">跟进经销商</th>';
+            html += '<th style="padding: 6px; text-align: left; border: 1px solid #ddd; background-color: #f8f9fa;">最初推荐人</th>';
+            html += '</tr></thead><tbody id="userRegPackageManualTbody">';
+            html += `<tr><td colspan="10" style="padding: 6px; text-align: center; border: 1px solid #ddd; color: #666;">查询中，请稍候... (0/${ids.length})</td></tr>`;
+            html += '</tbody></table>';
+            manualResultContainer.innerHTML = html;
+            const tbody = document.getElementById('userRegPackageManualTbody');
+            const progressRow = tbody.rows[0];
+
+            // 逐个ID串行查询
+            for (let i = 0; i < ids.length; i++) {
+                progressRow.firstElementChild.textContent = `查询中，请稍候... (${i + 1}/${ids.length})`;
+                try {
+                    const result = await queryUserRegPackageInfo(ids[i], token, queryRegisterTime, queryPackage, queryUserSource);
+                    let rowHtml = '<tr>';
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.id}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.createTime}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.totalInitialPoint}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.balance}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.packageCount || 0}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.packageList.replace(/；/g, '；<br>')}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.channelName || ''}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.followSales || ''}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.followDealer || ''}</td>`;
+                    rowHtml += `<td style="padding: 6px; border: 1px solid #ddd;">${result.referrerInfo || ''}</td>`;
+                    rowHtml += '</tr>';
+                    progressRow.insertAdjacentHTML('beforebegin', rowHtml);
+                } catch (error) {
+                    console.error('查询失败:', ids[i], error);
+                    progressRow.insertAdjacentHTML('beforebegin', `<tr><td colspan="10" style="padding: 6px; text-align: center; border: 1px solid #ddd; color: #dc3545;">${ids[i]}：查询失败</td></tr>`);
+                }
+                // 多个ID之间随机间隔，避免触发限流
+                if (i < ids.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300));
+                }
+            }
+            progressRow.remove();
+
+            manualQueryBtn.disabled = false;
+            manualQueryBtn.textContent = '手动查询';
         });
         
         // 导出CSV
