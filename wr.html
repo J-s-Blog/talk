@@ -1812,8 +1812,8 @@ function showNewsAuthorStats() {
         : '';
     const panel = document.getElementById('newsDetailPanel');
     panel.innerHTML = `
-        <div class="stats-head">📊 发贴统计：共 ${rows.length} 位作者 / ${newsData.length} 篇文章（按发贴数从多到少）
-            <button type="button" class="btn btn-primary btn-xs" style="margin-left:10px" onclick="exportNewsAuthorStats()">📥 导出Excel</button>
+        <div class="stats-head">📊 发贴统计：共 ${rows.length} 位作者 / ${newsData.length} 篇文章
+            <button type="button" class="btn btn-primary btn-xs" style="margin-left:10px" onclick="exportNewsAuthorStats()">导出</button>
         </div>
         ${pagedTip}
         <table class="stats-table">
