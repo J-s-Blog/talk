@@ -2269,6 +2269,28 @@ function sanitizeArticleHtml(html) {
     return tmp.innerHTML;
 }
 
+// 浏览器（Chrome/Edge）对已保存凭据的自动填充会用内置大字号渲染账号/密码框，
+// 直到该区域重绘后才按页面 CSS 字号显示（表现为首次加载字号偏大，切换视图后恢复）。
+// 加载后检测到已填充值时，主动对账号密码区做一次隐藏/显示强制重绘拉齐字号。
+(function normalizeCredAutofillRender() {
+    const fix = () => {
+        const phone = document.getElementById('phoneInput');
+        const pwd = document.getElementById('pwdInput');
+        if (!phone || !pwd) return;
+        if (!phone.value && !pwd.value) return; // 无自动填充则无需处理
+        const wrap = phone.closest('.cred-group');
+        if (!wrap) return;
+        wrap.style.display = 'none';
+        void wrap.offsetHeight; // 强制重排
+        wrap.style.display = '';
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(fix, 100));
+    } else {
+        setTimeout(fix, 100);
+    }
+})();
+
 // 自动运行：URL 带 ?taskName=autorun 时自动执行导出（使用预填账号与自动计算的日期范围）
 (function autoRunIfParam() {
     const params = new URLSearchParams(window.location.search);
