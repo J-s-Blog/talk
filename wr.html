@@ -465,6 +465,7 @@
                 <span class="status-dot checking" id="statusDot"></span>
                 <span id="statusText">正在检测运行环境...</span>
                 <span class="rank-chip" id="rankChip" style="display:none" onclick="openRankModal()" title="点击查看阅读量排名前十">📖 <b id="rankChipMine">-</b></span>
+                <button type="button" class="btn btn-xs" id="newsStatsBtn" style="display:none" onclick="showNewsAuthorStats()" title="统计已加载文章中每位作者的发贴数量、首篇与最近一篇发布时间">📊 发贴统计</button>
                 <button type="button" class="btn btn-success btn-xs" id="redownloadBtn" style="display:none" onclick="downloadExcel()">📥 重新下载Excel</button>
             </div>
         </div>
@@ -508,7 +509,6 @@
                         <button type="button" class="btn btn-primary" onclick="selectAllFilteredNews()" title="勾选当前搜索/筛选结果中的全部文章">全选</button>
                         <button type="button" class="btn" onclick="clearNewsSelection()">清空</button>
                         <button type="button" class="btn btn-success" id="newsDownloadBtn" onclick="openPackModal()" disabled title="批量下载所选文章（合并 Word 或 zip 打包）">下载</button>
-                        <button type="button" class="btn" onclick="showNewsAuthorStats()" title="统计已加载文章中每位作者的发贴数量、首篇与最近一篇发布时间">📊 发贴统计</button>
                     </div>
                     <div class="person-list" id="newsList">
                         <div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>
@@ -1107,6 +1107,9 @@ function refreshStatusBar() {
     if (entry) renderStatusEntry(entry);
     document.getElementById('redownloadBtn').style.display =
         (currentView === 'weekly' && excelGenerated) ? 'inline-block' : 'none';
+    // 发贴统计按钮：仅热点资讯视图且已加载数据时显示
+    document.getElementById('newsStatsBtn').style.display =
+        (currentView === 'news' && newsData.length > 0) ? 'inline-block' : 'none';
 }
 
 function updateBrowseStatus(msg, state, view) {
