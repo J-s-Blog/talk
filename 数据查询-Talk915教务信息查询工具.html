@@ -173,9 +173,9 @@
             white-space: nowrap !important;
         }
         
-        /* AI测评报告表格：固定布局与总宽3645px（等于colgroup列宽之和，覆盖全局 table width:auto !important） */
+        /* AI测评报告表格：固定布局与总宽5565px（等于colgroup列宽之和，覆盖全局 table width:auto !important） */
         #aiReportTable {
-            width: 3645px !important;
+            width: 5565px !important;
             table-layout: fixed !important;
         }
         #aiReportTable td {
@@ -7519,12 +7519,14 @@
                     statsHtml += `获取数据条数: ${resultData.length}\n`;
                     if (resultData.length > 0) {
                         const totalRegist = resultData.reduce((sum, item) => sum + (item.stuRegistNum || 0), 0);
-                        const totalClass = resultData.reduce((sum, item) => sum + (item.stuClassNum || 0), 0);
-                        const totalOpen = resultData.reduce((sum, item) => sum + (item.openNum || 0), 0);
+                        const totalBooked = resultData.reduce((sum, item) => sum + (item.bookedNum || 0), 0);
+                        const totalFutureOpen = resultData.reduce((sum, item) => sum + (item.futureOpenNum || 0), 0);
                         statsHtml += `总注册学员数: ${totalRegist}\n`;
                         statsHtml += `日均注册学员数: ${(totalRegist / dayDiff).toFixed(2)}\n`;
-                        statsHtml += `总上课学员数: ${totalClass}\n`;
-                        statsHtml += `总开课数: ${totalOpen}\n`;
+                        statsHtml += `订课总数: ${totalBooked}\n`;
+                        statsHtml += `日均订课数: ${(totalBooked / dayDiff).toFixed(2)}\n`;
+                        statsHtml += `24小时开课总量: ${totalFutureOpen}\n`;
+                        statsHtml += `日均24小时开课量: ${(totalFutureOpen / dayDiff).toFixed(2)}\n`;
                     }
                     queryStats.textContent = statsHtml;
                     
