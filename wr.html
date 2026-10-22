@@ -211,11 +211,12 @@
             font-weight: normal; font-size: 12px; color: #b26a00; background: #fff7e6;
             border: 1px solid #ffd591; border-radius: 6px; padding: 6px 10px; margin-top: 6px; line-height: 1.6;
         }
-        .stats-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
-        .stats-table th, .stats-table td { border: 1px solid #e0e0e0; padding: 6px 10px; text-align: left; }
-        .stats-table th { background: #f5f7ff; color: #3949ab; white-space: nowrap; }
+        .stats-table { width: auto; max-width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
+        .stats-table th, .stats-table td { border: 1px solid #e0e0e0; padding: 6px 12px; text-align: left; white-space: nowrap; }
+        .stats-table th { background: #f5f7ff; color: #3949ab; text-align: center; }
         .stats-table tbody tr:nth-child(even) { background: #fafafa; }
-        .stats-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .stats-table td.num { text-align: center; font-variant-numeric: tabular-nums; }
+        .stats-table td.time { text-align: center; }
         .btn-back {
             display: none; background: #eee; color: #555; border: none;
             border-radius: 8px; padding: 8px 14px; font-size: 12px;
@@ -1773,13 +1774,9 @@ function clearNewsSelection() {
     renderNewsList();
 }
 
-// 发贴统计：按作者聚合当前已加载的文章，表格从多到少展示发贴数与首篇/最近一篇发布时间
+// 发贴统计聚合：按作者统计当前已加载文章的发贴数与首篇/最近一篇发布时间，从多到少排序
 // 时间格式为 yyyy-MM-dd hh:mm:ss，可直接用字符串比较取最早/最晚
-function showNewsAuthorStats() {
-    if (newsData.length === 0) {
-        showToast('请先加载热点资讯', 'error');
-        return;
-    }
+function aggregateNewsAuthorStats() {
     const byAuthor = new Map();
     newsData.forEach(d => {
         const name = (d.userName || '').trim() || '未知作者';
@@ -1795,8 +1792,16 @@ function showNewsAuthorStats() {
             if (!s.last || t > s.last) s.last = t;
         }
     });
-    const rows = [...byAuthor.values()]
+    return [...byAuthor.values()]
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh'));
+}
+
+function showNewsAuthorStats() {
+    if (newsData.length === 0) {
+        showToast('请先加载热点资讯', 'error');
+        return;
+    }
+    const rows = aggregateNewsAuthorStats();
 
     selectedNewsIndex = -1; // 取消列表高亮，详情面板让位给统计表
     enterDetailView('newsWrap');
@@ -1807,7 +1812,9 @@ function showNewsAuthorStats() {
         : '';
     const panel = document.getElementById('newsDetailPanel');
     panel.innerHTML = `
-        <div class="stats-head">📊 发贴统计：共 ${rows.length} 位作者 / ${newsData.length} 篇文章（按发贴数从多到少）</div>
+        <div class="stats-head">📊 发贴统计：共 ${rows.length} 位作者 / ${newsData.length} 篇文章（按发贴数从多到少）
+            <button type="button" class="btn btn-primary btn-xs" style="margin-left:10px" onclick="exportNewsAuthorStats()">📥 导出Excel</button>
+        </div>
         ${pagedTip}
         <table class="stats-table">
             <thead>
@@ -1819,11 +1826,32 @@ function showNewsAuthorStats() {
                     <td class="num">${i + 1}</td>
                     <td>${escapeHtml(r.name)}</td>
                     <td class="num">${r.count}</td>
-                    <td>${escapeHtml(r.first || '-')}</td>
-                    <td>${escapeHtml(r.last || '-')}</td>
+                    <td class="time">${escapeHtml(r.first || '-')}</td>
+                    <td class="time">${escapeHtml(r.last || '-')}</td>
                 </tr>`).join('')}
             </tbody>
         </table>`;
+}
+
+// 导出发贴统计为 Excel（与页面表格同一份聚合数据）
+function exportNewsAuthorStats() {
+    if (newsData.length === 0) {
+        showToast('请先加载热点资讯', 'error');
+        return;
+    }
+    const rows = aggregateNewsAuthorStats().map((r, i) => ({
+        '排名': i + 1,
+        '作者': r.name,
+        '发贴数': r.count,
+        '第一篇发布时间': r.first || '-',
+        '最近一篇发布时间': r.last || '-'
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 6 }, { wch: 16 }, { wch: 10 }, { wch: 20 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, ws, '发贴统计');
+    const filename = `热点资讯发贴统计_${formatDate(new Date())}.xlsx`;
+    XLSX.writeFile(wb, filename);
 }
 
 // 筛选条件（搜索关键词/只看置顶）变更：清空已选状态，保证与当前列表同步
