@@ -205,6 +205,17 @@
         .detail-panel::-webkit-scrollbar { width: 6px; }
         .detail-panel::-webkit-scrollbar-thumb { background: #d5c8e8; border-radius: 3px; }
         .detail-panel:has(> .empty-tip) { display: flex; align-items: center; justify-content: center; }
+        /* 发贴统计表格 */
+        .stats-head { font-weight: bold; font-size: 13.5px; color: #333; }
+        .stats-tip {
+            font-weight: normal; font-size: 12px; color: #b26a00; background: #fff7e6;
+            border: 1px solid #ffd591; border-radius: 6px; padding: 6px 10px; margin-top: 6px; line-height: 1.6;
+        }
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
+        .stats-table th, .stats-table td { border: 1px solid #e0e0e0; padding: 6px 10px; text-align: left; }
+        .stats-table th { background: #f5f7ff; color: #3949ab; white-space: nowrap; }
+        .stats-table tbody tr:nth-child(even) { background: #fafafa; }
+        .stats-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
         .btn-back {
             display: none; background: #eee; color: #555; border: none;
             border-radius: 8px; padding: 8px 14px; font-size: 12px;
@@ -497,6 +508,7 @@
                         <button type="button" class="btn btn-primary" onclick="selectAllFilteredNews()" title="勾选当前搜索/筛选结果中的全部文章">全选</button>
                         <button type="button" class="btn" onclick="clearNewsSelection()">清空</button>
                         <button type="button" class="btn btn-success" id="newsDownloadBtn" onclick="openPackModal()" disabled title="批量下载所选文章（合并 Word 或 zip 打包）">下载</button>
+                        <button type="button" class="btn" onclick="showNewsAuthorStats()" title="统计已加载文章中每位作者的发贴数量、首篇与最近一篇发布时间">📊 发贴统计</button>
                     </div>
                     <div class="person-list" id="newsList">
                         <div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>
@@ -1756,6 +1768,59 @@ function selectAllFilteredNews() {
 function clearNewsSelection() {
     newsSelectedIds.clear();
     renderNewsList();
+}
+
+// 发贴统计：按作者聚合当前已加载的文章，表格从多到少展示发贴数与首篇/最近一篇发布时间
+// 时间格式为 yyyy-MM-dd hh:mm:ss，可直接用字符串比较取最早/最晚
+function showNewsAuthorStats() {
+    if (newsData.length === 0) {
+        showToast('请先加载热点资讯', 'error');
+        return;
+    }
+    const byAuthor = new Map();
+    newsData.forEach(d => {
+        const name = (d.userName || '').trim() || '未知作者';
+        const t = (d.createTime || '').slice(0, 16); // 精确到分钟
+        let s = byAuthor.get(name);
+        if (!s) {
+            s = { name, count: 0, first: t, last: t };
+            byAuthor.set(name, s);
+        }
+        s.count++;
+        if (t) {
+            if (!s.first || t < s.first) s.first = t;
+            if (!s.last || t > s.last) s.last = t;
+        }
+    });
+    const rows = [...byAuthor.values()]
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh'));
+
+    selectedNewsIndex = -1; // 取消列表高亮，详情面板让位给统计表
+    enterDetailView('newsWrap');
+    renderNewsList();
+
+    const pagedTip = newsData.length < newsTotalCount
+        ? `<div class="stats-tip">⚠️ 当前为「每页100」分页模式，仅统计已加载的 ${newsData.length} 篇（服务端共 ${newsTotalCount} 篇）。切换到「全部」重新加载后统计可覆盖全部文章</div>`
+        : '';
+    const panel = document.getElementById('newsDetailPanel');
+    panel.innerHTML = `
+        <div class="stats-head">📊 发贴统计：共 ${rows.length} 位作者 / ${newsData.length} 篇文章（按发贴数从多到少）</div>
+        ${pagedTip}
+        <table class="stats-table">
+            <thead>
+                <tr><th>#</th><th>作者</th><th>发贴数</th><th>第一篇发布时间</th><th>最近一篇发布时间</th></tr>
+            </thead>
+            <tbody>
+                ${rows.map((r, i) => `
+                <tr>
+                    <td class="num">${i + 1}</td>
+                    <td>${escapeHtml(r.name)}</td>
+                    <td class="num">${r.count}</td>
+                    <td>${escapeHtml(r.first || '-')}</td>
+                    <td>${escapeHtml(r.last || '-')}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
 }
 
 // 筛选条件（搜索关键词/只看置顶）变更：清空已选状态，保证与当前列表同步
