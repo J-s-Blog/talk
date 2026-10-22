@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>大学堂周报自动抓取工具</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -291,6 +293,37 @@
             word-break: break-all;
         }
 
+        /* ===== 热点资讯：批量选择与打包下载 ===== */
+        .news-bulk-bar {
+            display: none; flex-wrap: wrap; align-items: center; gap: 6px;
+            background: #f6f1fb; border: 1px solid #d5c8e8; border-radius: 8px;
+            padding: 6px 10px; font-size: 12px;
+        }
+        .news-bulk-bar.show { display: flex; }
+        .news-bulk-bar .bulk-count { font-weight: bold; color: #533483; white-space: nowrap; }
+        .news-bulk-bar button { width: auto; flex-shrink: 0; margin-top: 0; padding: 4px 10px; font-size: 11px; white-space: nowrap; }
+        /* 文章卡片复选框：左侧垂直居中，正文右移避让 */
+        #newsList .person-card { position: relative; padding-left: 32px; }
+        .news-check {
+            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            display: flex; align-items: center; cursor: pointer;
+        }
+        .news-check input { width: 16px; height: 16px; cursor: pointer; accent-color: #533483; margin: 0; }
+        .person-card.checked { border-color: #2e7d32; background: #f2faf2; }
+        /* 详情面板下载按钮组 */
+        .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        /* 打包方式选择弹窗（复用 rank-modal 遮罩与容器） */
+        .pack-options { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 10px; }
+        .pack-option-btn {
+            border: 1.5px solid #d5c8e8; background: #faf7fd; border-radius: 10px;
+            padding: 12px 14px; font-size: 14px; font-weight: bold; color: #533483;
+            cursor: pointer; text-align: left; line-height: 1.6; transition: all 0.15s;
+        }
+        .pack-option-btn:hover { border-color: #533483; background: #ede7f6; }
+        .pack-option-btn span { display: block; font-size: 11.5px; font-weight: normal; color: #888; margin-top: 2px; }
+        .pack-tip { font-size: 11.5px; color: #999; text-align: center; }
+
         /* ===== 阅读量排名：状态栏徽章 + 前十弹窗 ===== */
         .rank-chip {
             flex: none; font-size: 11.5px; color: #533483; background: #ede7f6;
@@ -453,6 +486,12 @@
                             <option value="1">只看置顶</option>
                         </select>
                     </div>
+                    <div class="news-bulk-bar" id="newsBulkBar">
+                        <span class="bulk-count" id="newsBulkCount">☑ 已选 0 篇</span>
+                        <button type="button" class="btn btn-primary" onclick="selectAllFilteredNews()" title="勾选当前搜索/筛选结果中的全部文章">全选</button>
+                        <button type="button" class="btn" onclick="clearNewsSelection()">清空</button>
+                        <button type="button" class="btn btn-success" id="newsDownloadBtn" onclick="openPackModal()" disabled title="批量下载所选文章（合并 Word 或 zip 打包）">下载</button>
+                    </div>
                     <div class="person-list" id="newsList">
                         <div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>
                     </div>
@@ -479,6 +518,27 @@
             <button type="button" class="rank-modal-close" onclick="closeRankModal()">✕</button>
         </div>
         <div class="rank-modal-body" id="rankModalBody"></div>
+    </div>
+</div>
+
+<!-- 热点资讯打包下载方式选择弹窗 -->
+<div class="rank-modal-mask" id="packModalMask" onclick="if(event.target===this)closePackModal()">
+    <div class="rank-modal">
+        <div class="rank-modal-head">
+            <h3>⬇ 选择下载方式（已选 <span id="packCount">0</span> 篇）</h3>
+            <button type="button" class="rank-modal-close" onclick="closePackModal()">✕</button>
+        </div>
+        <div class="rank-modal-body">
+            <div class="pack-options">
+                <button type="button" class="pack-option-btn" onclick="downloadSelectedNews('merged')">📄 合并成一个 Word
+                    <span>所有文章合成一个 .docx：开头带目录，每篇文章独立分页</span>
+                </button>
+                <button type="button" class="pack-option-btn" onclick="downloadSelectedNews('zip')">🗜️ 每篇一个文件打包 zip
+                    <span>每篇文章单独生成 .docx，打包成一个 .zip 下载</span>
+                </button>
+            </div>
+            <div class="pack-tip">批量下载需逐篇获取文章内容，已自动按限流控制请求节奏（≤3 次/秒）</div>
+        </div>
     </div>
 </div>
 
@@ -1383,6 +1443,7 @@ function switchView(view) {
 let newsData = [];        // 文章列表摘要（当前页或全部）
 let selectedNewsIndex = -1;
 let newsDetailCache = {}; // postId -> 详情，避免重复请求
+let newsSelectedIds = new Set(); // 批量下载选中的文章（String(postId)，跨筛选/翻页保留）
 const NEWS_PAGE_SIZE = 100; // 分页模式每页条数
 let newsPage = 1;           // 当前页码（分页模式）
 let newsTotalCount = 0;     // 文章总数（接口返回）
@@ -1582,31 +1643,66 @@ function resetNewsDetailPanel() {
         '<div class="empty-tip">👈 点击左侧文章查看内容详情</div>';
 }
 
-function renderNewsList() {
-    const listEl = document.getElementById('newsList');
-    if (newsData.length === 0) {
-        listEl.innerHTML = '<div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>';
-        return;
-    }
+// 当前搜索关键词/置顶筛选命中的文章（列表渲染与「全选当前结果」共用）
+function getFilteredNewsItems() {
     const kw = (document.getElementById('newsSearch').value || '').trim().toLowerCase();
     const topOnly = document.getElementById('topFilter').value === '1';
-    const items = newsData
+    return newsData
         .map((d, i) => ({ d, i }))
         .filter(({ d }) => (!topOnly || d.recommendFlag === 1)
             && (!kw
                 || (d.title || '').toLowerCase().includes(kw)
                 || (d.userName || '').toLowerCase().includes(kw)));
+}
+
+function renderNewsList() {
+    const listEl = document.getElementById('newsList');
+    document.getElementById('newsBulkBar').classList.toggle('show', newsData.length > 0);
+    if (newsData.length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>';
+        return;
+    }
+    const items = getFilteredNewsItems();
 
     listEl.innerHTML = items.length === 0
         ? '<div class="empty-tip">未找到匹配文章</div>'
         : items.map(({ d, i }) => `
-            <div class="person-card ${i === selectedNewsIndex ? 'active' : ''}" onclick="selectNews(${i})">
+            <div class="person-card ${i === selectedNewsIndex ? 'active' : ''} ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''}" onclick="selectNews(${i})">
+                <label class="news-check" title="选择文章（批量下载用）" onclick="event.stopPropagation()">
+                    <input type="checkbox" ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''} onchange="onNewsCheck(this, '${String(d.postId)}')">
+                </label>
                 <div class="p-title">${d.recommendFlag === 1 ? '<span class="p-top">置顶</span>' : ''}${escapeHtml(d.title || '无标题')}</div>
                 <div class="p-meta">
                     ${escapeHtml(d.userName || '-')} · ${escapeHtml((d.createTime || '').slice(0, 10))}<br>
                     👁 ${d.readNum} 阅读 · 👍 ${d.likedNum} 点赞
                 </div>
             </div>`).join('');
+    updateNewsBulkBar();
+}
+
+// 复选框勾选/取消：只更新计数与卡片样式，不整列重绘（保持列表滚动位置）
+function onNewsCheck(input, postId) {
+    const key = String(postId);
+    if (input.checked) newsSelectedIds.add(key); else newsSelectedIds.delete(key);
+    input.closest('.person-card').classList.toggle('checked', input.checked);
+    updateNewsBulkBar();
+}
+
+function updateNewsBulkBar() {
+    document.getElementById('newsBulkCount').textContent = `☑ 已选 ${newsSelectedIds.size} 篇`;
+    document.getElementById('newsDownloadBtn').disabled = newsSelectedIds.size === 0 || newsExportBusy;
+}
+
+// 全选当前搜索/筛选结果中的全部文章
+function selectAllFilteredNews() {
+    getFilteredNewsItems().forEach(({ d }) => newsSelectedIds.add(String(d.postId)));
+    renderNewsList();
+    if (getFilteredNewsItems().length === 0) showToast('当前没有匹配的文章', 'error');
+}
+
+function clearNewsSelection() {
+    newsSelectedIds.clear();
+    renderNewsList();
 }
 
 // 点击文章：按需抓取详情（缓存），并自动获取已学习清单/标记已读，再渲染富文本内容
@@ -1667,6 +1763,10 @@ function renderNewsDetail(d) {
                 作者：${escapeHtml(d.postUserName || '-')}
                 ｜ 发布时间：${escapeHtml(d.releaseTime || '-')}
                 <span class="am-stat">👁 ${d.watchingNum ?? d.readNum ?? 0} · 👍 ${d.likedNum ?? 0} · 💬 ${d.commentNum ?? 0}</span>
+            </div>
+            <div class="detail-actions">
+                <button type="button" class="btn btn-primary btn-xs news-dl-btn" onclick="downloadNewsWordById('${String(d.postId)}')" title="下载本文为 Word（.docx，图片内嵌）">⬇ 下载 Word</button>
+                <button type="button" class="btn btn-success btn-xs news-dl-btn" onclick="downloadNewsPdfById('${String(d.postId)}')" title="通过打印导出 PDF（在打印对话框中选择「另存为 PDF」）">⬇ 导出 PDF</button>
             </div>
         </div>
         <div class="article-body">${contentHtml || '<span style="color:#bbb">（无内容）</span>'}</div>
@@ -1748,6 +1848,334 @@ function renderLearnSection(postId, users, errMsg) {
     namesEl.textContent = users.length
         ? users.map(u => u.userName || '未知').join('，')
         : '（暂无）';
+}
+
+// ==================== 热点资讯：打包下载（Word / PDF / 批量） ====================
+let newsExportBusy = false; // 导出进行中，防止重复点击
+
+// 导出/打印共用样式（Word 与打印窗口内联，脱离页面 class 体系）
+const NEWS_EXPORT_CSS = `
+    body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; color: #333; font-size: 12pt; line-height: 1.8; }
+    h1 { font-size: 18pt; color: #533483; margin: 6pt 0 4pt; line-height: 1.5; }
+    .news-cat { color: #533483; font-size: 9pt; }
+    .article-meta { color: #777; font-size: 9.5pt; margin: 4pt 0 12pt; border-bottom: 1px solid #ddd; padding-bottom: 6pt; }
+    .article-body p { margin: 0 0 8pt; }
+    .article-body h2, .article-body h3, .article-body h4 { margin: 12pt 0 6pt; color: #222; }
+    .article-body img { max-width: 100%; height: auto; }
+    .article-body table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+    .article-body th, .article-body td { border: 1px solid #999; padding: 4pt 6pt; vertical-align: top; }
+    .article-body th { background: #ede7f6; color: #533483; }
+    .article-body blockquote { border-left: 3pt solid #ccc; margin: 8pt 0; padding: 4pt 10pt; color: #666; }
+    .article-body ol, .article-body ul { margin: 0 0 8pt; padding-left: 26pt; }
+    .article-body .ql-indent-1 { padding-left: 2em; }
+    .article-body .ql-indent-2 { padding-left: 4em; }
+    .article-body .ql-indent-3 { padding-left: 6em; }
+    .article-body .ql-align-center { text-align: center; }
+    .article-body .ql-align-right { text-align: right; }
+    .article-body .ql-align-justify { text-align: justify; }
+    .article-body a { color: #3949ab; }
+    .news-toc h1 { font-size: 16pt; margin-bottom: 10pt; }
+    .news-toc ol { font-size: 12pt; padding-left: 24pt; }
+    .news-toc li { margin: 3pt 0; }
+`;
+
+// 包装为完整 HTML 文档（htmlDocx.asBlob / 打印窗口共用）
+function wrapDocHtml(title, inner) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${NEWS_EXPORT_CSS}</style></head><body>${inner}</body></html>`;
+}
+
+// 组装单篇文章的导出 HTML（分类 + 标题 + 作者/时间 + 富文本正文）
+function buildArticleExportHtml(d, opts = {}) {
+    const cat = [d.parentPlateName, d.plateName].filter(Boolean).join(' > ');
+    const body = opts.bodyHtml != null ? opts.bodyHtml : sanitizeArticleHtml(d.content || '');
+    return `
+    <div class="news-article">
+        ${cat ? `<div class="news-cat">${escapeHtml(cat)}</div>` : ''}
+        <h1>${escapeHtml(d.title || '无标题')}</h1>
+        <div class="article-meta">作者：${escapeHtml(d.postUserName || '-')} ｜ 发布时间：${escapeHtml(d.releaseTime || '-')}</div>
+        <div class="article-body">${body || '<p>（无内容）</p>'}</div>
+    </div>`;
+}
+
+// 文件名清洗：去除非法字符、截断长度
+function sanitizeFilename(name) {
+    return String(name || '未命名')
+        .replace(/[\\/:*?"<>|\r\n\t]/g, '')
+        .replace(/^\.+|\.+$/g, '')
+        .trim()
+        .slice(0, 60) || '未命名';
+}
+
+// Blob 触发浏览器下载
+function saveBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// 图片内嵌：将正文中的远程图片转为 base64 dataURL（Word 打开时无需联网）；
+// 失败保留原链接，多图间小睡限流。同时补全协议相对/相对路径。
+// Word 不识别 max-width CSS，需按原始尺寸计算显式像素宽度（超出正文可用宽度则等比缩小），
+// 否则宽图会溢出页面边界被裁切。
+const NEWS_IMG_MAX_WIDTH = 600; // A4 正文可用宽度（默认页边距下约 6.25 英寸 ≈ 600px）
+
+// 测量图片原始尺寸（3 秒超时兜底，失败返回 0）
+function measureImageSize(src) {
+    return new Promise(resolve => {
+        const img = new Image();
+        const timer = setTimeout(() => resolve({ w: 0, h: 0 }), 3000);
+        img.onload = () => { clearTimeout(timer); resolve({ w: img.naturalWidth || 0, h: img.naturalHeight || 0 }); };
+        img.onerror = () => { clearTimeout(timer); resolve({ w: 0, h: 0 }); };
+        img.src = src;
+    });
+}
+
+async function inlineArticleImages(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const imgs = Array.from(tmp.querySelectorAll('img'));
+    const toFetch = [];
+    imgs.forEach(img => {
+        let src = img.getAttribute('src') || '';
+        if (!src || src.startsWith('data:')) return;
+        if (src.startsWith('//')) src = 'https:' + src;
+        else if (/^\/(?!\/)/.test(src)) src = ORIGIN + src;
+        if (/^https?:/i.test(src)) toFetch.push([img, src]);
+        else { img.removeAttribute('loading'); img.setAttribute('src', src); }
+    });
+    const cache = new Map();
+    for (const [, src] of [...new Map(toFetch.map(([img, s]) => [s, img]))]) {
+        try {
+            const resp = await fetch(src, { credentials: 'include' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const blob = await resp.blob();
+            const dataUrl = await new Promise((resolve, reject) => {
+                const fr = new FileReader();
+                fr.onload = () => resolve(fr.result);
+                fr.onerror = reject;
+                fr.readAsDataURL(blob);
+            });
+            cache.set(src, dataUrl);
+        } catch (e) {
+            console.warn('图片内嵌失败（保留原链接）:', src, e);
+        }
+        await sleep(80);
+    }
+    // 回写 src + 宽度约束：测量原始尺寸，超宽图片写显式像素宽度（Word 按宽度等比缩放）
+    for (const img of imgs) {
+        img.removeAttribute('loading');
+        img.removeAttribute('srcset');
+        const declaredW = parseInt(img.getAttribute('width'), 10)
+            || parseInt(img.style.width, 10) || 0;
+        // 清掉 CSS 约束，改用显式宽度（Word 不识别 max-width）
+        img.style.maxWidth = '';
+        if (cache.size) {
+            let src = img.getAttribute('src') || '';
+            if (src.startsWith('//')) src = 'https:' + src;
+            else if (/^\/(?!\/)/.test(src)) src = ORIGIN + src;
+            if (cache.has(src)) img.setAttribute('src', cache.get(src));
+            else if (/^https?:/i.test(src)) img.setAttribute('src', src);
+        }
+        const { w: naturalW } = await measureImageSize(img.getAttribute('src'));
+        let dispW = declaredW || naturalW || 0;
+        if (naturalW > 0) dispW = Math.min(dispW, naturalW); // 不放大小图
+        if (dispW > NEWS_IMG_MAX_WIDTH) {
+            img.setAttribute('width', NEWS_IMG_MAX_WIDTH);
+            img.style.width = NEWS_IMG_MAX_WIDTH + 'px';
+            img.style.height = 'auto'; // Word 按宽度等比缩放高度
+        }
+    }
+    return tmp.innerHTML;
+}
+
+// 导出期间禁用所有下载按钮
+function setNewsExportButtonsDisabled(disabled) {
+    document.querySelectorAll('.news-dl-btn').forEach(b => { b.disabled = disabled; });
+    updateNewsBulkBar();
+}
+
+// 单篇下载 Word：详情（缓存优先）→ 图片内嵌 → htmlDocx.asBlob → 保存
+async function downloadNewsWordById(postId) {
+    if (newsExportBusy) return;
+    newsExportBusy = true;
+    setNewsExportButtonsDisabled(true);
+    try {
+        updateBrowseStatus('正在生成 Word（图片内嵌中）...', 'checking');
+        let detail = newsDetailCache[postId];
+        if (!detail) detail = await fetchNewsDetail(postId);
+        const bodyHtml = await inlineArticleImages(sanitizeArticleHtml(detail.content || ''));
+        const inner = buildArticleExportHtml(detail, { bodyHtml });
+        const blob = htmlDocx.asBlob(wrapDocHtml(detail.title || '热点资讯', inner));
+        saveBlob(blob, `热点资讯_${sanitizeFilename(detail.title)}.docx`);
+        updateBrowseStatus('✅ Word 已生成');
+        showToast('✅ Word 已生成', 'success');
+    } catch (e) {
+        console.warn(e);
+        updateBrowseStatus(`❌ Word 生成失败: ${e.message}`, 'error');
+        showToast(`❌ Word 生成失败: ${e.message}`, 'error');
+    } finally {
+        newsExportBusy = false;
+        setNewsExportButtonsDisabled(false);
+    }
+}
+
+// 隐藏 iframe 打印窗口：写入样式化 HTML 后唤起打印（用户选择「另存为 PDF」）
+function printHtmlInIframe(html) {
+    let frame = document.getElementById('newsPrintFrame');
+    if (!frame) {
+        frame = document.createElement('iframe');
+        frame.id = 'newsPrintFrame';
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;visibility:hidden;';
+        document.body.appendChild(frame);
+    }
+    // 追加唯一注释，确保相同内容也能触发重新加载与 onload
+    frame.srcdoc = html + `<!--print-${Date.now()}-->`;
+    frame.onload = () => {
+        try {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+        } catch (e) {
+            console.warn('唤起打印失败:', e);
+            showToast('❌ 唤起打印失败，请重试', 'error');
+        }
+    };
+}
+
+// 单篇导出 PDF：打印导出（零依赖，中文/图片/排版完美还原）
+async function downloadNewsPdfById(postId) {
+    if (newsExportBusy) return;
+    newsExportBusy = true;
+    setNewsExportButtonsDisabled(true);
+    try {
+        let detail = newsDetailCache[postId];
+        if (!detail) detail = await fetchNewsDetail(postId);
+        printHtmlInIframe(wrapDocHtml(detail.title || '热点资讯', buildArticleExportHtml(detail)));
+        updateBrowseStatus('🖨️ 已打开打印窗口，请在打印机选择「另存为 PDF」后保存');
+        showToast('🖨️ 请在打印对话框中选择「另存为 PDF」', 'success');
+    } catch (e) {
+        console.warn(e);
+        updateBrowseStatus(`❌ PDF 导出失败: ${e.message}`, 'error');
+        showToast(`❌ PDF 导出失败: ${e.message}`, 'error');
+    } finally {
+        newsExportBusy = false;
+        setNewsExportButtonsDisabled(false);
+    }
+}
+
+// 打包方式选择弹窗
+function openPackModal() {
+    if (newsSelectedIds.size === 0) {
+        showToast('请先在列表中勾选文章', 'error');
+        return;
+    }
+    document.getElementById('packCount').textContent = newsSelectedIds.size;
+    document.getElementById('packModalMask').classList.add('show');
+}
+
+function closePackModal() {
+    document.getElementById('packModalMask').classList.remove('show');
+}
+
+// 批量下载所选文章：mode='merged' 合并成一个 Word（带目录分页）/ mode='zip' 每篇一个 docx 打包
+async function downloadSelectedNews(mode) {
+    if (newsExportBusy || newsSelectedIds.size === 0) return;
+    closePackModal();
+    newsExportBusy = true;
+    setNewsExportButtonsDisabled(true);
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    progressBar.style.display = 'block';
+    progressText.style.display = 'block';
+
+    try {
+        const total = newsSelectedIds.size;
+        // 按当前列表顺序整理选中项；其他页/旧数据中选中的 postId 追加在后（详情按 postId 抓取即可）
+        const ordered = newsData.filter(d => newsSelectedIds.has(String(d.postId)))
+            .map(d => ({ postId: d.postId, title: d.title }));
+        const extra = [...newsSelectedIds]
+            .filter(pid => !ordered.some(t => String(t.postId) === pid))
+            .map(pid => ({ postId: pid, title: '' }));
+        const tasks = [...ordered, ...extra];
+
+        // 逐篇获取详情 + 图片内嵌（缓存命中跳过请求；未命中时限流抖动，≤3 次/秒）
+        const docs = [];   // { title, inner }
+        const failed = [];
+        for (let i = 0; i < tasks.length; i++) {
+            const t = tasks[i];
+            const pct = Math.round((i / total) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `正在获取文章内容: ${i + 1}/${total}（${pct}%）- ${t.title || t.postId}`;
+            try {
+                let detail = newsDetailCache[t.postId];
+                if (!detail) {
+                    detail = await fetchNewsDetail(t.postId);
+                    newsDetailCache[t.postId] = detail;
+                    await sleep(300 + Math.random() * 300);
+                }
+                const bodyHtml = await inlineArticleImages(sanitizeArticleHtml(detail.content || ''));
+                docs.push({ title: detail.title || t.title || String(t.postId), inner: buildArticleExportHtml(detail, { bodyHtml }) });
+            } catch (e) {
+                console.warn('文章获取失败，跳过:', t.postId, e);
+                failed.push(t.title || String(t.postId));
+            }
+        }
+        if (docs.length === 0) throw new Error('没有可导出的文章（全部获取失败）');
+
+        const dateStr = new Date().toISOString().slice(0, 10);
+        progressFill.style.width = '92%';
+        if (mode === 'zip') {
+            progressText.textContent = `正在打包 zip（${docs.length} 篇）...`;
+            const zip = new JSZip();
+            const used = new Set();
+            docs.forEach((doc, i) => {
+                const base = `${String(i + 1).padStart(2, '0')}_${sanitizeFilename(doc.title)}`;
+                let name = base, n = 2;
+                while (used.has(name)) name = `${base}(${n++})`;
+                used.add(name);
+                zip.file(`${name}.docx`, htmlDocx.asBlob(wrapDocHtml(doc.title, doc.inner)));
+            });
+            const blob = await zip.generateAsync({ type: 'blob' });
+            progressFill.style.width = '100%';
+            saveBlob(blob, `热点资讯_${docs.length}篇_${dateStr}.zip`);
+        } else {
+            progressText.textContent = `正在合并 Word（${docs.length} 篇）...`;
+            // 目录页 + 每篇之间插入 Word 分页符
+            let inner = `<div class="news-toc"><h1>目录</h1><ol>${docs.map(doc => `<li>${escapeHtml(doc.title)}</li>`).join('')}</ol></div>`;
+            docs.forEach(doc => {
+                inner += `<br clear="all" style="mso-special-character:line-break;page-break-before:always">` + doc.inner;
+            });
+            const blob = htmlDocx.asBlob(wrapDocHtml(`热点资讯合集_${docs.length}篇`, inner));
+            progressFill.style.width = '100%';
+            saveBlob(blob, `热点资讯合集_${docs.length}篇_${dateStr}.docx`);
+        }
+
+        progressText.textContent = failed.length
+            ? `⚠️ 导出完成：成功 ${docs.length} 篇，失败 ${failed.length} 篇（${failed.slice(0, 3).join('、')}${failed.length > 3 ? ' 等' : ''}）`
+            : `✅ 导出完成！共 ${docs.length} 篇文章`;
+        showToast(failed.length
+            ? `⚠️ 导出完成：${docs.length} 篇成功，${failed.length} 篇失败`
+            : `✅ 导出完成！共 ${docs.length} 篇文章`, 'success');
+        updateBrowseStatus(`✅ ${progressText.textContent}`);
+    } catch (err) {
+        console.warn(err);
+        progressText.textContent = `❌ 导出失败: ${err.message}`;
+        showToast(`❌ 导出失败: ${err.message}`, 'error');
+        updateBrowseStatus(`❌ 导出失败: ${err.message}`, 'error');
+    } finally {
+        newsExportBusy = false;
+        setNewsExportButtonsDisabled(false);
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+            progressText.style.display = 'none';
+            progressFill.style.width = '0%';
+        }, 4000);
+    }
 }
 
 // ==================== 阅读量排名 ====================
