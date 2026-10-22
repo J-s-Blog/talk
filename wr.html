@@ -480,8 +480,8 @@
             <div class="browse-wrap" id="newsWrap">
                 <div class="list-side">
                     <div class="filter-row">
-                        <input type="text" id="newsSearch" placeholder="搜索标题/作者" oninput="renderNewsList()">
-                        <select id="topFilter" onchange="renderNewsList()">
+                        <input type="text" id="newsSearch" placeholder="搜索标题/作者" oninput="onNewsFilterChange()">
+                        <select id="topFilter" onchange="onNewsFilterChange()">
                             <option value="">全部文章</option>
                             <option value="1">只看置顶</option>
                         </select>
@@ -1634,6 +1634,7 @@ function syncNewsAfterLoad() {
     resetNewsDetailPanel();
     document.getElementById('newsSearch').value = '';
     document.getElementById('topFilter').value = '';
+    newsSelectedIds.clear(); // 重新加载/切换分页模式：筛选上下文已重置，清空已选状态
     renderNewsList();
     renderNewsPager();
 }
@@ -1702,6 +1703,12 @@ function selectAllFilteredNews() {
 
 function clearNewsSelection() {
     newsSelectedIds.clear();
+    renderNewsList();
+}
+
+// 筛选条件（搜索关键词/只看置顶）变更：清空已选状态，保证与当前列表同步
+function onNewsFilterChange() {
+    if (newsSelectedIds.size > 0) newsSelectedIds.clear();
     renderNewsList();
 }
 
