@@ -1818,7 +1818,7 @@ function showNewsAuthorStats() {
         ${pagedTip}
         <table class="stats-table">
             <thead>
-                <tr><th>#</th><th>作者</th><th>发贴数</th><th>第一篇发布时间</th><th>最近一篇发布时间</th></tr>
+                <tr><th>#</th><th>作者</th><th>发贴数</th><th>第一篇发布时间</th><th>最近一篇发布时间</th><th>操作</th></tr>
             </thead>
             <tbody>
                 ${rows.map((r, i) => `
@@ -1828,9 +1828,24 @@ function showNewsAuthorStats() {
                     <td class="num">${r.count}</td>
                     <td class="time">${escapeHtml(r.first || '-')}</td>
                     <td class="time">${escapeHtml(r.last || '-')}</td>
+                    <td><button type="button" class="btn btn-primary btn-xs news-dl-btn" onclick="exportAuthorStatsRow(${i})" title="导出该作者的全部 ${r.count} 篇文章为一个 Word（含目录分页）">导出</button></td>
                 </tr>`).join('')}
             </tbody>
         </table>`;
+}
+
+// 统计表行导出：把该作者的全部文章交给导出核心，合并成一个带目录分页的 Word
+async function exportAuthorStatsRow(rowIndex) {
+    const row = aggregateNewsAuthorStats()[rowIndex];
+    if (!row) return;
+    const tasks = newsData
+        .filter(d => ((d.userName || '').trim() || '未知作者') === row.name)
+        .map(d => ({ postId: d.postId, title: d.title }));
+    if (tasks.length === 0) {
+        showToast('未找到该作者的文章', 'error');
+        return;
+    }
+    await runNewsExport(tasks, 'merged', `热点资讯_${sanitizeFilename(row.name)}`);
 }
 
 // 导出发贴统计为 Excel（与页面表格同一份聚合数据）
@@ -1921,7 +1936,6 @@ function renderNewsDetail(d) {
             </div>
             <div class="detail-actions">
                 <button type="button" class="btn btn-primary btn-xs news-dl-btn" onclick="downloadNewsWordById('${String(d.postId)}')" title="下载本文为 Word（.docx，图片内嵌）">⬇ 下载 Word</button>
-                <button type="button" class="btn btn-success btn-xs news-dl-btn" onclick="downloadNewsPdfById('${String(d.postId)}')" title="通过打印导出 PDF（在打印对话框中选择「另存为 PDF」）">⬇ 导出 PDF</button>
             </div>
         </div>
         <div class="article-body">${contentHtml || '<span style="color:#bbb">（无内容）</span>'}</div>
@@ -2179,49 +2193,6 @@ async function downloadNewsWordById(postId) {
     }
 }
 
-// 隐藏 iframe 打印窗口：写入样式化 HTML 后唤起打印（用户选择「另存为 PDF」）
-function printHtmlInIframe(html) {
-    let frame = document.getElementById('newsPrintFrame');
-    if (!frame) {
-        frame = document.createElement('iframe');
-        frame.id = 'newsPrintFrame';
-        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;visibility:hidden;';
-        document.body.appendChild(frame);
-    }
-    // 追加唯一注释，确保相同内容也能触发重新加载与 onload
-    frame.srcdoc = html + `<!--print-${Date.now()}-->`;
-    frame.onload = () => {
-        try {
-            frame.contentWindow.focus();
-            frame.contentWindow.print();
-        } catch (e) {
-            console.warn('唤起打印失败:', e);
-            showToast('❌ 唤起打印失败，请重试', 'error');
-        }
-    };
-}
-
-// 单篇导出 PDF：打印导出（零依赖，中文/图片/排版完美还原）
-async function downloadNewsPdfById(postId) {
-    if (newsExportBusy) return;
-    newsExportBusy = true;
-    setNewsExportButtonsDisabled(true);
-    try {
-        let detail = newsDetailCache[postId];
-        if (!detail) detail = await fetchNewsDetail(postId);
-        printHtmlInIframe(wrapDocHtml(detail.title || '热点资讯', buildArticleExportHtml(detail)));
-        updateBrowseStatus('🖨️ 已打开打印窗口，请在打印机选择「另存为 PDF」后保存');
-        showToast('🖨️ 请在打印对话框中选择「另存为 PDF」', 'success');
-    } catch (e) {
-        console.warn(e);
-        updateBrowseStatus(`❌ PDF 导出失败: ${e.message}`, 'error');
-        showToast(`❌ PDF 导出失败: ${e.message}`, 'error');
-    } finally {
-        newsExportBusy = false;
-        setNewsExportButtonsDisabled(false);
-    }
-}
-
 // 打包方式选择弹窗
 function openPackModal() {
     if (newsSelectedIds.size === 0) {
@@ -2240,6 +2211,19 @@ function closePackModal() {
 async function downloadSelectedNews(mode) {
     if (newsExportBusy || newsSelectedIds.size === 0) return;
     closePackModal();
+    // 按当前列表顺序整理选中项；其他页/旧数据中选中的 postId 追加在后（详情按 postId 抓取即可）
+    const ordered = newsData.filter(d => newsSelectedIds.has(String(d.postId)))
+        .map(d => ({ postId: d.postId, title: d.title }));
+    const extra = [...newsSelectedIds]
+        .filter(pid => !ordered.some(t => String(t.postId) === pid))
+        .map(pid => ({ postId: pid, title: '' }));
+    await runNewsExport([...ordered, ...extra], mode);
+}
+
+// 导出核心：逐篇获取详情+图片内嵌（缓存优先，未命中限流抖动 ≤3 次/秒），再按 mode 打包。
+// fileBase：文件名/文档标题前缀；不传时 zip 默认「热点资讯」、合并 Word 默认「热点资讯合集」
+async function runNewsExport(tasks, mode, fileBase) {
+    if (newsExportBusy || tasks.length === 0) return;
     newsExportBusy = true;
     setNewsExportButtonsDisabled(true);
     const progressBar = document.getElementById('progressBar');
@@ -2249,15 +2233,7 @@ async function downloadSelectedNews(mode) {
     progressText.style.display = 'block';
 
     try {
-        const total = newsSelectedIds.size;
-        // 按当前列表顺序整理选中项；其他页/旧数据中选中的 postId 追加在后（详情按 postId 抓取即可）
-        const ordered = newsData.filter(d => newsSelectedIds.has(String(d.postId)))
-            .map(d => ({ postId: d.postId, title: d.title }));
-        const extra = [...newsSelectedIds]
-            .filter(pid => !ordered.some(t => String(t.postId) === pid))
-            .map(pid => ({ postId: pid, title: '' }));
-        const tasks = [...ordered, ...extra];
-
+        const total = tasks.length;
         // 逐篇获取详情 + 图片内嵌（缓存命中跳过请求；未命中时限流抖动，≤3 次/秒）
         const docs = [];   // { title, inner }
         const failed = [];
@@ -2283,6 +2259,7 @@ async function downloadSelectedNews(mode) {
         if (docs.length === 0) throw new Error('没有可导出的文章（全部获取失败）');
 
         const dateStr = new Date().toISOString().slice(0, 10);
+        const base = fileBase || (mode === 'zip' ? '热点资讯' : '热点资讯合集');
         progressFill.style.width = '92%';
         if (mode === 'zip') {
             progressText.textContent = `正在打包 zip（${docs.length} 篇）...`;
@@ -2297,7 +2274,7 @@ async function downloadSelectedNews(mode) {
             });
             const blob = await zip.generateAsync({ type: 'blob' });
             progressFill.style.width = '100%';
-            saveBlob(blob, `热点资讯_${docs.length}篇_${dateStr}.zip`);
+            saveBlob(blob, `${base}_${docs.length}篇_${dateStr}.zip`);
         } else {
             progressText.textContent = `正在合并 Word（${docs.length} 篇）...`;
             // 目录页 + 每篇之间插入 Word 分页符
@@ -2305,9 +2282,9 @@ async function downloadSelectedNews(mode) {
             docs.forEach(doc => {
                 inner += `<br clear="all" style="mso-special-character:line-break;page-break-before:always">` + doc.inner;
             });
-            const blob = htmlDocx.asBlob(wrapDocHtml(`热点资讯合集_${docs.length}篇`, inner));
+            const blob = htmlDocx.asBlob(wrapDocHtml(`${base}_${docs.length}篇`, inner));
             progressFill.style.width = '100%';
-            saveBlob(blob, `热点资讯合集_${docs.length}篇_${dateStr}.docx`);
+            saveBlob(blob, `${base}_${docs.length}篇_${dateStr}.docx`);
         }
 
         progressText.textContent = failed.length
