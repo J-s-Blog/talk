@@ -36,7 +36,7 @@
         .header p { font-size: 12px; opacity: 0.75; }
         .body { padding: 28px; }
         label { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
-        input[type="text"], input[type="date"], input[type="password"], textarea, select {
+        input[type="text"], input[type="search"], input[type="date"], input[type="password"], textarea, select {
             width: 100%;
             padding: 9px 12px;
             border: 1.5px solid #e0e0e0;
@@ -121,9 +121,9 @@
         .date-sep { flex: none; color: #999; font-size: 12px; }
         .tab-nav { display: flex; gap: 6px; flex-shrink: 0; }
         .tab-nav button {
-            flex: none; padding: 9px 18px; border: 2px solid #e0e0e0;
+            flex: none; padding: 6px 14px; border: 2px solid #e0e0e0;
             border-radius: 10px; background: #fafafa; cursor: pointer;
-            font-size: 13px; font-weight: bold; color: #666; transition: all 0.2s;
+            font-size: 12px; font-weight: bold; color: #666; transition: all 0.2s;
         }
         .tab-nav button.active { border-color: #533483; background: #ede7f6; color: #533483; }
         .tab-nav button:hover { border-color: #533483; }
@@ -133,7 +133,7 @@
         .tab-nav .view-btn.active { border-color: #3949ab; background: #3949ab; color: #fff; }
         .nav-sep { width: 1px; align-self: stretch; background: #e0e0e0; margin: 2px 4px; flex: none; }
         /* 加载分页下拉框（每页100 / 全部） */
-        .tab-nav select { width: auto; flex: none; padding: 7px 8px; font-size: 12px; cursor: pointer; border: 2px solid #e0e0e0; border-radius: 10px; }
+        .tab-nav select { width: auto; flex: none; padding: 6px 8px; font-size: 12px; cursor: pointer; border: 2px solid #e0e0e0; border-radius: 10px; }
         /* 资讯列表底部分页控件 */
         .pager { display: flex; align-items: center; gap: 6px; flex: none; padding-top: 2px; }
         .pager-btn {
@@ -175,6 +175,12 @@
         .filter-row { display: flex; gap: 6px; }
         .filter-row input { flex: 1 1 33%; min-width: 0; padding: 7px 10px; }
         .filter-row select { flex: 1 1 67%; min-width: 0; }
+        /* 热点资讯筛选行：搜索框占主宽度（带清除叉叉），筛选下拉仅显示两个字 */
+        .filter-row.news-filter-row input { flex: 1 1 auto; }
+        .filter-row.news-filter-row input::-webkit-search-cancel-button { cursor: pointer; }
+        .filter-row.news-filter-row select { flex: 0 0 64px; width: 64px; padding: 7px 4px; font-size: 12px; }
+        /* 周报筛选行：搜索框带清除叉叉，部门下拉固定窄宽（展开时选项列表自动加宽） */
+        .filter-row.week-filter-row select { flex: 0 0 140px; width: 140px; padding: 7px 6px; font-size: 12px; }
         .person-list {
             flex: 1 1 0; min-height: 0; width: 100%; overflow-y: auto;
             display: flex; flex-direction: column; gap: 8px; padding-right: 2px;
@@ -392,7 +398,7 @@
             .top-line .status-bar { flex: 1 1 100%; order: 4; }
             .top-line .cred-input { flex: 1 1 0; width: auto; min-width: 0; }
             .top-line .date-input { flex: 1 1 0; width: auto; min-width: 0; }
-            .tab-nav button { padding: 8px 14px; font-size: 12px; }
+            .tab-nav button { padding: 6px 12px; font-size: 12px; }
             .list-side { width: 100%; }
             /* 手机浏览器底部地址栏会悬浮遮挡内容，给内部滚动容器留出底部空间，保证最后的内容能滚动到可见区域 */
             .person-list { padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
@@ -461,8 +467,8 @@
         <div class="view-pane" id="paneWeekly">
             <div class="browse-wrap" id="browseWrap">
                 <div class="list-side">
-                    <div class="filter-row">
-                        <input type="text" id="personSearch" placeholder="" oninput="renderPersonList()">
+                    <div class="filter-row week-filter-row">
+                        <input type="search" id="personSearch" placeholder="" oninput="renderPersonList()" title="输入后可点击右侧 ✕ 一键清除">
                         <select id="deptFilter" onchange="renderPersonList()">
                             <option value="">全部部门</option>
                         </select>
@@ -479,11 +485,11 @@
         <div class="view-pane" id="paneNews" style="display:none;">
             <div class="browse-wrap" id="newsWrap">
                 <div class="list-side">
-                    <div class="filter-row">
-                        <input type="text" id="newsSearch" placeholder="搜索标题/作者" oninput="onNewsFilterChange()">
-                        <select id="topFilter" onchange="onNewsFilterChange()">
-                            <option value="">全部文章</option>
-                            <option value="1">只看置顶</option>
+                    <div class="filter-row news-filter-row">
+                        <input type="search" id="newsSearch" placeholder="搜索标题/作者" oninput="onNewsFilterChange()" title="输入后可点击右侧 ✕ 一键清除">
+                        <select id="topFilter" onchange="onNewsFilterChange()" title="筛选全部文章或仅看置顶">
+                            <option value="">全部</option>
+                            <option value="1">置顶</option>
                         </select>
                     </div>
                     <div class="news-bulk-bar" id="newsBulkBar">
