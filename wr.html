@@ -1144,21 +1144,65 @@ function populateDeptFilter() {
     sel.value = depts.includes(prev) ? prev : '';
 }
 
-function renderPersonList() {
-    const listEl = document.getElementById('personList');
-    if (excelData.length === 0) {
-        listEl.innerHTML = '<div class="empty-tip">暂无数据</div>';
-        return;
-    }
+// 周报清单按当前筛选条件过滤（人名列表渲染与状态栏计数共用）
+function filterWeeklyItems() {
     const kw = (document.getElementById('personSearch').value || '').trim().toLowerCase();
     const dept = document.getElementById('deptFilter').value;
-    const items = excelData
+    return excelData
         .map((d, i) => ({ d, i }))
         .filter(({ d }) => (!dept || (d.department || '').trim() === dept)
             && (!kw
                 || (d.name || '').toLowerCase().includes(kw)
                 || (d.department || '').toLowerCase().includes(kw)
                 || (d.position || '').toLowerCase().includes(kw)));
+}
+
+// 筛选激活时的状态栏提示文案（无筛选返回 null）
+function weeklyFilterStatusText() {
+    if (excelData.length === 0) return null;
+    const kw = (document.getElementById('personSearch').value || '').trim();
+    const dept = document.getElementById('deptFilter').value;
+    if (!kw && !dept) return null;
+    const n = filterWeeklyItems().length;
+    const parts = [];
+    if (kw) parts.push(`关键词「${kw}」`);
+    if (dept) parts.push(`部门「${dept}」`);
+    return `🔍 ${parts.join(' · ')}：匹配 ${n} / ${excelData.length} 条`;
+}
+
+function newsFilterStatusText() {
+    if (newsData.length === 0) return null;
+    const kw = (document.getElementById('newsSearch').value || '').trim();
+    const topOnly = document.getElementById('topFilter').value === '1';
+    if (!kw && !topOnly) return null;
+    const n = getFilteredNewsItems().length;
+    const parts = [];
+    if (kw) parts.push(`关键词「${kw}」`);
+    if (topOnly) parts.push('仅看置顶');
+    return `🔍 ${parts.join(' · ')}：匹配 ${n} / ${newsData.length} 篇`;
+}
+
+// 筛选变更后同步状态栏：有筛选显示命中数量，筛选清空后恢复默认加载提示
+const filterStatusActive = { weekly: false, news: false };
+function syncFilterStatus(view) {
+    const text = view === 'weekly' ? weeklyFilterStatusText() : newsFilterStatusText();
+    if (text) {
+        filterStatusActive[view] = true;
+        updateBrowseStatus(text, 'online', view);
+    } else if (filterStatusActive[view]) {
+        filterStatusActive[view] = false;
+        const d = defaultStatusForView(view);
+        if (d && d.msg) updateBrowseStatus(d.msg, 'online', view);
+    }
+}
+
+function renderPersonList() {
+    const listEl = document.getElementById('personList');
+    if (excelData.length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无数据</div>';
+        return;
+    }
+    const items = filterWeeklyItems();
 
     listEl.innerHTML = items.length === 0
         ? '<div class="empty-tip">未找到匹配人员</div>'
@@ -1170,6 +1214,7 @@ function renderPersonList() {
                     提交：${escapeHtml(d.submitTime || '-')}
                 </div>
             </div>`).join('');
+    syncFilterStatus('weekly');
 }
 
 // 点击人名：按需抓取该人员的周报详情（懒加载），再渲染详情面板
@@ -1685,6 +1730,7 @@ function renderNewsList() {
                 </div>
             </div>`).join('');
     updateNewsBulkBar();
+    syncFilterStatus('news');
 }
 
 // 复选框勾选/取消：只更新计数与卡片样式，不整列重绘（保持列表滚动位置）
