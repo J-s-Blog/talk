@@ -523,7 +523,7 @@
         .thead,
         .trow {
             display: grid;
-            grid-template-columns: 24px 56px 76px minmax(100px, 1fr) minmax(240px, 2.4fr);
+            grid-template-columns: 24px 56px 76px minmax(90px, 0.8fr) minmax(260px, 2.6fr) 52px;
             gap: 8px;
             align-items: center;
             padding: 8px 12px;
@@ -620,10 +620,10 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            cursor: pointer;
         }
-        .c-title:hover {
-            color: var(--primary);
+        .c-act {
+            display: flex;
+            justify-content: flex-end;
         }
         .c-prog {
             font-size: 12px;
@@ -979,7 +979,7 @@
                 grid-template-areas:
                     "ck title date"
                     "ck prog prog"
-                    "ck cat cat";
+                    "ck cat act";
                 row-gap: 3px;
                 padding: 9px 10px;
             }
@@ -992,6 +992,7 @@
             }
             .c-prog { grid-area: prog; }
             .c-cat { grid-area: cat; }
+            .c-act { grid-area: act; justify-content: flex-end; }
             .c-upd { grid-area: upd; }
             /* 手机端无表头，展开的任务行直接吸附在顶部 */
             .trow.open {
@@ -1833,7 +1834,7 @@
 
             const theadHtml = state.trashMode
                 ? `<div class="thead"><div></div><div>日期</div><div>标题</div><div style="text-align:right">删除时间 / 操作</div></div>`
-                : `<div class="thead"><div></div><div>日期</div><div>分类</div><div>标题</div><div>最新进展</div></div>`;
+                : `<div class="thead"><div></div><div>日期</div><div>分类</div><div>标题</div><div>最新进展</div><div style="text-align:right">操作</div></div>`;
 
             const rowsHtml = filtered.map(t => {
                 const cat = state.categories.find(c => c.id === t.categoryId);
@@ -1874,8 +1875,9 @@
                             <div class="c-check"><span class="ck ${isCompleted ? 'on' : ''}" onclick="event.stopPropagation(); toggleTaskStatus('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
                             <div class="c-date">${dateStr}</div>
                             <div class="c-cat">${catHtml}</div>
-                            <div class="c-title" onclick="event.stopPropagation(); openTaskModal('${t.id}')">${escapeHtml(t.title)}</div>
+                            <div class="c-title">${escapeHtml(t.title)}</div>
                             <div class="c-prog">${progHtml}</div>
+                            <div class="c-act"><button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); openTaskModal('${t.id}')">编辑</button></div>
                         </div>
                         <div class="tdetail">${escapeHtml(t.detail || '无详细描述')}</div>
                     `;
