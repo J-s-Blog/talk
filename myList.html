@@ -1149,6 +1149,7 @@
                     <div class="main-header-title">
                         <span id="mobile-main-title">今日任务</span>
                         <span id="task-count-badge" class="count-badge hidden">0</span>
+                        <button id="btn-sort" class="btn btn-xs btn-secondary" onclick="toggleSort()" title="按日期升序/降序切换">↓ 最近在前</button>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-xs btn-secondary" onclick="openCategoryModal()">管理分类</button>
@@ -1258,7 +1259,8 @@
             selectedCategoryId: null,
             searchKeyword: '',
             isCalendarCollapsed: false, // State for mobile calendar collapse
-            trashMode: false // 回收站视图开关
+            trashMode: false, // 回收站视图开关
+            sortDesc: true // 日期排序方向：true 最近在前（默认）
         };
 
         async function deriveKey(password, salt) {
@@ -1747,6 +1749,13 @@
         }
 
         // Core Render Logic
+        function toggleSort() {
+            state.sortDesc = !state.sortDesc;
+            const btn = document.getElementById('btn-sort');
+            if (btn) btn.innerText = state.sortDesc ? '↓ 最新在前' : '↑ 最早在前';
+            renderTasks();
+        }
+
         function renderTasks() {
             const list = document.getElementById('task-list');
             const titleEl = document.getElementById('mobile-main-title');
@@ -1791,7 +1800,6 @@
                     titleText = `${y}年${m + 1}月`;
                 } else if (state.viewMode === 'all') {
                     filtered = [...activeTasks];
-                    filtered.sort((a, b) => a.date.localeCompare(b.date));
                     titleText = '所有任务';
                 }
 
@@ -1813,7 +1821,9 @@
 
                 filtered.sort((a, b) => {
                     if (a.status === b.status) {
-                        return (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00'));
+                        const ka = a.date + (a.time || '00:00');
+                        const kb = b.date + (b.time || '00:00');
+                        return state.sortDesc ? kb.localeCompare(ka) : ka.localeCompare(kb);
                     }
                     return a.status === 'pending' ? -1 : 1;
                 });
