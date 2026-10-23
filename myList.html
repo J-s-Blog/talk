@@ -153,7 +153,7 @@
         .app-layout {
             display: grid;
             grid-template-columns: 300px 1fr;
-            max-width: 1200px;
+            width: 100%;
             margin: 0 auto;
             height: 100vh;
             background: var(--card);
@@ -495,104 +495,185 @@
             border-radius: 12px;
         }
 
+        /* 回收站按钮 */
+        #btn-trash.active {
+            background: var(--primary);
+            color: white;
+        }
+        .trash-badge {
+            background: var(--danger);
+            color: white;
+            border-radius: 999px;
+            padding: 0 5px;
+            font-size: 11px;
+            line-height: 16px;
+            margin-left: 4px;
+        }
+
+        /* ===== 任务表格布局 ===== */
         .task-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             flex: 1;
             min-height: 0;
             overflow-y: auto;
         }
 
-        .task-card {
+        .thead,
+        .trow {
+            display: grid;
+            grid-template-columns: 24px 56px 76px minmax(100px, 1fr) minmax(240px, 2.4fr);
+            gap: 8px;
+            align-items: center;
+            padding: 8px 12px;
+        }
+        .thead {
+            font-size: 12px;
+            line-height: 16px;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
             background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
+            z-index: 1;
+        }
+        .trow {
+            border-bottom: 1px solid var(--border);
             cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
+            transition: background 0.15s;
         }
-        .task-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        .trow:hover,
+        .trow.open {
+            background: var(--bg);
         }
-
-        .task-card.completed {
-            opacity: 0.6;
-            background: #f9fafb;
+        /* 展开详情后，任务行吸附在表头下方，随长内容滚动保持可见 */
+        .trow.open {
+            position: sticky;
+            top: 33px;
+            z-index: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
         }
-        .task-card.completed .task-title {
-            text-decoration: line-through;
+        .trow.done .c-title,
+        .trow.done .c-prog {
             color: var(--text-light);
         }
+        .trow.done .c-title {
+            text-decoration: line-through;
+        }
 
-        .task-checkbox {
-            width: 20px;
-            height: 20px;
+        .c-check {
+            display: flex;
+            align-items: center;
+        }
+        .ck {
+            width: 18px;
+            height: 18px;
             border: 2px solid var(--border);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            margin-top: 2px;
             transition: all 0.2s;
-        }
-        .task-card.completed .task-checkbox {
-            background: var(--success);
-            border-color: var(--success);
             color: white;
+            cursor: pointer;
         }
-        .task-checkbox svg {
-            width: 12px;
-            height: 12px;
+        .ck svg {
+            width: 10px;
+            height: 10px;
             display: none;
         }
-        .task-card.completed .task-checkbox svg {
+        .ck.on {
+            background: var(--success);
+            border-color: var(--success);
+        }
+        .ck.on svg {
             display: block;
         }
 
-        .task-main-info {
-            flex: 1;
+        .c-date {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .c-cat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .c-cat .color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .c-title {
+            font-size: 14px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .c-title:hover {
+            color: var(--primary);
+        }
+        .c-prog {
+            font-size: 12px;
+            color: var(--text-light);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .c-prog .pin {
+            margin-right: 2px;
+        }
+        .c-upd {
+            font-size: 12px;
+            color: var(--text-light);
+            text-align: right;
+            white-space: nowrap;
         }
 
-        .task-meta-row {
+        /* 回收站行 */
+        .trow.trash {
+            grid-template-columns: 24px 80px 1fr auto;
+        }
+        .trow.trash .c-title {
+            color: var(--text-light);
+            text-decoration: none;
+        }
+        .trow.trash .c-upd {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 4px;
-            font-size: 13px;
-            flex-wrap: wrap;
+            justify-content: flex-end;
         }
-        
-        .task-date-badge {
-            font-weight: 600;
-            color: var(--primary);
-            background: var(--primary-light);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-        .task-time-text {
-            color: var(--text-light);
-            font-weight: 500;
+        .trash-icon {
+            opacity: 0.5;
+            font-size: 14px;
         }
 
-        .task-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        .task-desc {
+        .tdetail {
+            display: none;
+            padding: 10px 14px 12px 44px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
             font-size: 13px;
+            line-height: 1.6;
             color: var(--text-light);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .tdetail.open {
+            display: block;
         }
 
         .empty-state {
@@ -652,6 +733,25 @@
             justify-content: flex-end;
             gap: 10px;
             margin-top: 20px;
+        }
+
+        /* 任务编辑弹窗：顶部紧凑信息行 + 大详情编辑区 */
+        .task-modal {
+            max-width: 720px;
+        }
+        .task-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr 1fr;
+            gap: 12px;
+        }
+        .task-detail-group {
+            margin-bottom: 0;
+        }
+        .task-modal .textarea {
+            height: 52vh;
+            min-height: 300px;
+            resize: vertical;
+            line-height: 1.6;
         }
 
         .month-picker-inputs {
@@ -869,6 +969,54 @@
             .main-header-title {
                 font-size: 18px;
             }
+
+            /* ===== 手机端任务表格：堆叠布局（无横向滚动） ===== */
+            .thead {
+                display: none;
+            }
+            .trow {
+                grid-template-columns: 20px 1fr auto;
+                grid-template-areas:
+                    "ck title date"
+                    "ck prog prog"
+                    "ck cat cat";
+                row-gap: 3px;
+                padding: 9px 10px;
+            }
+            .c-check { grid-area: ck; }
+            .c-title { grid-area: title; }
+            .c-date {
+                grid-area: date;
+                text-align: right;
+                font-weight: 500;
+            }
+            .c-prog { grid-area: prog; }
+            .c-cat { grid-area: cat; }
+            .c-upd { grid-area: upd; }
+            /* 手机端无表头，展开的任务行直接吸附在顶部 */
+            .trow.open {
+                top: 0;
+            }
+
+            /* 任务编辑弹窗：手机端信息字段两列排布 */
+            .task-meta-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .task-modal .textarea {
+                height: 45vh;
+                min-height: 220px;
+            }
+            .tdetail {
+                padding: 8px 12px 10px 38px;
+            }
+
+            /* 回收站行（手机端无进展/分类列） */
+            .trow.trash {
+                grid-template-columns: 20px 1fr auto;
+                grid-template-areas:
+                    "ck title date"
+                    "ck upd upd";
+            }
         }
         
         /* PC Specific Fixes */
@@ -969,16 +1117,16 @@
             <!-- View Switcher & Filters (Moved to Sidebar) -->
             <div class="filter-section">
                 <div class="view-switcher" style="width: 100%;">
-                    <button id="view-day" class="active" onclick="setView('day')">日</button>
+                    <button id="view-day" onclick="setView('day')">日</button>
                     <button id="view-week" onclick="setView('week')">周</button>
                     <button id="view-month" onclick="setView('month')">月</button>
-                    <button id="view-all" onclick="setView('all')">所有</button>
+                    <button id="view-all" class="active" onclick="setView('all')">所有</button>
                 </div>
 
                 <div class="status-search-row">
                     <div class="status-filter" style="width: 100%;">
-                        <button id="status-all" class="active" onclick="setStatusFilter('all')">全部</button>
-                        <button id="status-pending" onclick="setStatusFilter('pending')">未完成</button>
+                        <button id="status-all" onclick="setStatusFilter('all')">全部</button>
+                        <button id="status-pending" class="active" onclick="setStatusFilter('pending')">未完成</button>
                         <button id="status-completed" onclick="setStatusFilter('completed')">已完成</button>
                     </div>
                     <div class="search-box">
@@ -1004,6 +1152,7 @@
                     <div class="header-actions">
                         <button class="btn btn-xs btn-secondary" onclick="openCategoryModal()">管理分类</button>
                         <button class="btn btn-xs btn-secondary" onclick="exportToExcel()" title="导出当前筛选结果">📥 导出</button>
+                        <button id="btn-trash" class="btn btn-xs btn-secondary" onclick="toggleTrashView()" title="回收站：已删除任务可在此恢复">🗑 回收站<span id="trash-count-badge" class="trash-badge hidden">0</span></button>
                         <button class="btn btn-xs btn-primary" onclick="openTaskModal()">+ 新建</button>
                     </div>
                 </div>
@@ -1015,7 +1164,7 @@
 
     <!-- 任务弹窗 -->
     <div id="task-modal" class="modal-overlay hidden">
-        <div class="modal">
+        <div class="modal task-modal">
             <div class="modal-header">
                 <h3 id="task-modal-title">新建任务</h3>
                 <button class="modal-close" onclick="closeModal('task-modal')">×</button>
@@ -1025,11 +1174,7 @@
                 <label>任务标题</label>
                 <input type="text" id="t-title" class="input" placeholder="例如：完成项目报告">
             </div>
-            <div class="form-group">
-                <label>任务详情</label>
-                <textarea id="t-detail" class="textarea" placeholder="详细描述..."></textarea>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px">
+            <div class="task-meta-grid">
                 <div class="form-group">
                     <label>日期</label>
                     <input type="date" id="t-date" class="input">
@@ -1038,17 +1183,21 @@
                     <label>时间</label>
                     <input type="time" id="t-time" class="input">
                 </div>
+                <div class="form-group">
+                    <label>分类</label>
+                    <select id="t-category" class="select"></select>
+                </div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="t-status" class="select">
+                        <option value="pending">未完成</option>
+                        <option value="completed">已完成</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label>分类</label>
-                <select id="t-category" class="select"></select>
-            </div>
-            <div class="form-group">
-                <label>状态</label>
-                <select id="t-status" class="select">
-                    <option value="pending">未完成</option>
-                    <option value="completed">已完成</option>
-                </select>
+            <div class="form-group task-detail-group">
+                <label>任务详情</label>
+                <textarea id="t-detail" class="textarea" placeholder="详细描述...（支持「10-20：进展内容」换行记录，列表会自动提取最新一条）"></textarea>
             </div>
             <div class="modal-footer">
                 <button id="btn-delete-task" class="btn btn-danger hidden" onclick="deleteTask()">删除</button>
@@ -1102,12 +1251,13 @@
             categories: [],
             tasks: [],
             currentDate: new Date(), 
-            viewMode: 'day', 
-            statusFilter: 'all',
+            viewMode: 'all',
+            statusFilter: 'pending',
             calMonth: new Date(), 
             selectedCategoryId: null,
             searchKeyword: '',
-            isCalendarCollapsed: false // State for mobile calendar collapse
+            isCalendarCollapsed: false, // State for mobile calendar collapse
+            trashMode: false // 回收站视图开关
         };
 
         async function deriveKey(password, salt) {
@@ -1210,7 +1360,7 @@
             await loadData();
             renderCalendar();
             renderCategories();
-            setView('day'); // 初始化时调用 setView 以正确显示日选择器
+            setView('all'); // 初始化：默认「所有」视图 + 「未完成」筛选
         }
 
         async function loadData() {
@@ -1254,7 +1404,7 @@
             const todayStr = formatDate(today);
             const selectedStr = formatDate(state.currentDate);
 
-            const taskDates = new Set(state.tasks.map(t => t.date));
+            const taskDates = new Set(state.tasks.filter(t => t.status !== 'deleted').map(t => t.date));
 
             let html = ['日', '一', '二', '三', '四', '五', '六'].map(d => `<div class="day-name">${d}</div>`).join('');
 
@@ -1322,9 +1472,18 @@
             }
         }
 
+        // 退出回收站视图（切换视图/筛选时调用）
+        function exitTrashMode() {
+            if (!state.trashMode) return;
+            state.trashMode = false;
+            const btn = document.getElementById('btn-trash');
+            if (btn) btn.classList.remove('active');
+        }
+
         // View Switching Logic
         function setView(mode) {
             state.viewMode = mode;
+            exitTrashMode();
             document.querySelectorAll('.view-switcher button').forEach(b => b.classList.remove('active'));
             document.getElementById(`view-${mode}`).classList.add('active');
             
@@ -1474,6 +1633,7 @@
 
         function setStatusFilter(status) {
             state.statusFilter = status;
+            exitTrashMode();
             document.querySelectorAll('.status-filter button').forEach(b => b.classList.remove('active'));
             document.getElementById(`status-${status}`).classList.add('active');
             renderTasks();
@@ -1501,6 +1661,7 @@
 
         function filterByCategory(id) {
             state.selectedCategoryId = id;
+            exitTrashMode();
             renderCategories();
             renderTasks();
         }
@@ -1589,56 +1750,72 @@
             const list = document.getElementById('task-list');
             const titleEl = document.getElementById('mobile-main-title');
             const countBadge = document.getElementById('task-count-badge');
-            
+
             const now = state.currentDate;
+            const keywords = state.searchKeyword.toLowerCase().split(/\s+/).filter(Boolean);
+            const activeTasks = state.tasks.filter(t => t.status !== 'deleted');
             let filtered = [];
             let titleText = '';
-            const keywords = state.searchKeyword.toLowerCase().split(/\s+/).filter(Boolean);
 
-            // 搜索状态下忽略视图日期范围，全局搜索所有任务
-            if (keywords.length > 0) {
-                filtered = [...state.tasks];
-                titleText = `搜索“${state.searchKeyword}”`;
-            } else if (state.viewMode === 'day') {
-                const ds = formatDate(now);
-                filtered = state.tasks.filter(t => t.date === ds);
-                titleText = `${now.getMonth() + 1}月${now.getDate()}日`;
-            } else if (state.viewMode === 'week') {
-                const start = new Date(now);
-                start.setDate(now.getDate() - now.getDay());
-                const end = new Date(start);
-                end.setDate(start.getDate() + 6);
-                filtered = state.tasks.filter(t => t.date >= formatDate(start) && t.date <= formatDate(end));
-                const startStr = `${start.getMonth() + 1}月${start.getDate()}日`;
-                const endStr = `${end.getMonth() + 1}月${end.getDate()}日`;
-                titleText = `${startStr} - ${endStr}`;
-            } else if (state.viewMode === 'month') {
-                const y = now.getFullYear(), m = now.getMonth();
-                filtered = state.tasks.filter(t => {
-                    const d = new Date(t.date);
-                    return d.getFullYear() === y && d.getMonth() === m;
+            if (state.trashMode) {
+                // 回收站视图：仅显示已删除任务，按删除时间倒序
+                filtered = state.tasks.filter(t => t.status === 'deleted');
+                if (keywords.length > 0) filtered = filtered.filter(t => matchesKeyword(t, keywords));
+                filtered.sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''));
+                titleText = '回收站';
+            } else {
+                // 搜索状态下忽略视图日期范围，全局搜索所有任务
+                if (keywords.length > 0) {
+                    filtered = [...activeTasks];
+                    titleText = `搜索“${state.searchKeyword}”`;
+                } else if (state.viewMode === 'day') {
+                    const ds = formatDate(now);
+                    filtered = activeTasks.filter(t => t.date === ds);
+                    titleText = `${now.getMonth() + 1}月${now.getDate()}日`;
+                } else if (state.viewMode === 'week') {
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - now.getDay());
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    filtered = activeTasks.filter(t => t.date >= formatDate(start) && t.date <= formatDate(end));
+                    const startStr = `${start.getMonth() + 1}月${start.getDate()}日`;
+                    const endStr = `${end.getMonth() + 1}月${end.getDate()}日`;
+                    titleText = `${startStr} - ${endStr}`;
+                } else if (state.viewMode === 'month') {
+                    const y = now.getFullYear(), m = now.getMonth();
+                    filtered = activeTasks.filter(t => {
+                        const d = new Date(t.date);
+                        return d.getFullYear() === y && d.getMonth() === m;
+                    });
+                    titleText = `${y}年${m + 1}月`;
+                } else if (state.viewMode === 'all') {
+                    filtered = [...activeTasks];
+                    filtered.sort((a, b) => a.date.localeCompare(b.date));
+                    titleText = '所有任务';
+                }
+
+                if (state.selectedCategoryId) {
+                    filtered = filtered.filter(t => t.categoryId === state.selectedCategoryId);
+                    const catName = state.categories.find(c => c.id === state.selectedCategoryId)?.name || '未知分类';
+                    titleText += ` · ${catName}`;
+                }
+
+                if (state.statusFilter !== 'all') {
+                    filtered = filtered.filter(t => t.status === state.statusFilter);
+                    const statusText = state.statusFilter === 'completed' ? '已完成' : '未完成';
+                    titleText += ` · ${statusText}`;
+                }
+
+                if (keywords.length > 0) {
+                    filtered = filtered.filter(t => matchesKeyword(t, keywords));
+                }
+
+                filtered.sort((a, b) => {
+                    if (a.status === b.status) {
+                        return (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00'));
+                    }
+                    return a.status === 'pending' ? -1 : 1;
                 });
-                titleText = `${y}年${m + 1}月`;
-            } else if (state.viewMode === 'all') {
-                filtered = [...state.tasks];
-                filtered.sort((a, b) => a.date.localeCompare(b.date));
-                titleText = '所有任务';
-            }
-
-            if (state.selectedCategoryId) {
-                filtered = filtered.filter(t => t.categoryId === state.selectedCategoryId);
-                const catName = state.categories.find(c => c.id === state.selectedCategoryId)?.name || '未知分类';
-                titleText += ` · ${catName}`;
-            }
-
-            if (state.statusFilter !== 'all') {
-                filtered = filtered.filter(t => t.status === state.statusFilter);
-                const statusText = state.statusFilter === 'completed' ? '已完成' : '未完成';
-                titleText += ` · ${statusText}`;
-            }
-
-            if (keywords.length > 0) {
-                filtered = filtered.filter(t => matchesKeyword(t, keywords));
             }
 
             if (titleEl) titleEl.innerText = titleText;
@@ -1646,54 +1823,74 @@
                 countBadge.innerText = `${filtered.length} 条`;
                 countBadge.classList.remove('hidden');
             }
-
-            filtered.sort((a, b) => {
-                if (a.status === b.status) {
-                    return (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00'));
-                }
-                return a.status === 'pending' ? -1 : 1;
-            });
+            updateTrashBadge();
 
             if (filtered.length === 0) {
-                const emptyText = keywords.length > 0 ? '未找到匹配的任务' : '当前暂无任务';
+                const emptyText = state.trashMode ? '回收站为空' : (keywords.length > 0 ? '未找到匹配的任务' : '当前暂无任务');
                 list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>${emptyText}</p></div>`;
                 return;
             }
 
-            list.innerHTML = filtered.map(t => {
+            const theadHtml = state.trashMode
+                ? `<div class="thead"><div></div><div>日期</div><div>标题</div><div style="text-align:right">删除时间 / 操作</div></div>`
+                : `<div class="thead"><div></div><div>日期</div><div>分类</div><div>标题</div><div>最新进展</div></div>`;
+
+            const rowsHtml = filtered.map(t => {
                 const cat = state.categories.find(c => c.id === t.categoryId);
-                const badge = cat ? `<span class="badge" style="background:${cat.color}">${cat.name}</span>` : '';
                 const isCompleted = t.status === 'completed';
                 const dateObj = new Date(t.date + 'T00:00:00');
-                
-                const dateStrShort = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
-                const timeStr = t.time || '全天';
+                const dateStr = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+
+                const catHtml = cat
+                    ? `<span class="color-dot" style="background:${cat.color}"></span>${escapeHtml(cat.name)}`
+                    : '<span style="opacity:.5">—</span>';
+
+                // 最新进展：优先解析详情中带日期前缀的最新一条，否则显示详情开头
+                const prog = extractLatestProgress(t.detail);
+                let progHtml;
+                if (prog) {
+                    progHtml = `<span class="pin">📍</span>${prog.label}：${escapeHtml(prog.text)}`;
+                } else if (t.detail) {
+                    progHtml = `<span class="pin">📄</span>${escapeHtml(t.detail)}`;
+                } else {
+                    progHtml = '<span style="opacity:.5">—</span>';
+                }
+
+                if (state.trashMode) {
+                    const deletedStr = t.deletedAt ? `删除于${relativeTime(t.deletedAt)}` : '已删除';
+                    return `
+                        <div class="trow trash">
+                            <div class="c-check"><span class="trash-icon">🗑</span></div>
+                            <div class="c-date">${dateStr}</div>
+                            <div class="c-title">${escapeHtml(t.title)}</div>
+                            <div class="c-upd"><span>${deletedStr}</span><button class="btn btn-xs btn-primary" onclick="restoreTask('${t.id}')">恢复</button></div>
+                        </div>
+                        <div class="tdetail">${escapeHtml(t.detail || '无详细描述')}</div>
+                    `;
+                }
 
                 return `
-                            <div class="task-card ${isCompleted ? 'completed' : ''}" onclick="openTaskModal('${t.id}')">
-                                <div class="task-checkbox" onclick="event.stopPropagation(); toggleTaskStatus('${t.id}')">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                </div>
-                                <div class="task-main-info">
-                                    <div class="task-meta-row">
-                                        <span class="task-date-badge">${dateStrShort}</span>
-                                        <span class="task-time-text">${timeStr}</span>
-                                        ${badge}
-                                    </div>
-                                    <div class="task-title">${t.title}</div>
-                                    <div class="task-desc">${t.detail || '无详细描述'}</div>
-                                </div>
-                            </div>
-                        `;
+                        <div class="trow ${isCompleted ? 'done' : ''}">
+                            <div class="c-check"><span class="ck ${isCompleted ? 'on' : ''}" onclick="event.stopPropagation(); toggleTaskStatus('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
+                            <div class="c-date">${dateStr}</div>
+                            <div class="c-cat">${catHtml}</div>
+                            <div class="c-title" onclick="event.stopPropagation(); openTaskModal('${t.id}')">${escapeHtml(t.title)}</div>
+                            <div class="c-prog">${progHtml}</div>
+                        </div>
+                        <div class="tdetail">${escapeHtml(t.detail || '无详细描述')}</div>
+                    `;
             }).join('');
+
+            list.innerHTML = theadHtml + rowsHtml;
         }
 
         async function toggleTaskStatus(id) {
             const task = state.tasks.find(t => t.id === id);
-            if (!task) return;
+            if (!task || task.status === 'deleted') return;
 
             const newStatus = task.status === 'pending' ? 'completed' : 'pending';
             task.status = newStatus;
+            task.updatedAt = new Date().toISOString();
 
             const key = await getKey();
             const encrypted = await encryptData(task, key);
@@ -1755,7 +1952,8 @@
                 time: document.getElementById('t-time').value,
                 categoryId: document.getElementById('t-category').value,
                 status: document.getElementById('t-status').value,
-                createdAt: id ? state.tasks.find(t => t.id === id).createdAt : new Date().toISOString()
+                createdAt: id ? state.tasks.find(t => t.id === id).createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             };
 
             const key = await getKey();
@@ -1781,20 +1979,112 @@
             renderTasks();
         }
 
+        // 软删除：仅标记状态，数据永不真正从数据库删除
         async function deleteTask() {
             const id = document.getElementById('t-id').value;
-            if (!confirm('确定删除此任务？')) return;
+            if (!confirm('将任务移入回收站？（可在回收站中恢复，数据不会真正删除）')) return;
 
-            const { error } = await sbClient.from('tasks').delete().eq('id', id);
+            const task = state.tasks.find(t => t.id === id);
+            if (!task) return;
+
+            task.prevStatus = task.status || 'pending';
+            task.status = 'deleted';
+            task.deletedAt = new Date().toISOString();
+
+            const key = await getKey();
+            const encrypted = await encryptData(task, key);
+            const { error } = await sbClient.from('tasks').update({ encrypted_data: encrypted }).eq('id', id);
             if (error) {
-                alert('删除任务失败，可能是数据库权限(RLS)问题: ' + error.message);
+                alert('删除任务失败: ' + error.message);
                 return;
             }
 
-            state.tasks = state.tasks.filter(t => t.id !== id);
             closeModal('task-modal');
             renderCalendar();
             renderTasks();
+        }
+
+        // 从回收站恢复任务到删除前的状态
+        async function restoreTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (!task) return;
+
+            task.status = task.prevStatus || 'pending';
+            delete task.prevStatus;
+            delete task.deletedAt;
+
+            const key = await getKey();
+            const encrypted = await encryptData(task, key);
+            const { error } = await sbClient.from('tasks').update({ encrypted_data: encrypted }).eq('id', id);
+            if (error) {
+                alert('恢复任务失败: ' + error.message);
+                return;
+            }
+
+            renderCalendar();
+            renderTasks();
+        }
+
+        // ===== 回收站 / 渲染辅助函数 =====
+        function updateTrashBadge() {
+            const n = state.tasks.filter(t => t.status === 'deleted').length;
+            const badge = document.getElementById('trash-count-badge');
+            if (!badge) return;
+            badge.innerText = n;
+            badge.classList.toggle('hidden', n === 0);
+        }
+
+        function toggleTrashView() {
+            state.trashMode = !state.trashMode;
+            document.getElementById('btn-trash').classList.toggle('active', state.trashMode);
+            renderTasks();
+        }
+
+        // 从详情中提取带日期前缀的最新一条进展
+        // 支持两种写法：日期与正文同行（"10-20：xxx"），或日期单独成行、正文在后续行（直到下一个日期行）
+        function extractLatestProgress(detail) {
+            if (!detail) return null;
+            const dateRe = /^(?:(20\d{2})[-/.年])?(\d{1,2})[-/.月](\d{1,2})[日]?\s*[:：]?\s*/;
+            const entries = [];
+            let current = null;
+            for (const raw of String(detail).split(/\n/)) {
+                const line = raw.trim();
+                if (!line) continue;
+                const m = line.match(dateRe);
+                if (m) {
+                    const y = m[1] ? parseInt(m[1], 10) : new Date().getFullYear();
+                    const dateVal = new Date(y, parseInt(m[2], 10) - 1, parseInt(m[3], 10)).getTime();
+                    const rest = line.slice(m[0].length).trim();
+                    current = { dateVal, label: `${parseInt(m[2], 10)}-${parseInt(m[3], 10)}`, parts: rest ? [rest] : [] };
+                    entries.push(current);
+                } else if (current) {
+                    current.parts.push(line);
+                }
+            }
+            if (!entries.length) return null;
+            let best = entries[0];
+            for (const e of entries) if (e.dateVal >= best.dateVal) best = e;
+            const text = best.parts.join(' ').trim();
+            return { label: best.label, text: text || '（无正文）' };
+        }
+
+        // 相对时间显示：今天 / 昨天 / N天前 / N周前 / 具体日期
+        function relativeTime(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '—';
+            const now = new Date();
+            const startOfDay = t => new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+            const days = Math.floor((startOfDay(now) - startOfDay(d)) / 86400000);
+            if (days <= 0) return '今天';
+            if (days === 1) return '昨天';
+            if (days < 7) return `${days}天前`;
+            if (days < 30) return `${Math.floor(days / 7)}周前`;
+            return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
         function formatDate(d) {
@@ -1806,29 +2096,32 @@
         }
 
         function exportToExcel() {
+            if (state.trashMode) { alert('回收站中的任务不支持导出'); return; }
+
             const now = state.currentDate;
+            const activeTasks = state.tasks.filter(t => t.status !== 'deleted');
             let filtered = [];
             const keywords = state.searchKeyword.toLowerCase().split(/\s+/).filter(Boolean);
 
             if (keywords.length > 0) {
-                filtered = [...state.tasks];
+                filtered = [...activeTasks];
             } else if (state.viewMode === 'day') {
                 const ds = formatDate(now);
-                filtered = state.tasks.filter(t => t.date === ds);
+                filtered = activeTasks.filter(t => t.date === ds);
             } else if (state.viewMode === 'week') {
                 const start = new Date(now);
                 start.setDate(now.getDate() - now.getDay());
                 const end = new Date(start);
                 end.setDate(start.getDate() + 6);
-                filtered = state.tasks.filter(t => t.date >= formatDate(start) && t.date <= formatDate(end));
+                filtered = activeTasks.filter(t => t.date >= formatDate(start) && t.date <= formatDate(end));
             } else if (state.viewMode === 'month') {
                 const y = now.getFullYear(), m = now.getMonth();
-                filtered = state.tasks.filter(t => {
+                filtered = activeTasks.filter(t => {
                     const d = new Date(t.date);
                     return d.getFullYear() === y && d.getMonth() === m;
                 });
             } else if (state.viewMode === 'all') {
-                filtered = [...state.tasks];
+                filtered = [...activeTasks];
             }
 
             if (state.selectedCategoryId) {
@@ -1903,6 +2196,18 @@
 
             lUser.addEventListener('keydown', handleEnter);
             lPass.addEventListener('keydown', handleEnter);
+
+            // 任务表格：点击行展开/收起完整详情（按钮、勾选框除外）
+            document.getElementById('task-list').addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('.ck')) return;
+                const row = e.target.closest('.trow');
+                if (!row) return;
+                const detail = row.nextElementSibling;
+                if (detail && detail.classList.contains('tdetail')) {
+                    row.classList.toggle('open');
+                    detail.classList.toggle('open');
+                }
+            });
 
             // 手机端：滚动时显示滚动条，停止滚动后隐藏
             let scrollTimer = null;
