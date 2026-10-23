@@ -1042,6 +1042,8 @@
                     </div>
                 </div>
                 
+                <button id="referrerDataExportDetailBtn" title="导出最近一次查询（导入查询或手动查询）的推荐人获客用户明细" style="width: 100%; padding: 8px; background-color: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">导出获客用户明细(Excel)</button>
+
                 <div id="referrerDataQueryStatus" style="margin-bottom: 10px; padding: 6px; border-radius: 4px; display: none;"></div>
                 
                 <!-- 表格数据区域 -->
@@ -9269,6 +9271,7 @@ function exportRegisteredUsers() {
             // 全局变量
             let referrerDataImportedData = null;
             let referrerDataCache = new Map();
+            let referrerDataLastQuery = null; // 最近一次查询的结果（含用户明细），用于导出获客用户明细
 
             // 检测文件分隔符
             function detectDelimiter(content) {
@@ -9350,6 +9353,7 @@ function exportRegisteredUsers() {
                 document.getElementById('referrerDataQueryBtn').addEventListener('click', handleReferrerDataQuery);
                 document.getElementById('referrerDataExportBtn').addEventListener('click', handleReferrerDataExport);
                 document.getElementById('referrerDataManualQueryBtn').addEventListener('click', handleReferrerDataManualQuery);
+                document.getElementById('referrerDataExportDetailBtn').addEventListener('click', handleReferrerDataExportDetail);
             }
 
             // 处理文件输入变化
@@ -9587,6 +9591,10 @@ function exportRegisteredUsers() {
                     return;
                 }
 
+                // 记录本次查询结果，用于导出获客用户明细（导出直接使用查询结果，不重新查询）
+                const collectedResults = [];
+                referrerDataLastQuery = { results: collectedResults, startDate, endDate };
+
                 showReferrerDataQueryStatus('开始查询...', 'info');
 
                 const startTime = Date.now();
@@ -9601,6 +9609,7 @@ function exportRegisteredUsers() {
                         showReferrerDataQueryStatus(`正在查询第 ${i + 1}/${queryIds.length} 个推荐人: ${referrerId}`, 'info');
 
                         const result = await queryReferrerData(referrerId, startDate, endDate);
+                        collectedResults.push({ referrerId, ...result });
                         totalQueries++;
                         totalResults += result.totalcount || 0;
                         totalCourses += result.上过课 || 0;
@@ -9643,10 +9652,13 @@ function exportRegisteredUsers() {
                     return;
                 }
 
+                // 记录本次查询结果，用于导出获客用户明细（导出直接使用查询结果，不重新查询）
+                let results = [];
+                referrerDataLastQuery = { results, startDate, endDate };
+
                 showReferrerDataQueryStatus('开始手动查询...', 'info');
 
                 const startTime = Date.now();
-                let results = [];
 
                 try {
                     for (let i = 0; i < ids.length; i++) {
@@ -9690,7 +9702,7 @@ function exportRegisteredUsers() {
                     throw new Error('请先登录获取token');
                 }
 
-                // 构建基础payload
+                // 构建基础payload（pageSize=1000，查询时同时获取统计数与用户明细，导出时无需重新查询）
                 function buildPayload(isPay, isFreeClass) {
                     return {
                         "accountName": "",
@@ -9708,12 +9720,11 @@ function exportRegisteredUsers() {
                         "classesTool": "-1",
                         "accountStatus": "0",
                         "currPage": 0,
-                        "pageSize": 10
+                        "pageSize": 1000
                     };
                 }
 
-                // 1. 查询总获客数 (isPay=0)
-                let totalCount = 0;
+                // 1. 查询全部获客用户 (isPay=0)，同时作为总获客数与明细基础列表
                 let response = await fetchWithRetry(url, {
                     method: 'POST',
                     headers: {
@@ -9723,7 +9734,8 @@ function exportRegisteredUsers() {
                     body: JSON.stringify(buildPayload("0", "0"))
                 });
                 let data = await response.json();
-                totalCount = data.totalCount || 0;
+                const totalCount = data.totalCount || 0;
+                const userRecords = data.resultData || [];
 
                 // 2. 查询购买过套餐的用户数 (isPay=1)
                 let hasPackage = 0;
@@ -9737,6 +9749,7 @@ function exportRegisteredUsers() {
                 });
                 data = await response.json();
                 hasPackage = data.totalCount || 0;
+                const payUserIds = new Set((data.resultData || []).map(u => String(u.userId)));
 
                 // 3. 查询购买过30课时以上套餐的用户数 (isPay=3)
                 let has30ClassPackage = 0;
@@ -9750,6 +9763,7 @@ function exportRegisteredUsers() {
                 });
                 data = await response.json();
                 has30ClassPackage = data.totalCount || 0;
+                const pay30UserIds = new Set((data.resultData || []).map(u => String(u.userId)));
 
                 // 4. 查询上过课的用户数 (isFreeClass=1, isPay=0)
                 let hasCourse = 0;
@@ -9763,24 +9777,11 @@ function exportRegisteredUsers() {
                 });
                 data = await response.json();
                 hasCourse = data.totalCount || 0;
+                const courseUserIds = new Set((data.resultData || []).map(u => String(u.userId)));
 
-                // 5. 查询最早和最晚注册用户
+                // 找出最早和最晚注册的用户
                 let earliestUser = null;
                 let latestUser = null;
-                response = await fetchWithRetry(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': token
-                    },
-                    body: JSON.stringify({
-                        ...buildPayload("0", "0"),
-                        "pageSize": 1000
-                    })
-                });
-                data = await response.json();
-                const userRecords = data.resultData || [];
-                
                 userRecords.forEach(user => {
                     // 找出最早和最晚注册的用户
                     const createTime = user.createTime;
@@ -9792,13 +9793,24 @@ function exportRegisteredUsers() {
                     }
                 });
 
+                // 构建获客用户明细（各列口径与汇总表对应）
+                const details = userRecords.map((user, index) => ({
+                    '序号': index + 1,
+                    '用户ID': user.userId,
+                    '注册时间': user.createTime || '',
+                    '上过课': courseUserIds.has(String(user.userId)) ? '是' : '否',
+                    '购买过套餐': payUserIds.has(String(user.userId)) ? '是' : '否',
+                    '购买过30课时以上套餐': pay30UserIds.has(String(user.userId)) ? '是' : '否'
+                }));
+
                 const result = {
                     totalcount: totalCount,
                     最早注册用户: earliestUser ? earliestUser.createTime : '',
                     最晚注册用户: latestUser ? latestUser.createTime : '',
                     上过课: hasCourse,
                     购买过套餐: hasPackage,
-                    购买过30课时以上套餐: has30ClassPackage
+                    购买过30课时以上套餐: has30ClassPackage,
+                    details: details
                 };
 
                 // 缓存结果
@@ -9917,6 +9929,51 @@ function exportRegisteredUsers() {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            }
+
+            // 处理导出获客用户明细按钮点击（Excel，直接使用已有查询结果，不重新查询）
+            function handleReferrerDataExportDetail() {
+                if (!referrerDataLastQuery || !referrerDataLastQuery.results || referrerDataLastQuery.results.length === 0) {
+                    return; // 没有查询结果时不做任何提示
+                }
+
+                const { results, startDate, endDate } = referrerDataLastQuery;
+
+                // 按推荐人ID去重，跳过没有明细数据的结果
+                const seenIds = new Set();
+                const exportResults = results.filter(r => {
+                    if (seenIds.has(String(r.referrerId)) || !Array.isArray(r.details)) {
+                        return false;
+                    }
+                    seenIds.add(String(r.referrerId));
+                    return true;
+                });
+
+                if (exportResults.length === 0) {
+                    return;
+                }
+
+                const workbook = XLSX.utils.book_new();
+
+                exportResults.forEach(detailResult => {
+                    const ws = XLSX.utils.json_to_sheet(detailResult.details, {
+                        header: ['序号', '用户ID', '注册时间', '上过课', '购买过套餐', '购买过30课时以上套餐']
+                    });
+                    ws['!cols'] = [
+                        { wch: 8 },   // 序号
+                        { wch: 15 },  // 用户ID
+                        { wch: 22 },  // 注册时间
+                        { wch: 10 },  // 上过课
+                        { wch: 12 },  // 购买过套餐
+                        { wch: 24 }   // 购买过30课时以上套餐
+                    ];
+                    const sheetName = exportResults.length === 1 ? '获客用户明细' : `推荐人_${detailResult.referrerId}`;
+                    XLSX.utils.book_append_sheet(workbook, ws, sheetName);
+                });
+
+                XLSX.writeFile(workbook, `推荐人获客用户明细_${startDate}至${endDate}.xlsx`);
+
+                showReferrerDataQueryStatus(`导出完成！共导出 ${exportResults.length} 个推荐人的获客用户明细`, 'success');
             }
 
             // 显示查询状态
