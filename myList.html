@@ -1870,6 +1870,7 @@
                 if (state.trashMode) {
                     const deletedStr = t.deletedAt ? `删除于${relativeTime(t.deletedAt)}` : '已删除';
                     return `
+                        <div class="titem">
                         <div class="trow trash">
                             <div class="c-check"><span class="trash-icon">🗑</span></div>
                             <div class="c-date">${dateStr}</div>
@@ -1877,10 +1878,12 @@
                             <div class="c-upd"><span>${deletedStr}</span><button class="btn btn-xs btn-primary" onclick="restoreTask('${t.id}')">恢复</button></div>
                         </div>
                         <div class="tdetail">${escapeHtml(t.detail || '无详细描述')}</div>
+                        </div>
                     `;
                 }
 
                 return `
+                        <div class="titem">
                         <div class="trow ${isCompleted ? 'done' : ''}">
                             <div class="c-check"><span class="ck ${isCompleted ? 'on' : ''}" onclick="event.stopPropagation(); toggleTaskStatus('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
                             <div class="c-date">${dateStr}</div>
@@ -1890,6 +1893,7 @@
                             <div class="c-act"><button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); openTaskModal('${t.id}')">编辑</button></div>
                         </div>
                         <div class="tdetail">${escapeHtml(t.detail || '无详细描述')}</div>
+                        </div>
                     `;
             }).join('');
 
