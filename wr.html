@@ -1300,12 +1300,12 @@ function extractFieldBlocks(html) {
     let textBuf = '';
 
     const flushText = () => {
-        const t = htmlToText(textBuf);
-        if (t) blocks.push({ type: 'text', text: t });
+        const t = sanitizeRichText(textBuf);
+        if (t) blocks.push({ type: 'text', html: t });
         textBuf = '';
     };
 
-    // 将表格重建为干净表格HTML
+    // 将表格重建为干净表格HTML（单元格保留原始颜色/高亮/加粗等内联格式）
     const rebuildTable = (tbl) => {
         const rows = [];
         tbl.querySelectorAll('tr').forEach(tr => {
@@ -1315,9 +1315,9 @@ function extractFieldBlocks(html) {
                 const rowspan = cell.getAttribute('rowspan');
                 const attrs = (colspan && colspan !== '1' ? ` colspan="${escapeHtml(colspan)}"` : '')
                             + (rowspan && rowspan !== '1' ? ` rowspan="${escapeHtml(rowspan)}"` : '');
-                cells.push({ text: htmlToText(cell.innerHTML), attrs });
+                cells.push({ html: sanitizeRichText(cell.innerHTML), attrs });
             });
-            if (cells.some(c => c.text !== '')) rows.push(cells);
+            if (cells.some(c => c.html !== '')) rows.push(cells);
         });
         if (rows.length === 0) return '';
         // 首行含 th 或有多行时，首行按表头渲染
@@ -1325,7 +1325,7 @@ function extractFieldBlocks(html) {
         let t = '<table class="detail-table">';
         rows.forEach((cells, ri) => {
             const tag = (ri === 0 && firstHeader) ? 'th' : 'td';
-            t += '<tr>' + cells.map(c => `<${tag}${c.attrs}>${escapeHtml(c.text)}</${tag}>`).join('') + '</tr>';
+            t += '<tr>' + cells.map(c => `<${tag}${c.attrs}>${c.html}</${tag}>`).join('') + '</tr>';
         });
         return t + '</table>';
     };
@@ -1376,12 +1376,15 @@ function renderPersonDetail(d) {
                     const click = idx >= 0 ? ` onclick="openImage(${idx})"` : '';
                     return `<div class="inline-img-wrap"><img class="inline-img" src="${escapeHtml(b.url)}" alt="图片" loading="lazy"${click} onerror="this.parentElement.style.display='none'"></div>`;
                 }
-                return `<div class="content">${escapeHtml(b.text)}</div>`;
+                return `<div class="content">${b.html}</div>`;
             }).join('');
             if (!body) body = '<div class="content"><span style="color:#bbb">（无内容）</span></div>';
         } else {
-            const text = fieldText(d, key);
-            body = `<div class="content">${text ? escapeHtml(text) : '<span style="color:#bbb">（无内容）</span>'}</div>`;
+            // 无表格/图片时同样按富文本渲染，保留原始颜色/高亮等格式
+            const rich = d.raw && d.raw[key] ? sanitizeRichText(d.raw[key]) : '';
+            const plain = rich ? '' : escapeHtml(fieldText(d, key));
+            const content = rich || plain;
+            body = `<div class="content">${content || '<span style="color:#bbb">（无内容）</span>'}</div>`;
         }
         return `<div class="detail-section"><h4>${title}</h4>${body}</div>`;
     };
@@ -1432,6 +1435,69 @@ function htmlToText(html) {
     const tmp = document.createElement('div');
     tmp.innerHTML = s;
     return (tmp.textContent || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+// 将富文本HTML净化为安全的内联格式HTML：还原原始排版（红色/黄色高亮、加粗、斜体、下划线等），
+// 块级标签转为换行（li 补圆点），未知标签拆包仅保留文字；样式仅放行白名单属性，杜绝XSS与样式污染
+function sanitizeRichText(html) {
+    if (!html) return '';
+    const tpl = document.createElement('template'); // template内容惰性解析，不会触发图片加载/脚本执行
+    tpl.innerHTML = String(html);
+    tpl.content.querySelectorAll('script,style,iframe,object,embed,link,meta,noscript').forEach(n => n.remove());
+
+    const STYLE_PROPS = ['color', 'background-color', 'background', 'font-weight', 'text-decoration', 'font-style'];
+    const KEEP = { SPAN: 'span', B: 'strong', STRONG: 'strong', I: 'em', EM: 'em', U: 'u', SUB: 'sub', SUP: 'sup', MARK: 'mark' };
+    const BLOCK = new Set(['P', 'DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'ASIDE', 'NAV', 'UL', 'OL',
+        'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'FIGURE', 'FIGCAPTION', 'HR']);
+
+    // 仅保留白名单样式声明（原始数据如 color: rgb(255,0,0)、background-color: rgb(255,255,0)）
+    const filterStyle = (raw, extraParts) => {
+        const parts = (extraParts || []).slice();
+        String(raw || '').split(';').forEach(decl => {
+            const prop = decl.split(':')[0].trim().toLowerCase();
+            if (prop && STYLE_PROPS.includes(prop)) parts.push(decl.trim());
+        });
+        return parts.join('; ');
+    };
+
+    const build = (node) => {
+        let out = '';
+        Array.from(node.childNodes).forEach(child => {
+            if (child.nodeType === 3) { out += escapeHtml(child.textContent); return; }
+            if (child.nodeType !== 1) return;
+            const tag = child.tagName;
+            if (tag === 'BR') { out += '\n'; return; }
+            if (tag === 'IMG') return; // 图片由 extractFieldBlocks 按原文顺序单独提取
+            if (tag === 'LI') {
+                const inner = build(child);
+                if (inner) out += (out && !out.endsWith('\n') ? '\n' : '') + '• ' + inner + '\n';
+                return;
+            }
+            if (BLOCK.has(tag)) {
+                const inner = build(child);
+                if (inner) out += (out && !out.endsWith('\n') ? '\n' : '') + inner + '\n';
+                return;
+            }
+            let mapped = KEEP[tag];
+            const extraStyle = [];
+            if (tag === 'FONT') { // <font color="red"> → <span style="color: red">
+                mapped = 'span';
+                if (child.getAttribute('color')) extraStyle.push('color: ' + child.getAttribute('color'));
+            }
+            const inner = build(child);
+            if (!inner) return;
+            if (!mapped) { out += inner; return; } // 其余标签拆包，保留内容
+            const style = filterStyle(child.getAttribute('style'), extraStyle);
+            out += style ? `<${mapped} style="${escapeHtml(style)}">${inner}</${mapped}>` : inner;
+        });
+        return out;
+    };
+
+    return build(tpl.content)
         .replace(/\u00a0/g, ' ')
         .replace(/[ \t]+\n/g, '\n')
         .replace(/\n{3,}/g, '\n\n')
@@ -1813,7 +1879,7 @@ function showNewsAuthorStats() {
     const panel = document.getElementById('newsDetailPanel');
     panel.innerHTML = `
         <div class="stats-head">📊 发贴统计：共 ${rows.length} 位作者 / ${newsData.length} 篇文章
-            <button type="button" class="btn btn-primary btn-xs" style="margin-left:10px" onclick="exportNewsAuthorStats()">导出排名</button>
+            <button type="button" class="btn btn-primary btn-xs" style="margin-left:10px" onclick="exportNewsAuthorStats()">导出</button>
         </div>
         ${pagedTip}
         <table class="stats-table">
