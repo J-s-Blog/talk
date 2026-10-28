@@ -1234,6 +1234,7 @@
                         <thead>
                             <tr>
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">序号</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">系统ID</th>
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">员工ID</th>
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">员工姓名</th>
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">员工empID</th>
@@ -1241,6 +1242,7 @@
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">绑定状态</th>
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">绑定时间</th>
                                 <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">解绑时间</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f8f9fa; font-weight: bold;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="accountBindingTableBody">
@@ -6709,7 +6711,7 @@ function exportRegisteredUsers() {
             if (accountBindingData.length === 0) {
                 const row = tableBody.insertRow();
                 const cell = row.insertCell(0);
-                cell.colSpan = 8;
+                cell.colSpan = 10;
                 cell.textContent = '没有找到账号绑定记录数据';
                 cell.style.textAlign = 'center';
                 cell.style.padding = '20px';
@@ -6727,41 +6729,107 @@ function exportRegisteredUsers() {
                 cell0.textContent = i + 1;
                 cell0.style.border = '1px solid #ddd';
                 cell0.style.padding = '10px';
+                // 系统ID（绑定记录ID，用于解绑操作）
+                const cellId = row.insertCell(1);
+                cellId.textContent = record.id || '';
+                cellId.style.border = '1px solid #ddd';
+                cellId.style.padding = '10px';
                 // 员工ID
-                const cell1 = row.insertCell(1);
+                const cell1 = row.insertCell(2);
                 cell1.textContent = record.staffUserId || '';
                 cell1.style.border = '1px solid #ddd';
                 cell1.style.padding = '10px';
                 // 员工姓名
-                const cell2 = row.insertCell(2);
+                const cell2 = row.insertCell(3);
                 cell2.textContent = record.staffName || '';
                 cell2.style.border = '1px solid #ddd';
                 cell2.style.padding = '10px';
                 // 员工empID
-                const cell3 = row.insertCell(3);
+                const cell3 = row.insertCell(4);
                 cell3.textContent = record.staffTalkId || '';
                 cell3.style.border = '1px solid #ddd';
                 cell3.style.padding = '10px';
                 // 经销商ID
-                const cell4 = row.insertCell(4);
+                const cell4 = row.insertCell(5);
                 cell4.textContent = record.dealerTalkId || '';
                 cell4.style.border = '1px solid #ddd';
                 cell4.style.padding = '10px';
                 // 绑定状态
-                const cell5 = row.insertCell(5);
+                const cell5 = row.insertCell(6);
                 cell5.textContent = record.status === 0 ? '绑定' : record.status === 1 ? '解绑' : '';
                 cell5.style.border = '1px solid #ddd';
                 cell5.style.padding = '10px';
                 // 绑定时间
-                const cell6 = row.insertCell(6);
+                const cell6 = row.insertCell(7);
                 cell6.textContent = record.createTime || '';
                 cell6.style.border = '1px solid #ddd';
                 cell6.style.padding = '10px';
                 // 解绑时间
-                const cell7 = row.insertCell(7);
+                const cell7 = row.insertCell(8);
                 cell7.textContent = record.updateTime || '';
                 cell7.style.border = '1px solid #ddd';
                 cell7.style.padding = '10px';
+                // 操作列：绑定状态时显示解绑按钮
+                const cell8 = row.insertCell(9);
+                cell8.style.border = '1px solid #ddd';
+                cell8.style.padding = '10px';
+                if (record.status === 0) {
+                    const unbindBtn = document.createElement('button');
+                    unbindBtn.textContent = '解绑';
+                    unbindBtn.style.cssText = 'padding: 5px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;';
+                    unbindBtn.addEventListener('click', function() {
+                        unbindAccountBinding(record.id);
+                    });
+                    cell8.appendChild(unbindBtn);
+                }
+            }
+        }
+        
+        // 解绑跟进账号绑定
+        async function unbindAccountBinding(id) {
+            if (!id) {
+                alert('缺少绑定记录ID，无法解绑');
+                return;
+            }
+            if (!confirm(`确定要解绑该账号绑定吗？（系统ID: ${id}）`)) {
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('talk915_token');
+                if (!token) {
+                    alert('请先登录获取token');
+                    return;
+                }
+                
+                const response = await fetch('https://www.talk915.com/users/adminStaff/unbindDealer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/userManagement/staff/accountBinding',
+                        'Origin': 'https://www.talk915.com',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'token': token
+                    },
+                    body: JSON.stringify({ "id": id }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                if (data.resultCode === 0) {
+                    alert('解绑成功');
+                    // 重新查询以刷新列表状态
+                    queryAccountBinding();
+                } else {
+                    alert(`解绑失败: ${data.resultMessage || '未知错误'}`);
+                }
+            } catch (error) {
+                console.error('解绑错误:', error);
+                alert(`解绑失败: ${error.message}`);
             }
         }
         
@@ -10735,6 +10803,7 @@ function exportRegisteredUsers() {
             // 导出详细记录到第一个sheet
             const detailedData = accountBindingData.map((record, index) => ({
                 '序号': index + 1,
+                '系统ID': record.id || '',
                 '员工ID': record.staffUserId || '',
                 '员工姓名': record.staffName || '',
                 '员工empID': record.staffTalkId || '',
