@@ -185,6 +185,7 @@
             font-size: 12px; color: #555; cursor: pointer; white-space: nowrap; user-select: none;
         }
         .filter-row.news-filter-row .unread-toggle input { flex: 0 0 auto; cursor: pointer; }
+        .filter-row.news-filter-row .unread-toggle:has(input:disabled) { color: #bbb; cursor: not-allowed; }
         /* 周报筛选行：搜索框带清除叉叉，部门下拉固定窄宽（展开时选项列表自动加宽） */
         .filter-row.week-filter-row select { flex: 0 0 140px; width: 140px; padding: 7px 6px; font-size: 12px; }
         .person-list {
@@ -451,8 +452,10 @@
                 <button type="button" id="loadBrowseBtn" onclick="loadBrowseData()">📥 加载周报</button>
                 <button type="button" id="tabBtnExport" onclick="runExport()">📤 导出周报</button>
                 <button type="button" id="loadNewsBtn" style="display:none" onclick="loadNewsData()">📥 加载热点资讯</button>
-                <select id="newsPageSizeSel" style="display:none" onchange="onNewsPageSizeChange()" title="加载分页：每页100条可翻页，或一次性加载全部">
+                <select id="newsPageSizeSel" style="display:none" onchange="onNewsPageSizeChange()" title="加载分页：每页100/200/300条可翻页，或一次性加载全部（全部模式不显示未读筛选）">
                     <option value="100" selected>每页100</option>
+                    <option value="200">每页200</option>
+                    <option value="300">每页300</option>
                     <option value="all">全部</option>
                 </select>
             </div>
@@ -597,6 +600,7 @@ let authToken = '';
 let tokenTs = 0;
 let lastLoginCreds = ''; // 记录已登录凭据，凭据变化时自动重新登录
 let currentUserId = null; // 登录用户ID（用于判断是否已在文章已学习清单中）
+let currentUserName = ''; // 登录用户名（列表接口无作者ID，用于识别自己发的帖子）
 (function restoreToken() {
     try {
         const raw = localStorage.getItem('kc_token');
@@ -607,16 +611,17 @@ let currentUserId = null; // 登录用户ID（用于判断是否已在文章已�
                 tokenTs = o.ts;
                 lastLoginCreds = o.key || '';
                 currentUserId = o.userId || null;
+                currentUserName = o.userName || '';
             }
         }
     } catch (e) {}
 })();
 function saveToken(key) {
     tokenTs = Date.now();
-    try { localStorage.setItem('kc_token', JSON.stringify({ token: authToken, ts: tokenTs, key, userId: currentUserId })); } catch (e) {}
+    try { localStorage.setItem('kc_token', JSON.stringify({ token: authToken, ts: tokenTs, key, userId: currentUserId, userName: currentUserName })); } catch (e) {}
 }
 function clearToken() {
-    authToken = ''; tokenTs = 0; lastLoginCreds = ''; currentUserId = null;
+    authToken = ''; tokenTs = 0; lastLoginCreds = ''; currentUserId = null; currentUserName = '';
     try { localStorage.removeItem('kc_token'); } catch (e) {}
 }
 
@@ -906,6 +911,7 @@ async function doLogin(phone, password, companyId) {
     if (token) {
         authToken = token;
         currentUserId = extractUserIdFromResponse(data);
+        currentUserName = extractUserNameFromResponse(data);
         log('success', `✅ 登录成功！Token: ${token.substring(0, 12)}... 用户ID: ${currentUserId ?? '未获取到'}`);
     } else {
         log('warn', '⚠️ 登录成功但未获取到Token，请检查接口响应');
@@ -924,6 +930,13 @@ function extractUserIdFromResponse(data) {
     const rd = data.resultData || {};
     const cand = rd.userId ?? rd.id ?? rd.postUserId ?? data.userId ?? data.id;
     return cand != null ? Number(cand) : null;
+}
+
+// 从登录响应中提取当前用户名（兼容常见字段名），用于识别自己发的帖子
+function extractUserNameFromResponse(data) {
+    const rd = data.resultData || {};
+    const cand = rd.userName ?? rd.name ?? rd.loginName ?? data.userName ?? data.name;
+    return typeof cand === 'string' ? cand.trim() : '';
 }
 
 async function apiGet(path) {
@@ -1201,7 +1214,8 @@ function newsFilterStatusText() {
     if (newsData.length === 0) return null;
     const kw = (document.getElementById('newsSearch').value || '').trim();
     const topOnly = document.getElementById('topFilter').value === '1';
-    const unreadOnly = document.getElementById('unreadFilter')?.checked;
+    const unreadCb = document.getElementById('unreadFilter');
+    const unreadOnly = !!(unreadCb && unreadCb.checked && !unreadCb.disabled);
     if (!kw && !topOnly && !unreadOnly) return null;
     const n = getFilteredNewsItems().length;
     const parts = [];
@@ -1596,11 +1610,18 @@ let newsTotalCount = 0;     // 文章总数（接口返回）
 let newsLoaded = false;     // 是否已成功加载过列表
 let newsPagingBusy = false; // 翻页请求进行中，防止重复点击
 
-// 已读状态：postId(String) -> true 表示当前登录用户已在已学习名单中；未确认（缺失）视为未读
+// 已读状态：postId(String) -> true 表示当前登录用户已在已学习名单中；
+// 'self' 表示登录用户自己发布的文章（不显示已读徽章、也不算未读）；未确认（缺失）视为未读
 // 列表加载后通过 queryForumLearnUserRecord 批量检查（带并发限制），结果缓存在本会话内复用
-let newsReadMap = new Map();     // postId -> true（已确认已读）
+let newsReadMap = new Map();     // postId -> true（已确认已读）/ 'self'（自己发的，跳过检查且不算未读）
 let newsReadChecking = false;    // 批量检查进行中
 let newsReadCheckSeq = 0;        // 检查批次号：翻页/重载后使旧批次失效
+
+// 当前分页大小：下拉选择「每页X」时取对应数值，解析失败回退 100
+function newsPageSize() {
+    const n = parseInt(document.getElementById('newsPageSizeSel').value, 10);
+    return Number.isFinite(n) && n > 0 ? n : NEWS_PAGE_SIZE;
+}
 
 // 加载热点资讯：复用登录token → 按分页模式下拉框选择「每页100（可翻页）」或「全部（一次性拉取）」
 async function loadNewsData() {
@@ -1641,20 +1662,20 @@ function newsPageSizeMode() {
 
 // 状态栏提示文案：分页模式下显示当前页/总页数与总数
 function newsPageStatusText() {
-    if (newsPageSizeMode() !== 'all' && newsTotalCount > NEWS_PAGE_SIZE) {
+    if (newsPageSizeMode() !== 'all' && newsTotalCount > newsPageSize()) {
         return `已加载第 ${newsPage}/${newsTotalPages()} 页（共 ${newsTotalCount} 篇）`;
     }
     return `已加载 ${newsData.length} 篇热点资讯`;
 }
 
 function newsTotalPages() {
-    return Math.max(1, Math.ceil(newsTotalCount / NEWS_PAGE_SIZE));
+    return Math.max(1, Math.ceil(newsTotalCount / newsPageSize()));
 }
 
 // 分页模式：抓取指定页（currentPage + pageSize=100），并记录 totalCount
 async function fetchNewsPage(page) {
     const buildUrl = () =>
-        `${FORUM_LIST_PATH}?keyWord=&plateId=&currentPage=${page}&pageSize=${NEWS_PAGE_SIZE}&token=${authToken}&companyId=${COMPANY_ID}`;
+        `${FORUM_LIST_PATH}?keyWord=&plateId=&currentPage=${page}&pageSize=${newsPageSize()}&token=${authToken}&companyId=${COMPANY_ID}`;
     let data = await apiGet(buildUrl());
     if (isAuthExpired(data)) {
         clearToken();
@@ -1709,6 +1730,7 @@ async function fetchNewsListAll() {
 function mapNewsRecords(records) {
     return records.map(p => ({
         postId: p.postId,
+        postUserId: p.postUserId ?? p.userId ?? null, // 作者ID（列表接口可能不返回，用于识别自己发的帖子）
         title: p.title || '',
         createTime: p.createTime || '',
         userName: p.userName || '',
@@ -1721,8 +1743,10 @@ function mapNewsRecords(records) {
 }
 
 // 切换分页模式：已加载过数据时，回到第1页按新模式重新抓取
+// 「全部」模式帖子多、已读检查耗时长，禁用「只看未读」开关并取消勾选
 async function onNewsPageSizeChange() {
     newsPage = 1;
+    syncUnreadToggleState();
     renderNewsPager();
     if (!newsLoaded) return; // 尚未加载，仅记住选择
     const btn = document.getElementById('loadNewsBtn');
@@ -1742,6 +1766,18 @@ async function onNewsPageSizeChange() {
         updateBrowseStatus(`❌ 加载失败: ${err.message}`, 'error');
     } finally {
         btn.disabled = false;
+    }
+}
+
+// 「只看未读」开关可用性跟随分页模式：全部模式禁用并取消勾选，其余模式启用
+function syncUnreadToggleState() {
+    const cb = document.getElementById('unreadFilter');
+    if (!cb) return;
+    if (newsPageSizeMode() === 'all') {
+        cb.checked = false;
+        cb.disabled = true;
+    } else {
+        cb.disabled = false;
     }
 }
 
@@ -1776,7 +1812,7 @@ async function newsGoPage(page) {
 function renderNewsPager() {
     const pager = document.getElementById('newsPager');
     if (!pager) return;
-    const show = newsLoaded && newsPageSizeMode() === '100' && newsTotalCount > NEWS_PAGE_SIZE;
+    const show = newsLoaded && newsPageSizeMode() !== 'all' && newsTotalCount > newsPageSize();
     pager.style.display = show ? 'flex' : 'none';
     if (!show) return;
     const totalPages = newsTotalPages();
@@ -1803,11 +1839,11 @@ function resetNewsDetailPanel() {
 }
 
 // 当前搜索关键词/置顶/未读筛选命中的文章（列表渲染与「全选当前结果」共用）
-// 未读筛选：只保留未确认已读的文章（newsReadMap 缺失或为 false 均视为未读）
+// 未读筛选：只保留未确认已读的文章（newsReadMap 缺失视为未读；'self' 自己发的帖子也排除在外）
 function getFilteredNewsItems() {
     const kw = (document.getElementById('newsSearch').value || '').trim().toLowerCase();
     const topOnly = document.getElementById('topFilter').value === '1';
-    const unreadOnly = document.getElementById('unreadFilter')?.checked;
+    const unreadOnly = document.getElementById('unreadFilter')?.checked && !document.getElementById('unreadFilter').disabled;
     return newsData
         .map((d, i) => ({ d, i }))
         .filter(({ d }) => (!topOnly || d.recommendFlag === 1)
@@ -1833,7 +1869,7 @@ function renderNewsList() {
                 <label class="news-check" title="选择文章（批量下载用）" onclick="event.stopPropagation()">
                     <input type="checkbox" ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''} onchange="onNewsCheck(this, '${String(d.postId)}')">
                 </label>
-                <div class="p-title">${d.recommendFlag === 1 ? '<span class="p-top">置顶</span>' : ''}${newsReadMap.get(String(d.postId)) ? '<span class="p-read" title="当前账号已学习过该文章">已读</span>' : ''}${escapeHtml(d.title || '无标题')}</div>
+                <div class="p-title">${d.recommendFlag === 1 ? '<span class="p-top">置顶</span>' : ''}${newsReadMap.get(String(d.postId)) === true ? '<span class="p-read" title="当前账号已学习过该文章">已读</span>' : ''}${escapeHtml(d.title || '无标题')}</div>
                 <div class="p-meta">
                     ${escapeHtml(d.userName || '-')} · ${escapeHtml((d.createTime || '').slice(0, 10))}<br>
                     👁 ${d.readNum} 阅读 · 👍 ${d.likedNum} 点赞
@@ -2053,8 +2089,13 @@ async function ensureLearnList(postId) {
             : (newsDetailCache[postId]?.isCurrentPerson === 1);
         // 文章作者是登录用户本人时，不调用标记已读
         const isSelfAuthor = selfKnown && Number(newsDetailCache[postId]?.postUserId) === Number(currentUserId);
-        // 同步已读缓存：打开文章即确认已读状态，供列表「已读」徽章与未读筛选使用
-        if (selfLearned || isSelfAuthor) newsReadMap.set(String(postId), true);
+        // 顺带学习自己的用户名（详情含作者名时），兜底用于列表识别自己发的帖子
+        if (isSelfAuthor && !currentUserName && newsDetailCache[postId]?.postUserName) {
+            currentUserName = newsDetailCache[postId].postUserName;
+        }
+        // 同步已读缓存：自己发的记为 'self'（不显示已读徽章、也不算未读），已学习记为 true
+        if (isSelfAuthor) newsReadMap.set(String(postId), 'self');
+        else if (selfLearned) newsReadMap.set(String(postId), true);
         if (!selfLearned && !isSelfAuthor) {
             const ok = await markArticleRead(postId);
             if (ok) {
@@ -2088,6 +2129,12 @@ async function fetchLearnList(postId) {
     return data.resultData || [];
 }
 
+// 判断文章是否为当前登录用户本人发布：优先用作者ID，列表接口无ID时用作者名兜底
+function isSelfNewsPost(d) {
+    if (currentUserId != null && d.postUserId != null && Number(d.postUserId) === Number(currentUserId)) return true;
+    return !!currentUserName && (d.userName || '').trim() === currentUserName;
+}
+
 // 批量检查已读状态：对当前列表中尚未确认的文章逐个获取已学习名单，
 // 判断当前登录用户是否在名单中（并发限制 6，避免瞬时请求过多）；结果写入 newsReadMap 并刷新列表
 async function refreshNewsReadStatus() {
@@ -2096,9 +2143,15 @@ async function refreshNewsReadStatus() {
         try { await ensureLogin(true); } catch (e) { console.warn('已读状态检查需要登录用户ID，已跳过:', e); return; }
     }
     const seq = ++newsReadCheckSeq;
+    // 自己发的帖子跳过检查：直接标记 'self'（不显示已读徽章、也不算未读）
     const pending = newsData
-        .map(d => String(d.postId))
-        .filter(id => !newsReadMap.has(id));
+        .map(d => {
+            const id = String(d.postId);
+            if (newsReadMap.has(id)) return null;
+            if (isSelfNewsPost(d)) { newsReadMap.set(id, 'self'); return null; }
+            return id;
+        })
+        .filter(Boolean);
     if (pending.length === 0) { renderNewsList(); return; }
 
     newsReadChecking = true;
@@ -2111,8 +2164,11 @@ async function refreshNewsReadStatus() {
             const id = queue.shift();
             try {
                 const users = await fetchLearnList(id);
-                if (users.some(u => Number(u.userId) === Number(currentUserId))) {
+                const mine = users.find(u => Number(u.userId) === Number(currentUserId));
+                if (mine) {
                     newsReadMap.set(id, true);
+                    // 名单里能确认自己的用户名时补记（兜底用于识别自己发的帖子）
+                    if (!currentUserName && mine.userName) currentUserName = mine.userName;
                 }
             } catch (e) { /* 单篇失败忽略，视为未读 */ }
             done++;
