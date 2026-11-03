@@ -178,13 +178,13 @@
         /* 热点资讯筛选行：搜索框占主宽度（带清除叉叉），筛选下拉仅显示两个字 */
         .filter-row.news-filter-row input { flex: 1 1 auto; }
         .filter-row.news-filter-row input::-webkit-search-cancel-button { cursor: pointer; }
+        .filter-row.news-filter-row select { flex: 0 0 64px; width: 64px; padding: 7px 4px; font-size: 12px; }
         /* 热点资讯「只看未读」开关 */
         .filter-row.news-filter-row .unread-toggle {
             flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px;
             font-size: 12px; color: #555; cursor: pointer; white-space: nowrap; user-select: none;
         }
         .filter-row.news-filter-row .unread-toggle input { flex: 0 0 auto; cursor: pointer; }
-        .filter-row.news-filter-row .unread-toggle:has(input:disabled) { color: #bbb; cursor: not-allowed; }
         /* 周报筛选行：搜索框带清除叉叉，部门下拉固定窄宽（展开时选项列表自动加宽） */
         .filter-row.week-filter-row select { flex: 0 0 140px; width: 140px; padding: 7px 6px; font-size: 12px; }
         .person-list {
@@ -281,6 +281,7 @@
         .person-card .p-top { display: inline-block; font-size: 10px; color: #fff; background: #e53935; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
         /* 文章卡片「已读」徽章（当前登录用户已在已学习名单中） */
         .person-card .p-read { display: inline-block; font-size: 10px; color: #2e7d32; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
+        .person-card .p-unk { display: inline-block; font-size: 10px; color: #757575; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
         .news-cat { font-size: 11px; color: #533483; background: #ede7f6; border-radius: 4px; padding: 1px 7px; display: inline-block; margin-bottom: 6px; }
         /* 富文本正文：还原文章原始格式（字体粗细、大小、表格、图片、列表等） */
         .article-body { font-size: 15px; line-height: 1.9; color: #333; word-break: break-word; }
@@ -451,7 +452,7 @@
                 <button type="button" id="loadBrowseBtn" onclick="loadBrowseData()">📥 加载周报</button>
                 <button type="button" id="tabBtnExport" onclick="runExport()">📤 导出周报</button>
                 <button type="button" id="loadNewsBtn" style="display:none" onclick="loadNewsData()">📥 加载热点资讯</button>
-                <select id="newsPageSizeSel" style="display:none" onchange="onNewsPageSizeChange()" title="加载分页：每页100/200/300条可翻页，或一次性加载全部（全部模式不显示未读筛选）">
+                <select id="newsPageSizeSel" style="display:none" onchange="onNewsPageSizeChange()" title="加载分页：每页100/200/300条可翻页（自动预读取下一页），或一次性加载全部">
                     <option value="100" selected>每页100</option>
                     <option value="200">每页200</option>
                     <option value="300">每页300</option>
@@ -510,7 +511,7 @@
                 <div class="list-side">
                     <div class="filter-row news-filter-row">
                         <input type="search" id="newsSearch" placeholder="搜索标题/作者" oninput="onNewsFilterChange()" title="输入后可点击右侧 ✕ 一键清除">
-                        <label class="unread-toggle" title="勾选后仅显示当前账号未阅读的文章（已读状态在列表加载后自动检查）">
+                        <label class="unread-toggle" title="勾选后仅显示当前账号未阅读的文章（已读状态在列表加载后自动检查，并逐步生效）">
                             <input type="checkbox" id="unreadFilter" onchange="onNewsFilterChange()">只看未读
                         </label>
                     </div>
@@ -944,7 +945,17 @@ async function apiGet(path) {
         headers: headers,
         credentials: 'include'
     });
-    return await resp.json();
+    let data;
+    try {
+        data = await resp.json();
+    } catch (e) {
+        // 非 JSON 响应（如限流页/网关错误页）：抛出带状态码的错误供上层识别限流
+        const err = new Error(`HTTP ${resp.status}`);
+        err.httpStatus = resp.status;
+        throw err;
+    }
+    if (data && typeof data === 'object') data.__httpStatus = resp.status; // 供限流检测使用
+    return data;
 }
 
 async function apiRequest(path, method, body) {
@@ -1206,18 +1217,16 @@ function weeklyFilterStatusText() {
 }
 
 function newsFilterStatusText() {
-    const unreadMode = isUnreadOnly();
-    const total = unreadMode ? unreadPool.length : newsData.length;
-    if (total === 0) return null;
+    if (newsData.length === 0) return null;
     const kw = (document.getElementById('newsSearch').value || '').trim();
     const unreadCb = document.getElementById('unreadFilter');
-    const unreadOnly = !!(unreadCb && unreadCb.checked && !unreadCb.disabled);
+    const unreadOnly = !!(unreadCb && unreadCb.checked);
     if (!kw && !unreadOnly) return null;
     const n = getFilteredNewsItems().length;
     const parts = [];
     if (kw) parts.push(`关键词「${kw}」`);
     if (unreadOnly) parts.push('只看未读');
-    return `🔍 ${parts.join(' · ')}：匹配 ${n} / ${total} 篇`;
+    return `🔍 ${parts.join(' · ')}：匹配 ${n} / ${newsData.length} 篇`;
 }
 
 // 筛选变更后同步状态栏：有筛选显示命中数量，筛选清空后恢复默认加载提示
@@ -1607,11 +1616,112 @@ let newsPagingBusy = false; // 翻页请求进行中，防止重复点击
 
 // 已读状态：postId(String) -> true 表示当前登录用户已在已学习名单中；
 // 'self' 表示登录用户自己发布的文章（不显示已读徽章、也不算未读）；未确认（缺失）视为未读
-// 列表加载后通过 queryForumLearnUserRecord 批量检查（带并发限制），结果缓存在本会话内复用
+// 列表加载后通过 queryForumLearnUserRecord 批量检查（带并发限制），结果写入 newsReadMap 并持久化到 IndexedDB
 let newsReadMap = new Map();     // postId -> true（已确认已读）/ 'self'（自己发的，跳过检查且不算未读）
 let newsReadChecking = false;    // 批量检查进行中
 let newsReadCheckSeq = 0;        // 检查批次号：翻页/重载后使旧批次失效
-loadReadCache(); // 启动时恢复本地已读状态缓存，让已读徽章/未读筛选无需重新请求即生效
+
+// 预读取缓存：page -> 该页文章记录（分页模式下提前抓取下一页，翻页时秒开）
+const newsPageCache = new Map();
+let newsPrefetchBusy = false;    // 预读取请求进行中（一次只预读一页）
+
+// ==================== 本地缓存（IndexedDB）：已读状态 + 已看帖子 ====================
+// 数据量大（帖子内容含富文本），故用 IndexedDB 而非 localStorage。
+// readStatus: postId -> { s: true|'self', u: 当前登录用户ID, t: 记录时间 }
+// posts:      postId -> { list: 列表摘要, detail: 已看过的详情内容(可null), t: 记录时间 }
+const WR_CACHE_DB = 'wr_cache';
+const WR_CACHE_VER = 1;
+const STORE_READ_STATUS = 'readStatus';
+const STORE_POSTS = 'posts';
+let wrCacheDb = null;
+
+function openWrCache() {
+    if (wrCacheDb) return Promise.resolve(wrCacheDb);
+    if (!('indexedDB' in window)) return Promise.reject(new Error('当前环境不支持 IndexedDB'));
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(WR_CACHE_DB, WR_CACHE_VER);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE_READ_STATUS)) db.createObjectStore(STORE_READ_STATUS);
+            if (!db.objectStoreNames.contains(STORE_POSTS)) db.createObjectStore(STORE_POSTS);
+        };
+        req.onsuccess = () => { wrCacheDb = req.result; resolve(wrCacheDb); };
+        req.onerror = () => reject(req.error || new Error('IndexedDB 打开失败'));
+    });
+}
+
+// 批量写入一个 store：entries 为 [key, value][]
+async function wrCachePutMany(store, entries) {
+    if (!entries || !entries.length) return;
+    try {
+        const db = await openWrCache();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readwrite');
+            const os = tx.objectStore(store);
+            entries.forEach(([k, v]) => os.put(v, k));
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) { /* 缓存失败不影响功能 */ }
+}
+
+// 读取一个 store 全部记录：返回 [key, value][]
+async function wrCacheGetAll(store) {
+    try {
+        const db = await openWrCache();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readonly');
+            const out = [];
+            const cursorReq = tx.objectStore(store).openCursor();
+            cursorReq.onsuccess = () => {
+                const c = cursorReq.result;
+                if (c) { out.push([c.key, c.value]); c.continue(); }
+                else resolve(out);
+            };
+            cursorReq.onerror = () => reject(cursorReq.error);
+        });
+    } catch (e) { return []; }
+}
+
+// 更新已读状态：同步内存 Map + 持久化到 IndexedDB（仅记录已读/'self'，未读不落库）
+function setNewsRead(postId, val) {
+    const key = String(postId);
+    if (val === true || val === 'self') {
+        newsReadMap.set(key, val);
+        wrCachePutMany(STORE_READ_STATUS, [[key, { s: val, u: currentUserId, t: Date.now() }]]);
+    } else {
+        newsReadMap.delete(key);
+    }
+}
+
+// 启动时从 IndexedDB 恢复：已读状态（仅当前登录用户的记录）+ 已看过的帖子详情
+async function loadNewsCache() {
+    const [readRows, postRows] = await Promise.all([wrCacheGetAll(STORE_READ_STATUS), wrCacheGetAll(STORE_POSTS)]);
+    readRows.forEach(([key, v]) => {
+        if (v && v.u === currentUserId && (v.s === true || v.s === 'self')) newsReadMap.set(String(key), v.s);
+    });
+    postRows.forEach(([key, v]) => {
+        if (v && v.detail) newsDetailCache[v.detail.postId ?? key] = v.detail;
+    });
+    if (newsData.length) renderNewsList(); // 已有列表在显示时刷新徽章/未读筛选
+}
+
+// 已显示的帖子摘要 + 已抓取的详情落库（newsDetailCache 常驻内存，确保不覆盖已有详情）
+function cacheListRecords(records) {
+    const entries = records.map(d => [String(d.postId), { list: d, detail: newsDetailCache[d.postId] || null, t: Date.now() }]);
+    wrCachePutMany(STORE_POSTS, entries);
+}
+
+// 列表渐进刷新节流：已读检查确认变化时合并重绘（250ms 内只重绘一次），并保留滚动位置不打断浏览
+let newsRenderPending = false;
+function scheduleNewsRender() {
+    if (newsRenderPending) return;
+    newsRenderPending = true;
+    setTimeout(() => { newsRenderPending = false; renderNewsList(true); }, 250);
+}
+
+// 启动即恢复本地缓存（restoreToken 已在脚本前部完成，currentUserId 可用）
+loadNewsCache();
 
 // 当前分页大小：下拉选择「每页X」时取对应数值，解析失败回退 100
 function newsPageSize() {
@@ -1619,92 +1729,7 @@ function newsPageSize() {
     return Number.isFinite(n) && n > 0 ? n : NEWS_PAGE_SIZE;
 }
 
-// ===== 本地缓存：IndexedDB（列表页/文章详情）+ localStorage（已读状态）=====
-// 目的：预读后的数据落盘，翻页/切换筛选/重开页面时快速响应，不必重复请求
-const PAGE_CACHE_TTL = 6 * 3600 * 1000;        // 列表页缓存有效期（列表会更新，缓存短暂）
-const DETAIL_CACHE_TTL = 7 * 24 * 3600 * 1000; // 文章详情缓存有效期（正文基本不变）
-const READ_CACHE_TTL = 30 * 24 * 3600 * 1000;  // 已读状态有效期
-let idbOpenPromise = null;
-function idbOpen() {
-    if (idbOpenPromise) return idbOpenPromise;
-    idbOpenPromise = new Promise((resolve, reject) => {
-        try {
-            const req = indexedDB.open('kcNewsCache', 1);
-            req.onupgradeneeded = () => {
-                const db = req.result;
-                if (!db.objectStoreNames.contains('pages')) db.createObjectStore('pages');
-                if (!db.objectStoreNames.contains('details')) db.createObjectStore('details');
-            };
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        } catch (e) { reject(e); }
-    });
-    return idbOpenPromise;
-}
-// 读取 IndexedDB 缓存；不可用/未命中返回 null
-async function idbGet(store, key) {
-    try {
-        const db = await idbOpen();
-        return await new Promise((resolve, reject) => {
-            const tx = db.transaction(store, 'readonly');
-            const req = tx.objectStore(store).get(key);
-            req.onsuccess = () => resolve(req.result ?? null);
-            req.onerror = () => reject(req.error);
-        });
-    } catch (e) { return null; }
-}
-// 写入 IndexedDB 缓存；失败静默（降级为无缓存）
-async function idbSet(store, key, value) {
-    try {
-        const db = await idbOpen();
-        await new Promise((resolve, reject) => {
-            const tx = db.transaction(store, 'readwrite');
-            tx.objectStore(store).put(value, key);
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    } catch (e) { /* 忽略 */ }
-}
-
-// 已读状态持久化到 localStorage（数据量小：postId -> 'read'/'self'）
-function loadReadCache() {
-    try {
-        const o = JSON.parse(localStorage.getItem('kc_news_read') || 'null');
-        if (o && o.reads && (Date.now() - o.ts) < READ_CACHE_TTL) {
-            for (const [k, v] of Object.entries(o.reads)) newsReadMap.set(k, v);
-        }
-    } catch (e) {}
-}
-let saveReadCacheTimer = null;
-function saveReadCache() {
-    clearTimeout(saveReadCacheTimer);
-    saveReadCacheTimer = setTimeout(() => {
-        try {
-            localStorage.setItem('kc_news_read', JSON.stringify({ ts: Date.now(), reads: Object.fromEntries(newsReadMap) }));
-        } catch (e) { /* 容量超限时忽略 */ }
-    }, 800);
-}
-
-// ===== 只看未读：跨页未读池模式 =====
-// 勾选后不再局限于当前服务器页，而是自动向后扫描各页、逐篇检查已读状态，
-// 把未读文章累积进 unreadPool；列表翻页显示的是「下一批未读文章」
-let unreadPool = [];            // 未读文章对象池（跨服务器页累积，元素为文章摘要副本）
-let unreadScanPage = 0;         // 已扫描到的服务器页码
-let unreadScanExhausted = false; // 服务器所有页已扫描完
-let unreadScanBusy = false;     // 扫描进行中
-let unreadScanSeq = 0;          // 扫描批次号：重新加载列表后使旧扫描失效
-let newsServerPage = 1;         // 勾选未读筛选前所在的服务器页码（取消勾选时恢复）
-let unreadFilterActive = false; // 未读筛选生效状态（用于检测开关切换）
-let selectedPostId = null;      // 当前打开文章的 postId（并发切换守卫）
-
-// 「只看未读」是否生效：勾选且未被禁用（全部模式下禁用）
-function isUnreadOnly() {
-    const cb = document.getElementById('unreadFilter');
-    return !!(cb && cb.checked && !cb.disabled);
-}
-
-// 加载热点资讯：复用登录token → 按分页模式下拉框选择「每页100/200/300（可翻页）」或「全部（一次性拉取）」
-// 手动点击时 force=true 绕过列表页缓存拉取最新数据
+// 加载热点资讯：复用登录token → 按分页模式下拉框选择「每页100（可翻页）」或「全部（一次性拉取）」
 async function loadNewsData() {
     const btn = document.getElementById('loadNewsBtn');
     btn.disabled = true;
@@ -1713,10 +1738,11 @@ async function loadNewsData() {
         await ensureLogin();
         updateBrowseStatus('正在获取热点资讯列表...', 'checking');
         newsPage = 1; // 手动点击加载时回到第1页
+        newsPageCache.clear(); // 重新加载：预读取缓存失效
         if (newsPageSizeMode() === 'all') {
-            await fetchNewsListAll(true);
+            await fetchNewsListAll();
         } else {
-            await fetchNewsPage(newsPage, true);
+            await fetchNewsPage(newsPage);
         }
         newsLoaded = true;
         syncNewsAfterLoad();
@@ -1727,8 +1753,9 @@ async function loadNewsData() {
         }
         // 同步获取阅读量排名（失败不影响资讯列表）
         try { await fetchRanking(); } catch (e) { console.warn('获取阅读量排名失败:', e); }
-        // 后台预读下一页（列表+已读状态），结果落盘缓存
-        prefetchAhead();
+        // 后台批量检查已读状态（不阻塞列表展示）；分页模式下同时预读取下一页
+        refreshNewsReadStatus();
+        prefetchNewsPage(2);
     } catch (err) {
         updateBrowseStatus(`❌ 加载失败: ${err.message}`, 'error');
     } finally {
@@ -1741,11 +1768,8 @@ function newsPageSizeMode() {
     return document.getElementById('newsPageSizeSel').value;
 }
 
-// 状态栏提示文案：分页模式下显示当前页/总页数与总数；未读模式显示未读池进度
+// 状态栏提示文案：分页模式下显示当前页/总页数与总数
 function newsPageStatusText() {
-    if (isUnreadOnly()) {
-        return `未读 ${unreadPool.length} 篇（已扫描 ${unreadScanPage} 页${unreadScanExhausted ? '，已全部扫完' : ''}）`;
-    }
     if (newsPageSizeMode() !== 'all' && newsTotalCount > newsPageSize()) {
         return `已加载第 ${newsPage}/${newsTotalPages()} 页（共 ${newsTotalCount} 篇）`;
     }
@@ -1756,17 +1780,8 @@ function newsTotalPages() {
     return Math.max(1, Math.ceil(newsTotalCount / newsPageSize()));
 }
 
-// 分页模式：抓取指定页原始记录（currentPage + 每页条数），并记录 totalCount
-// 带 IndexedDB 缓存（key 含每页条数）；手动点「加载热点资讯」时 force=true 绕过缓存拉最新
-async function fetchNewsPageRecords(page, force = false) {
-    const cacheKey = `p${newsPageSize()}_${page}`;
-    if (!force) {
-        const hit = await idbGet('pages', cacheKey);
-        if (hit && hit.records && (Date.now() - hit.ts) < PAGE_CACHE_TTL) {
-            if (hit.totalCount) newsTotalCount = hit.totalCount;
-            return hit.records;
-        }
-    }
+// 抓取指定页并返回映射后的记录（不改动全局列表状态，预读取也复用）
+async function fetchNewsPageRecords(page) {
     const buildUrl = () =>
         `${FORUM_LIST_PATH}?keyWord=&plateId=&currentPage=${page}&pageSize=${newsPageSize()}&token=${authToken}&companyId=${COMPANY_ID}`;
     let data = await apiGet(buildUrl());
@@ -1779,129 +1794,66 @@ async function fetchNewsPageRecords(page, force = false) {
         throw new Error(`获取热点资讯列表失败: ${data?.resultMessage || '未知错误'}`);
     }
     newsTotalCount = data.totalCount || 0;
-    const records = data.resultData || [];
-    idbSet('pages', cacheKey, { ts: Date.now(), totalCount: newsTotalCount, records });
-    return records;
+    return mapNewsRecords(data.resultData || []);
 }
 
-// 分页模式：抓取指定页并映射为列表摘要（force 透传给 fetchNewsPageRecords 绕过缓存）
-async function fetchNewsPage(page, force = false) {
-    const records = await fetchNewsPageRecords(page, force);
+// 分页模式：抓取指定页并写入页缓存与本地持久化
+async function fetchNewsPage(page) {
+    newsData = await fetchNewsPageRecords(page);
     newsPage = page;
-    newsServerPage = page;
-    newsData = mapNewsRecords(records);
+    newsPageCache.set(page, newsData);
+    cacheListRecords(newsData);
     return newsData.length;
 }
 
-// 未读池扫描：从服务器下一页开始逐页抓取并检查已读状态，把未读文章累积进 unreadPool，
-// 直到池内未读数量达到 minCount、扫描页数达到 maxScanPage 或所有页扫描完。
-// 按需加载：翻到第 N 页未读时触发 minCount=N*每页条数；预读模式传 maxScanPage 限制只多扫 1 页
-async function ensureUnreadPool(minCount, maxScanPage = Infinity) {
-    if (!newsLoaded || unreadScanBusy) return;
-    if (!currentUserId) {
-        try { await ensureLogin(true); } catch (e) { console.warn('未读扫描需要登录用户ID，已跳过:', e); return; }
-    }
-    const seq = ++unreadScanSeq;
-    unreadScanBusy = true;
-    renderNewsPager();
+// 后台预读取指定页：抓取列表 + 检查这些帖子的已读状态（结果进共享缓存，翻页时秒开）
+async function prefetchNewsPage(page) {
+    if (newsPageSizeMode() === 'all') return;
+    if (page < 1 || page > newsTotalPages() || newsPageCache.has(page) || newsPrefetchBusy) return;
+    newsPrefetchBusy = true;
     try {
-        while (!unreadScanExhausted && unreadPool.length < minCount && unreadScanPage < maxScanPage) {
-            if (seq !== unreadScanSeq) return;
-            const page = unreadScanPage + 1;
-            updateBrowseStatus(`正在后台预取文章/检查已读状态（已扫描 ${unreadScanPage} 页，未读 ${unreadPool.length} 篇）...`, 'checking', 'news');
-            let records;
-            try {
-                records = await fetchNewsPageRecords(page);
-            } catch (e) {
-                console.warn('未读扫描拉取列表失败:', e);
-                break;
-            }
-            if (seq !== unreadScanSeq) return;
-            if (!records.length) { unreadScanExhausted = true; break; }
-            unreadScanPage = page;
-            const mapped = mapNewsRecords(records);
-            // 自己发的直接标记 'self' 跳过检查；其余按缓存增量检查
-            mapped.forEach(d => { if (isSelfNewsPost(d)) newsReadMap.set(String(d.postId), 'self'); });
-            const queue = mapped.filter(d => !newsReadMap.has(String(d.postId))).map(d => String(d.postId));
-            const worker = async () => {
-                while (queue.length) {
-                    if (seq !== unreadScanSeq) return;
-                    const id = queue.shift();
-                    try {
-                        const users = await fetchLearnList(id);
-                        const mine = users.find(u => Number(u.userId) === Number(currentUserId));
-                        if (mine) {
-                            newsReadMap.set(id, true);
-                            if (!currentUserName && mine.userName) currentUserName = mine.userName;
-                        }
-                    } catch (e) { /* 单篇失败忽略，视为未读 */ }
-                }
-            };
-            await Promise.all(Array.from({ length: Math.min(6, queue.length) }, worker));
-            if (seq !== unreadScanSeq) return;
-            // 收集本页未读（去重；newsReadMap 缺失 = 未读）
-            const seen = new Set(unreadPool.map(d => String(d.postId)));
-            mapped.forEach(d => {
-                const id = String(d.postId);
-                if (!newsReadMap.get(id) && !seen.has(id)) { unreadPool.push(d); seen.add(id); }
-            });
-            if (records.length < newsPageSize()) unreadScanExhausted = true; // 不足一页说明到末页了
-            saveReadCache(); // 已读状态落盘
-            renderNewsList();
-            renderNewsPager();
-            syncFilterStatus('news');
-        }
-    } finally {
-        if (seq === unreadScanSeq) {
-            unreadScanBusy = false;
-            renderNewsPager();
-            updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`, 'online', 'news');
-            syncFilterStatus('news');
-        }
-    }
+        const records = await fetchNewsPageRecords(page);
+        newsPageCache.set(page, records);
+        cacheListRecords(records);
+        prefetchNewsReadStatus(records);
+    } catch (e) { /* 预读取失败静默忽略，翻页时正常拉取 */ }
+    finally { newsPrefetchBusy = false; }
 }
 
 // 全部模式：第一次查询取 totalCount，再以 pageSize=totalCount 一次性拉全
-async function fetchNewsListAll(force = false) {
+async function fetchNewsListAll() {
     const buildUrl = (page, size) =>
         `${FORUM_LIST_PATH}?keyWord=&plateId=&currentPage=${page}&pageSize=${size}&token=${authToken}&companyId=${COMPANY_ID}`;
 
-    // 探测/拉取记录，force 时绕过缓存（全部模式缓存 key 带 totalCount，变化时天然失效）
-    const fetchRecords = async (page, size, forceReq) => {
-        const cacheKey = `all_${size}_${page}`;
-        if (!forceReq) {
-            const hit = await idbGet('pages', cacheKey);
-            if (hit && hit.records && (Date.now() - hit.ts) < PAGE_CACHE_TTL) return hit;
-        }
-        let data = await apiGet(buildUrl(page, size));
-        if (isAuthExpired(data)) {
-            clearToken();
-            await ensureLogin(true);
-            data = await apiGet(buildUrl(page, size));
-        }
-        if (!data || data.resultCode !== 0) {
-            throw new Error(`获取热点资讯列表失败: ${data?.resultMessage || '未知错误'}`);
-        }
-        const rec = { ts: Date.now(), records: data.resultData || [], totalCount: data.totalCount || 0 };
-        idbSet('pages', cacheKey, rec);
-        return rec;
-    };
-
     // 第一次：探测总数
-    let first = await fetchRecords(1, 20, force);
+    let first = await apiGet(buildUrl(1, 20));
+    if (isAuthExpired(first)) {
+        clearToken();
+        await ensureLogin(true);
+        first = await apiGet(buildUrl(1, 20));
+    }
+    if (!first || first.resultCode !== 0) {
+        throw new Error(`获取热点资讯列表失败: ${first?.resultMessage || '未知错误'}`);
+    }
     const totalCount = first.totalCount || 0;
-    let records = first.records || [];
+    let records = first.resultData || [];
 
     // 一次性获取全部（pageSize = totalCount）
     if (totalCount > records.length) {
-        const all = await fetchRecords(1, totalCount, force);
-        if (all.records && all.records.length) {
-            records = all.records;
+        let all = await apiGet(buildUrl(1, totalCount));
+        if (isAuthExpired(all)) {
+            clearToken();
+            await ensureLogin(true);
+            all = await apiGet(buildUrl(1, totalCount));
+        }
+        if (all && all.resultCode === 0 && Array.isArray(all.resultData) && all.resultData.length) {
+            records = all.resultData;
         }
     }
 
     newsTotalCount = totalCount;
     newsData = mapNewsRecords(records);
+    cacheListRecords(newsData); // 全部模式的列表摘要也落库
     return newsData.length;
 }
 
@@ -1920,11 +1872,10 @@ function mapNewsRecords(records) {
     }));
 }
 
-// 切换分页模式：已加载过数据时，回到第1页按新模式重新抓取
-// 「全部」模式帖子多、已读检查耗时长，禁用「只看未读」开关并取消勾选
+// 切换分页模式：已加载过数据时，回到第1页按新模式重新抓取（「只看未读」开关始终可用）
 async function onNewsPageSizeChange() {
     newsPage = 1;
-    syncUnreadToggleState();
+    newsPageCache.clear(); // 每页条数变了，预读取缓存全部失效
     renderNewsPager();
     if (!newsLoaded) return; // 尚未加载，仅记住选择
     const btn = document.getElementById('loadNewsBtn');
@@ -1938,8 +1889,9 @@ async function onNewsPageSizeChange() {
         }
         syncNewsAfterLoad();
         updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`);
-        // 后台预读下一页（列表+已读状态），加速后续翻页；未读池模式由扫描器按需加载，跳过
-        if (!isUnreadOnly()) prefetchAhead();
+        // 后台批量检查已读状态（不阻塞列表展示）；分页模式下同时预读取下一页
+        refreshNewsReadStatus();
+        prefetchNewsPage(2);
     } catch (err) {
         updateBrowseStatus(`❌ 加载失败: ${err.message}`, 'error');
     } finally {
@@ -1947,68 +1899,49 @@ async function onNewsPageSizeChange() {
     }
 }
 
-// 「只看未读」开关可用性跟随分页模式：全部模式禁用并取消勾选（同时退出未读池模式），其余模式启用
-function syncUnreadToggleState() {
-    const cb = document.getElementById('unreadFilter');
-    if (!cb) return;
-    if (newsPageSizeMode() === 'all') {
-        cb.checked = false;
-        cb.disabled = true;
-        // 从每页模式切到全部：退出未读池模式，恢复服务器页上下文
-        if (unreadFilterActive) {
-            unreadFilterActive = false;
-            newsPage = newsServerPage;
-            selectedNewsIndex = -1;
-            selectedPostId = null;
-        }
-    } else {
-        cb.disabled = false;
-    }
-}
+// 「只看未读」开关在所有模式下均可用（含「全部」模式，检查结果渐进生效）
 
-// 翻页：首页/上页/下页按钮统一入口
-// 未读模式：翻的是「未读池」的页——显示下一批未读文章，池子不足时后台继续扫描服务器后续页补足
+// 翻页：首页/上页/下页按钮统一入口（命中预读取缓存时秒开）
 async function newsGoPage(page) {
     if (newsPagingBusy) return;
-    if (isUnreadOnly()) {
-        const target = Math.max(1, page); // 未读模式下允许翻到尚未扫出的页（等待扫描补足）
-        if (target === newsPage && !unreadScanBusy) return;
-        newsPagingBusy = true;
-        newsPage = target;
-        selectedNewsIndex = -1;
-        selectedPostId = null;
-        leaveDetailView('newsWrap');
-        resetNewsDetailPanel();
-        renderNewsList();
-        renderNewsPager();
-        await ensureUnreadPool(target * newsPageSize());
-        newsPagingBusy = false;
-        renderNewsList();
-        renderNewsPager();
-        return;
-    }
     const target = Math.min(Math.max(1, page), newsTotalPages());
     if (target === newsPage) return;
     newsPagingBusy = true;
     renderNewsPager();
-    updateBrowseStatus('正在获取热点资讯列表...', 'checking');
-    try {
-        await fetchNewsPage(target);
-        // 保留搜索筛选条件，仅重置选中项与详情面板
+    if (newsPageCache.has(target)) {
+        newsData = newsPageCache.get(target);
+        newsPage = target;
         selectedNewsIndex = -1;
-        selectedPostId = null;
         leaveDetailView('newsWrap');
         resetNewsDetailPanel();
         renderNewsList();
         renderNewsPager();
         updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`);
-        // 后台预读下一页（列表+已读状态），加速后续翻页
-        prefetchAhead();
+        // 补齐本页尚未检查的已读状态（预读取时可能只查了一部分）
+        refreshNewsReadStatus();
+        newsPagingBusy = false;
+        renderNewsPager();
+        prefetchNewsPage(target + 1); // 继续预读取下一页
+        return;
+    }
+    updateBrowseStatus('正在获取热点资讯列表...', 'checking');
+    try {
+        await fetchNewsPage(target);
+        // 保留搜索/未读筛选条件，仅重置选中项与详情面板
+        selectedNewsIndex = -1;
+        leaveDetailView('newsWrap');
+        resetNewsDetailPanel();
+        renderNewsList();
+        renderNewsPager();
+        updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`);
+        // 后台批量检查本页文章的已读状态
+        refreshNewsReadStatus();
     } catch (err) {
         updateBrowseStatus(`❌ 翻页失败: ${err.message}`, 'error');
     } finally {
         newsPagingBusy = false;
         renderNewsPager();
+        prefetchNewsPage(target + 1); // 预读取下一页
     }
 }
 
@@ -2019,15 +1952,6 @@ function renderNewsPager() {
     const show = newsLoaded && newsPageSizeMode() !== 'all' && newsTotalCount > newsPageSize();
     pager.style.display = show ? 'flex' : 'none';
     if (!show) return;
-    if (isUnreadOnly()) {
-        const totalPages = Math.max(1, Math.ceil(getFilteredNewsItems().length / newsPageSize()));
-        const moreComing = !unreadScanExhausted; // 还有服务器页未扫描，允许继续翻
-        document.getElementById('pgInfo').textContent = `第 ${newsPage}/${totalPages} 页（未读 ${unreadPool.length} 篇）`;
-        document.getElementById('pgFirst').disabled = newsPagingBusy || unreadScanBusy || newsPage <= 1;
-        document.getElementById('pgPrev').disabled = newsPagingBusy || unreadScanBusy || newsPage <= 1;
-        document.getElementById('pgNext').disabled = newsPagingBusy || unreadScanBusy || (newsPage >= totalPages && !moreComing);
-        return;
-    }
     const totalPages = newsTotalPages();
     document.getElementById('pgInfo').textContent = `第 ${newsPage}/${totalPages} 页`;
     document.getElementById('pgFirst').disabled = newsPagingBusy || newsPage <= 1;
@@ -2037,20 +1961,12 @@ function renderNewsPager() {
 
 function syncNewsAfterLoad() {
     selectedNewsIndex = -1;
-    selectedPostId = null;
     leaveDetailView('newsWrap');
     resetNewsDetailPanel();
     document.getElementById('newsSearch').value = '';
     newsSelectedIds.clear(); // 重新加载/切换分页模式：筛选上下文已重置，清空已选状态
-    // 重置未读池：列表数据已变，需重新扫描
-    unreadPool = [];
-    unreadScanPage = 0;
-    unreadScanExhausted = false;
-    unreadFilterActive = isUnreadOnly(); // 保持开关勾选状态
-    newsServerPage = 1;
     renderNewsList();
     renderNewsPager();
-    if (unreadFilterActive) ensureUnreadPool(newsPageSize());
 }
 
 function resetNewsDetailPanel() {
@@ -2059,49 +1975,45 @@ function resetNewsDetailPanel() {
 }
 
 // 当前搜索关键词/未读筛选命中的文章（列表渲染与「全选当前结果」共用）
-// 未读模式：数据源为跨页未读池 unreadPool（缺失即未读；'self' 自己发的帖子已排除）
+// 未读筛选：保留未确认已读的文章（newsReadMap 缺失视为未读；'self' 自己发的排除；'unknown' 未验证的也按未读保留）
 function getFilteredNewsItems() {
     const kw = (document.getElementById('newsSearch').value || '').trim().toLowerCase();
-    const unreadOnly = isUnreadOnly();
-    const source = unreadOnly ? unreadPool : newsData;
-    return source
+    const unreadOnly = document.getElementById('unreadFilter')?.checked;
+    return newsData
         .map((d, i) => ({ d, i }))
-        .filter(({ d }) => (!unreadOnly || !newsReadMap.get(String(d.postId)))
-            && (!kw
-                || (d.title || '').toLowerCase().includes(kw)
-                || (d.userName || '').toLowerCase().includes(kw)));
+        .filter(({ d }) => {
+            const st = newsReadMap.get(String(d.postId));
+            return (!unreadOnly || !st || st === 'unknown')
+                && (!kw
+                    || (d.title || '').toLowerCase().includes(kw)
+                    || (d.userName || '').toLowerCase().includes(kw));
+        });
 }
 
-function renderNewsList() {
+function renderNewsList(keepScroll) {
     const listEl = document.getElementById('newsList');
-    const unreadMode = isUnreadOnly();
-    document.getElementById('newsBulkBar').classList.toggle('show', unreadMode ? unreadPool.length > 0 : newsData.length > 0);
-    if (!newsLoaded || (unreadMode ? unreadPool.length === 0 && unreadScanExhausted : newsData.length === 0)) {
-        listEl.innerHTML = newsLoaded && unreadMode
-            ? '<div class="empty-tip">🎉 没有未读文章了</div>'
-            : '<div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>';
+    const prevScroll = listEl.scrollTop; // 渐进重绘时恢复滚动位置，避免浏览被打断
+    document.getElementById('newsBulkBar').classList.toggle('show', newsData.length > 0);
+    if (newsData.length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>';
         return;
     }
-    let items = getFilteredNewsItems();
-    // 未读模式：按显示页切片，每页展示「下一批未读文章」（池子由后台扫描按需补足）
-    if (unreadMode) {
-        const start = (newsPage - 1) * newsPageSize();
-        items = items.slice(start, start + newsPageSize());
-    }
+    const items = getFilteredNewsItems();
 
     listEl.innerHTML = items.length === 0
-        ? (unreadMode && unreadScanBusy ? '<div class="empty-tip">⏳ 正在扫描未读文章...</div>' : '<div class="empty-tip">未找到匹配文章</div>')
-        : items.map(({ d }) => `
-            <div class="person-card ${String(d.postId) === String(selectedPostId) ? 'active' : ''} ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''}" onclick="selectNewsItem('${String(d.postId)}')">
+        ? '<div class="empty-tip">未找到匹配文章</div>'
+        : items.map(({ d, i }) => `
+            <div class="person-card ${i === selectedNewsIndex ? 'active' : ''} ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''}" onclick="selectNews(${i})">
                 <label class="news-check" title="选择文章（批量下载用）" onclick="event.stopPropagation()">
                     <input type="checkbox" ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''} onchange="onNewsCheck(this, '${String(d.postId)}')">
                 </label>
-                <div class="p-title">${d.recommendFlag === 1 ? '<span class="p-top">置顶</span>' : ''}${newsReadMap.get(String(d.postId)) === true ? '<span class="p-read" title="当前账号已学习过该文章">已读</span>' : ''}${escapeHtml(d.title || '无标题')}</div>
+                <div class="p-title">${d.recommendFlag === 1 ? '<span class="p-top">置顶</span>' : ''}${newsReadMap.get(String(d.postId)) === true ? '<span class="p-read" title="当前账号已学习过该文章">已读</span>' : ''}${newsReadMap.get(String(d.postId)) === 'unknown' ? '<span class="p-unk" title="已读状态检查未成功（可能被限流），下次加载/翻页时自动重试">未验</span>' : ''}${escapeHtml(d.title || '无标题')}</div>
                 <div class="p-meta">
                     ${escapeHtml(d.userName || '-')} · ${escapeHtml((d.createTime || '').slice(0, 10))}<br>
                     👁 ${d.readNum} 阅读 · 👍 ${d.likedNum} 点赞
                 </div>
             </div>`).join('');
+    if (keepScroll && prevScroll) listEl.scrollTop = prevScroll;
     updateNewsBulkBar();
     syncFilterStatus('news');
 }
@@ -2161,7 +2073,6 @@ function showNewsAuthorStats() {
     const rows = aggregateNewsAuthorStats();
 
     selectedNewsIndex = -1; // 取消列表高亮，详情面板让位给统计表
-    selectedPostId = null;
     enterDetailView('newsWrap');
     renderNewsList();
 
@@ -2230,47 +2141,22 @@ function exportNewsAuthorStats() {
 // 筛选条件（搜索关键词/只看置顶）变更：清空已选状态，保证与当前列表同步
 function onNewsFilterChange() {
     if (newsSelectedIds.size > 0) newsSelectedIds.clear();
-    // 「只看未读」开关切换：进入/退出跨页未读池模式
-    const on = isUnreadOnly();
-    if (on !== unreadFilterActive) {
-        unreadFilterActive = on;
-        if (on) {
-            newsServerPage = newsPage; // 记住退出时恢复到哪个服务器页
-            newsPage = 1;              // 未读池从第1页开始显示
-        } else {
-            newsPage = newsServerPage; // 恢复服务器页上下文
-        }
-        selectedNewsIndex = -1;
-        selectedPostId = null;
-        leaveDetailView('newsWrap');
-        resetNewsDetailPanel();
-        renderNewsPager();
-    }
     renderNewsList();
-    if (on && unreadFilterActive) ensureUnreadPool(newsPage * newsPageSize());
+    const unreadOn = document.getElementById('unreadFilter')?.checked;
+    if (unreadOn) {
+        refreshNewsReadStatus(); // 勾选「只看未读」时才开始检查已读状态
+    } else {
+        newsReadCheckSeq++; // 取消勾选：使进行中的检查批次失效，worker 循环随即退出，不再发请求
+    }
 }
 
 // 点击文章：按需抓取详情（缓存），并自动获取已学习清单/标记已读，再渲染富文本内容
-// 列表点击入口：未读模式按 postId 打开（文章可能不在当前服务器页），普通模式按索引打开
-function selectNewsItem(postId) {
-    if (isUnreadOnly()) { selectNewsByKey(postId); return; }
-    const idx = newsData.findIndex(x => String(x.postId) === String(postId));
-    if (idx >= 0) openNewsArticle(newsData[idx], idx);
-}
-
-// 未读模式：按 postId 从未读池/当前页数据中定位文章并打开
-function selectNewsByKey(postId) {
-    const key = String(postId);
-    const idx = newsData.findIndex(x => String(x.postId) === key);
-    const d = idx >= 0 ? newsData[idx] : unreadPool.find(x => String(x.postId) === key);
-    if (d) openNewsArticle(d, idx);
-}
-
-async function openNewsArticle(d, index) {
+async function selectNews(index) {
     selectedNewsIndex = index;
-    selectedPostId = String(d.postId);
     enterDetailView('newsWrap');
     renderNewsList();
+    const d = newsData[index];
+    if (!d) return;
     const panel = document.getElementById('newsDetailPanel');
     if (newsDetailCache[d.postId]) {
         renderNewsDetail(newsDetailCache[d.postId]);
@@ -2281,19 +2167,18 @@ async function openNewsArticle(d, index) {
     try {
         const detail = await fetchNewsDetail(d.postId);
         newsDetailCache[d.postId] = detail;
-        if (selectedPostId !== String(d.postId)) return; // 期间已切换
+        // 已看过的帖子内容持久化到 IndexedDB，下次打开（含跨会话）秒开
+        wrCachePutMany(STORE_POSTS, [[String(d.postId), { list: d, detail, t: Date.now() }]]);
+        if (selectedNewsIndex !== index) return; // 期间已切换
         renderNewsDetail(detail);
         ensureLearnList(d.postId); // 打开文章后自动执行：获取已学习清单 + 未读时标记已读
     } catch (e) {
-        if (selectedPostId !== String(d.postId)) return;
-        panel.innerHTML = `<div class="empty-tip">❌ 获取文章内容失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="selectNewsItem('${String(d.postId)}')">🔄 重试</button></div>`;
+        if (selectedNewsIndex !== index) return;
+        panel.innerHTML = `<div class="empty-tip">❌ 获取文章内容失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="selectNews(${index})">🔄 重试</button></div>`;
     }
 }
 
-// 抓取文章详情：优先取 IndexedDB 缓存（正文基本不变，缓存 7 天），未命中才请求并落盘
 async function fetchNewsDetail(postId) {
-    const hit = await idbGet('details', String(postId));
-    if (hit && hit.detail && (Date.now() - hit.ts) < DETAIL_CACHE_TTL) return hit.detail;
     const buildUrl = () => `${FORUM_DETAIL_PATH}?postId=${postId}&token=${authToken}&companyId=${COMPANY_ID}`;
     let data = await apiGet(buildUrl());
     if (isAuthExpired(data)) {
@@ -2304,7 +2189,6 @@ async function fetchNewsDetail(postId) {
     if (!data || data.resultCode !== 0 || !data.resultData) {
         throw new Error(data?.resultMessage || '未知错误');
     }
-    idbSet('details', String(postId), { ts: Date.now(), detail: data.resultData });
     return data.resultData;
 }
 
@@ -2356,13 +2240,14 @@ async function ensureLearnList(postId) {
         if (isSelfAuthor && !currentUserName && newsDetailCache[postId]?.postUserName) {
             currentUserName = newsDetailCache[postId].postUserName;
         }
-        // 同步已读缓存：自己发的记为 'self'（不显示已读徽章、也不算未读），已学习记为 true
-        if (isSelfAuthor) setNewsSelf(postId);
-        else if (selfLearned) setNewsRead(postId);
+        // 同步已读缓存：自己发的记为 'self'（不显示已读徽章、也不算未读），已学习记为 true（均持久化）
+        if (isSelfAuthor) setNewsRead(postId, 'self');
+        else if (selfLearned) setNewsRead(postId, true);
         if (!selfLearned && !isSelfAuthor) {
             const ok = await markArticleRead(postId);
             if (ok) {
-                setNewsRead(postId);
+                setNewsRead(postId, true); // 未读→已读的变化也记录到本地缓存
+                renderNewsList(); // 刷新列表徽章与未读筛选结果
                 showToast('✅ 已标记本文档为已学习', 'success');
                 users = await fetchLearnList(postId); // 标记成功后刷新清单
                 // 阅读量数据变化：调用一次排名查询刷新状态栏徽章
@@ -2386,7 +2271,9 @@ async function fetchLearnList(postId) {
         data = await apiGet(buildUrl());
     }
     if (!data || data.resultCode !== 0) {
-        throw new Error(data?.resultMessage || '获取已学习清单失败');
+        const err = new Error(data?.resultMessage || '获取已学习清单失败');
+        err.httpStatus = data?.__httpStatus; // 保留 HTTP 状态码供限流检测
+        throw err;
     }
     return data.resultData || [];
 }
@@ -2397,84 +2284,129 @@ function isSelfNewsPost(d) {
     return !!currentUserName && (d.userName || '').trim() === currentUserName;
 }
 
-// 后台预读：多扫描一页服务器数据（列表落 IndexedDB 缓存、已读状态落 localStorage、未读进池），
-// 让后续翻页/切换「只看未读」/重开页面时直接命中缓存快速响应
-// 分页模式专用；全部模式下数据已全量在内存，退化为批量检查当前全量的已读状态
-function prefetchAhead() {
-    if (!newsLoaded) return;
-    if (newsPageSizeMode() === 'all') { refreshNewsReadStatus(); return; }
-    const targetPage = Math.max(unreadScanPage, newsServerPage) + 1;
-    ensureUnreadPool(unreadPool.length + 1, targetPage);
-}
-
-// 标记文章为已读：写入缓存 + 从未读池移除 + 刷新列表（未读模式下该文章随即消失）
-function setNewsRead(postId) {
-    newsReadMap.set(String(postId), true);
-    unreadPool = unreadPool.filter(d => String(d.postId) !== String(postId));
-    saveReadCache();
-    renderNewsList();
-}
-
-// 标记文章为自己发的：写入缓存 + 从未读池移除 + 刷新列表
-function setNewsSelf(postId) {
-    newsReadMap.set(String(postId), 'self');
-    unreadPool = unreadPool.filter(d => String(d.postId) !== String(postId));
-    saveReadCache();
-    renderNewsList();
-}
-
 // 批量检查已读状态：对当前列表中尚未确认的文章逐个获取已学习名单，
-// 判断当前登录用户是否在名单中（并发限制 6，避免瞬时请求过多）；结果写入 newsReadMap 并刷新列表
+// 判断当前登录用户是否在名单中（并发限制 6，避免瞬时请求过多）；结果写入 newsReadMap + IndexedDB 并渐进刷新列表
 async function refreshNewsReadStatus() {
+    // 仅在勾选「只看未读」时才检查已读状态；未勾选时跳过（勾选瞬间由 onNewsFilterChange 触发检查）
+    if (!document.getElementById('unreadFilter')?.checked) return;
     if (!currentUserId) {
         // 旧缓存 token 未记录用户ID时，强制重登录一次获取（失败则放弃检查，全部视为未读）
         try { await ensureLogin(true); } catch (e) { console.warn('已读状态检查需要登录用户ID，已跳过:', e); return; }
     }
     const seq = ++newsReadCheckSeq;
     // 自己发的帖子跳过检查：直接标记 'self'（不显示已读徽章、也不算未读）
+    // 已确认（true/'self'）的跳过；'unknown' 上次未验证的本次重试
     const pending = newsData
         .map(d => {
             const id = String(d.postId);
-            if (newsReadMap.has(id)) return null;
-            if (isSelfNewsPost(d)) { newsReadMap.set(id, 'self'); return null; }
+            const st = newsReadMap.get(id);
+            if (st === true || st === 'self') return null;
+            if (!st && isSelfNewsPost(d)) { setNewsRead(id, 'self'); return null; }
             return id;
         })
         .filter(Boolean);
-    if (pending.length === 0) { renderNewsList(); return; }
+    if (pending.length === 0) { renderNewsList(true); return; }
 
     newsReadChecking = true;
     let done = 0;
+    let unknownCount = 0;
     const total = pending.length;
     const queue = [...pending];
     const worker = async () => {
         while (queue.length) {
             if (seq !== newsReadCheckSeq) return; // 已被新一批检查取代（翻页/重载）
             const id = queue.shift();
-            try {
-                const users = await fetchLearnList(id);
-                const mine = users.find(u => Number(u.userId) === Number(currentUserId));
-                if (mine) {
-                    newsReadMap.set(id, true);
-                    // 名单里能确认自己的用户名时补记（兜底用于识别自己发的帖子）
-                    if (!currentUserName && mine.userName) currentUserName = mine.userName;
-                }
-            } catch (e) { /* 单篇失败忽略，视为未读 */ }
+            const result = await checkNewsReadStatus(id);
             done++;
             if (seq === newsReadCheckSeq) {
                 updateBrowseStatus(`正在检查已读状态 ${done}/${total}...`, 'checking', 'news');
-                // 每检查完 10 篇刷新一次列表，让「已读」徽章与未读筛选逐步生效
-                if (done % 10 === 0) renderNewsList();
+                // 渐进刷新：确认已读或标记未验时列表视觉有变化才重绘，确认未读不重绘
+                if (result !== 'unread') scheduleNewsRender();
+                if (result === 'unknown') unknownCount++;
             }
         }
     };
     await Promise.all(Array.from({ length: Math.min(6, queue.length) }, worker));
     if (seq !== newsReadCheckSeq) return;
     newsReadChecking = false;
-    saveReadCache(); // 已读状态落盘
-    renderNewsList();
-    // 恢复状态栏默认文案（若有筛选条件则恢复筛选命中提示）
-    updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`, 'online', 'news');
+    renderNewsList(true);
+    // 恢复状态栏默认文案（有未验证帖子时提示会自动重试；若有筛选条件则恢复筛选命中提示）
+    updateBrowseStatus(unknownCount > 0
+        ? `✅ ${newsPageStatusText()}（⚠️ ${unknownCount} 篇未验证已标灰，重新加载或翻页时自动重试）`
+        : `✅ ${newsPageStatusText()}，点击文章查看内容`, 'online', 'news');
     syncFilterStatus('news');
+}
+
+// ==================== 限流退避 ====================
+// 检测到服务端限流（HTTP 429/503 或提示"频繁/限流/稍后再试"等）时：
+// 1) 全局放慢：所有检查请求的间隔逐步增大（成功后逐步回落）
+// 2) 单篇重试：同一篇按 2/4/8/16s 指数退避重试，最多 5 次
+// 3) 重试耗尽：该篇标记 'unknown'（列表显示灰色「未验」，不算已读也不算确认未读），
+//    后续重新加载/翻页触发检查时自动重试，直到拿到真实状态
+const NEWS_CHECK_MAX_RETRY = 5;
+let newsCheckDelayMs = 0;  // 全局检查间隔（毫秒），限流后增大、连续成功后回落
+let newsBackoffUntil = 0;  // 全局限流退避截止时间戳，所有检查请求在此期间排队等待
+
+// 判断错误是否为服务端限流
+function isRateLimitError(e) {
+    if (!e) return false;
+    if (e.httpStatus === 429 || e.httpStatus === 503) return true;
+    return /频繁|限流|限速|稍后再试|稍后重试|too many|rate limit/i.test(String(e.message || ''));
+}
+
+// 检查单篇帖子：在已学习名单中找到自己 → 记为已读（含持久化）；否则保持未读
+// 返回 'read'（确认已读）/ 'unread'（确认未读）/ 'unknown'（限流重试耗尽，未获取到真实状态）
+async function checkNewsReadStatus(id) {
+    for (let attempt = 0; ; attempt++) {
+        const waitMs = newsBackoffUntil - Date.now();
+        if (waitMs > 0) await sleep(waitMs);
+        if (newsCheckDelayMs > 0) await sleep(newsCheckDelayMs + Math.random() * 100);
+        try {
+            const users = await fetchLearnList(id);
+            newsBackoffUntil = 0; // 请求成功：解除退避
+            if (newsCheckDelayMs > 0) newsCheckDelayMs = Math.max(0, newsCheckDelayMs - 50);
+            const mine = users.find(u => Number(u.userId) === Number(currentUserId));
+            if (mine) {
+                setNewsRead(id, true);
+                // 名单里能确认自己的用户名时补记（兜底用于识别自己发的帖子）
+                if (!currentUserName && mine.userName) currentUserName = mine.userName;
+                return 'read';
+            }
+            return 'unread';
+        } catch (e) {
+            if (isRateLimitError(e) && attempt < NEWS_CHECK_MAX_RETRY - 1) {
+                newsCheckDelayMs = Math.min(2000, newsCheckDelayMs + 150); // 全局放慢
+                const backoff = Math.min(30000, 2000 * Math.pow(2, attempt)); // 单篇退避 2/4/8/16s
+                newsBackoffUntil = Math.max(newsBackoffUntil, Date.now() + backoff);
+                updateBrowseStatus(`⚠️ 疑似被服务器限流，已放慢检查速度并重试（第 ${attempt + 1} 次）...`, 'checking', 'news');
+                continue;
+            }
+            // 非限流错误或重试耗尽：标记为未验证（仅内存标记不落库，后续检查自动重试）
+            newsReadMap.set(String(id), 'unknown');
+            return 'unknown';
+        }
+    }
+}
+
+// 预读取页的已读状态检查：只写缓存不刷新界面（并发 3，避免抢占当前页检查的带宽）
+// 仅在勾选「只看未读」时执行，未勾选时预读取只拉列表不查状态
+async function prefetchNewsReadStatus(records) {
+    if (!currentUserId) return;
+    if (!document.getElementById('unreadFilter')?.checked) return;
+    const queue = records
+        .map(d => String(d.postId))
+        .filter(id => {
+            const st = newsReadMap.get(id);
+            return st !== true && st !== 'self'; // 已确认的跳过；未验证（'unknown'）的也重试
+        });
+    const worker = async () => {
+        while (queue.length) {
+            if (!document.getElementById('unreadFilter')?.checked) return; // 勾选已取消，停止预读检查
+            const id = queue.shift();
+            await checkNewsReadStatus(id);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, queue.length) }, worker));
 }
 
 // 设置文章阅读状态为已读（POST saveForumLearnDuration），返回是否成功
