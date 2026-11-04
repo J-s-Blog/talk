@@ -890,6 +890,9 @@ async function doLogin(phone, password, companyId) {
         authToken = token;
         currentUserId = extractUserIdFromResponse(data);
         currentUserName = extractUserNameFromResponse(data);
+        // 登录后按新用户ID重新加载本地已读缓存：启动时未登录（userId为空）缓存未生效，
+        // 此时补加载可避免把本地已标已读的帖子再向服务器重复查询
+        loadNewsCache();
         log('success', `✅ 登录成功！Token: ${token.substring(0, 12)}... 用户ID: ${currentUserId ?? '未获取到'}`);
     } else {
         log('warn', '⚠️ 登录成功但未获取到Token，请检查接口响应');
