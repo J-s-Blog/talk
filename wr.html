@@ -26,14 +26,6 @@
             max-width: 760px;
             overflow: hidden;
         }
-        .header {
-            background: linear-gradient(135deg, #0f3460 0%, #533483 100%);
-            color: #fff;
-            padding: 28px 30px;
-            text-align: center;
-        }
-        .header h1 { font-size: 22px; margin-bottom: 6px; letter-spacing: 1px; }
-        .header p { font-size: 12px; opacity: 0.75; }
         .body { padding: 28px; }
         label { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
         input[type="text"], input[type="search"], input[type="date"], input[type="password"], textarea, select {
@@ -150,9 +142,7 @@
         .view-pane > .browse-wrap { flex: 1 1 0; min-height: 0; }
 
         /* ===== 在线浏览 ===== */
-        .btn-sm { width: auto; padding: 8px 14px; font-size: 12px; margin-top: 0; }
         .btn-xs { width: auto; margin-top: 0; padding: 5px 12px; font-size: 11px; flex-shrink: 0; }
-        .browse-status { font-size: 11px; color: #888; margin-bottom: 0; min-width: 0; }
         /* 轻量提示气泡（登录成功/失败等） */
         .toast {
             position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
@@ -169,7 +159,6 @@
             width: 250px; flex-shrink: 0; min-height: 0;
             display: flex; flex-direction: column; gap: 8px;
         }
-        .list-side .btn-sm { width: 100%; }
         .list-side select { width: 100%; cursor: pointer; padding: 7px 10px; }
         /* 搜索框(1/3) + 部门下拉(2/3) 并排一行 */
         .filter-row { display: flex; gap: 6px; }
@@ -389,14 +378,11 @@
         .rank-table th, .rank-table td { padding: 7px 8px; border-bottom: 1px solid #eee; text-align: left; }
         .rank-table th { background: #ede7f6; color: #533483; }
         .rank-table td.rk { width: 44px; text-align: center; font-weight: bold; color: #533483; }
-        .rank-table td.rk .medal { font-size: 15px; }
         .rank-table tr.top1 td, .rank-table tr.top2 td, .rank-table tr.top3 td { background: #fdf9ef; }
 
         /* 浏览模式（默认视图）：铺满全屏、页面锁定不滚动，人员列表与周报详情各自内部滚动 */
         body.browse-mode { overflow: hidden; height: 100vh; height: 100dvh; padding: 0; }
         body.browse-mode .container { width: 100%; max-width: none; height: 100%; display: flex; flex-direction: column; border-radius: 0; }
-        body.browse-mode .header { flex-shrink: 0; padding: 12px 18px; }
-        body.browse-mode .header p { display: none; }
         body.browse-mode .body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px 16px 14px; }
         body.browse-mode .top-line,
         body.browse-mode #progressBar, body.browse-mode #progressText { flex-shrink: 0; }
@@ -406,9 +392,6 @@
         /* ===== 小屏适配（手机 / 平板） ===== */
         @media (max-width: 720px) {
             body { padding: 12px 8px; }
-            .header { padding: 18px 14px; }
-            .header h1 { font-size: 17px; }
-            .header p { font-size: 10px; }
             .body { padding: 16px 12px; }
             /* 手机：按钮行 / 账号密码行 / 起止日期行 / 状态栏，各占一整行 */
             .top-line { gap: 8px; }
@@ -435,7 +418,6 @@
             .nav-sep { display: none; }
         }
         @media (max-width: 400px) {
-            .header h1 { font-size: 15px; }
             .body { padding: 14px 10px; }
         }
     </style>
@@ -1712,12 +1694,14 @@ function cacheListRecords(records) {
     wrCachePutMany(STORE_POSTS, entries);
 }
 
-// 列表渐进刷新节流：已读检查确认变化时合并重绘（250ms 内只重绘一次），并保留滚动位置不打断浏览
+// 列表渐进刷新节流：已读检查确认变化时合并重绘，并保留滚动位置不打断浏览
+// 节流间隔随列表大小自适应（全部模式 2600+ 条时约 1.6s 才重绘一次），避免高频全量重建 DOM 吃满 CPU
 let newsRenderPending = false;
 function scheduleNewsRender() {
     if (newsRenderPending) return;
     newsRenderPending = true;
-    setTimeout(() => { newsRenderPending = false; renderNewsList(true); }, 250);
+    const delay = Math.max(250, Math.min(2000, Math.round(newsData.length * 0.6)));
+    setTimeout(() => { newsRenderPending = false; renderNewsList(true); }, delay);
 }
 
 // 启动即恢复本地缓存（restoreToken 已在脚本前部完成，currentUserId 可用）
@@ -2015,7 +1999,8 @@ function renderNewsList(keepScroll) {
             </div>`).join('');
     if (keepScroll && prevScroll) listEl.scrollTop = prevScroll;
     updateNewsBulkBar();
-    syncFilterStatus('news');
+    // 批量检查进行中时不覆盖状态栏（检查进度由 worker 统一维护，完成后此处再恢复筛选提示）
+    if (!newsReadChecking) syncFilterStatus('news');
 }
 
 // 复选框勾选/取消：只更新计数与卡片样式，不整列重绘（保持列表滚动位置）
@@ -2310,6 +2295,7 @@ async function refreshNewsReadStatus() {
     newsReadChecking = true;
     let done = 0;
     let unknownCount = 0;
+    let lastProgTs = 0;
     const total = pending.length;
     const queue = [...pending];
     const worker = async () => {
@@ -2319,7 +2305,14 @@ async function refreshNewsReadStatus() {
             const result = await checkNewsReadStatus(id);
             done++;
             if (seq === newsReadCheckSeq) {
-                updateBrowseStatus(`正在检查已读状态 ${done}/${total}...`, 'checking', 'news');
+                // 进度消息限频（500ms 一次），避免高频 DOM 写入；限流退避期间显示退避提示
+                const now = Date.now();
+                if (now - lastProgTs > 500) {
+                    lastProgTs = now;
+                    updateBrowseStatus(newsBackoffUntil > now
+                        ? `⚠️ 被限流，已放慢速度退避重试（${done}/${total}）...`
+                        : `正在检查已读状态 ${done}/${total}...`, 'checking', 'news');
+                }
                 // 渐进刷新：确认已读或标记未验时列表视觉有变化才重绘，确认未读不重绘
                 if (result !== 'unread') scheduleNewsRender();
                 if (result === 'unknown') unknownCount++;
@@ -2358,12 +2351,13 @@ function isRateLimitError(e) {
 // 返回 'read'（确认已读）/ 'unread'（确认未读）/ 'unknown'（限流重试耗尽，未获取到真实状态）
 async function checkNewsReadStatus(id) {
     for (let attempt = 0; ; attempt++) {
+        // 限流退避等待 + 随机抖动：避免多个 worker 退避到期后同一瞬间放量再次触发限流
         const waitMs = newsBackoffUntil - Date.now();
-        if (waitMs > 0) await sleep(waitMs);
+        if (waitMs > 0) await sleep(waitMs + Math.random() * 600);
         if (newsCheckDelayMs > 0) await sleep(newsCheckDelayMs + Math.random() * 100);
         try {
             const users = await fetchLearnList(id);
-            newsBackoffUntil = 0; // 请求成功：解除退避
+            // 注意：成功时不清除 newsBackoffUntil（否则会取消其他 worker 刚设置的退避，导致限流-恢复反复振荡）
             if (newsCheckDelayMs > 0) newsCheckDelayMs = Math.max(0, newsCheckDelayMs - 50);
             const mine = users.find(u => Number(u.userId) === Number(currentUserId));
             if (mine) {
@@ -2393,6 +2387,7 @@ async function checkNewsReadStatus(id) {
 async function prefetchNewsReadStatus(records) {
     if (!currentUserId) return;
     if (!document.getElementById('unreadFilter')?.checked) return;
+    if (newsReadChecking) return; // 主批量检查进行中时不并发预读检查，避免请求翻倍触发限流
     const queue = records
         .map(d => String(d.postId))
         .filter(id => {
