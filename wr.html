@@ -219,6 +219,8 @@
             position: sticky; top: 0; z-index: 5;
             margin-left: auto; /* 手机端靠右显示，方便右手单手点击 */
         }
+        /* 桌面端也强制显示的返回按钮（通知帖子详情返回原通知用，手机端仍走 .show-detail 规则） */
+        .btn-back.always { display: inline-block; }
         .detail-header { border-bottom: 2px solid #ede7f6; padding-bottom: 10px; margin-bottom: 12px; }
         .detail-header h3 { color: #533483; font-size: 18px; }
         .detail-header .d-meta { font-size: 12px; color: #777; margin-top: 4px; line-height: 1.7; }
@@ -273,6 +275,32 @@
         .person-card .p-unk { display: inline-block; font-size: 10px; color: #757575; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
         /* 大列表分段渲染的「加载更多」提示条 */
         .render-more { text-align: center; font-size: 12px; color: #533483; padding: 10px 0 14px; }
+        /* ===== 通知列表：消息卡片与页码跳转下拉框 ===== */
+        .person-card .msg-time { font-size: 11px; color: #888; margin: 3px 0 2px; }
+        .person-card .msg-content {
+            font-size: 12px; color: #666; line-height: 1.6;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        /* 页码跳转弹层：点击中间「第 x/y 页」弹出页码列表（替代原生下拉框，避免超出左栏） */
+        #msgPager { position: relative; }
+        .pager-info.clickable { cursor: pointer; border-bottom: 1px dashed #533483; }
+        .pager-info.clickable:hover { color: #533483; }
+        .msg-page-pop {
+            position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+            background: #fff; border: 1px solid #d5c8e8; border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            max-height: 236px; overflow-y: auto; min-width: 92px;
+            padding: 4px; z-index: 60;
+        }
+        .msg-page-pop::-webkit-scrollbar { width: 5px; }
+        .msg-page-pop::-webkit-scrollbar-thumb { background: #d5c8e8; border-radius: 3px; }
+        .msg-page-pop button {
+            display: block; width: 100%; border: none; background: none;
+            padding: 6px 16px; font-size: 12px; color: #444;
+            border-radius: 6px; cursor: pointer; text-align: center; white-space: nowrap;
+        }
+        .msg-page-pop button:hover { background: #ede7f6; color: #533483; }
+        .msg-page-pop button.cur { background: #533483; color: #fff; font-weight: bold; }
         .news-cat { font-size: 11px; color: #533483; background: #ede7f6; border-radius: 4px; padding: 1px 7px; display: inline-block; margin-bottom: 6px; }
         /* 富文本正文：还原文章原始格式（字体粗细、大小、表格、图片、列表等） */
         .article-body { font-size: 15px; line-height: 1.9; color: #333; word-break: break-word; }
@@ -432,10 +460,12 @@
             <div class="tab-nav" id="mainNav">
                 <button type="button" id="viewBtnWeekly" class="view-btn active" onclick="switchView('weekly')">📊 周报</button>
                 <button type="button" id="viewBtnNews" class="view-btn" onclick="switchView('news')">🔥 热点资讯</button>
+                <button type="button" id="viewBtnMsg" class="view-btn" onclick="switchView('msg')">🔔 通知</button>
                 <span class="nav-sep"></span>
                 <button type="button" id="loadBrowseBtn" onclick="loadBrowseData()">📥 加载周报</button>
                 <button type="button" id="tabBtnExport" onclick="runExport()">📤 导出周报</button>
                 <button type="button" id="loadNewsBtn" style="display:none" onclick="loadNewsData()">📥 加载热点资讯</button>
+                <button type="button" id="loadMsgBtn" style="display:none" onclick="loadMsgData()">📥 加载通知</button>
                 <select id="newsPageSizeSel" style="display:none" onchange="onNewsPageSizeChange()" title="加载分页：每页100/200/300条可翻页（自动预读取下一页），或一次性加载全部">
                     <option value="100" selected>每页100</option>
                     <option value="200">每页200</option>
@@ -520,6 +550,23 @@
                 </div>
             </div>
         </div>
+        <div class="view-pane" id="paneMsg" style="display:none;">
+            <div class="browse-wrap" id="msgWrap">
+                <div class="list-side">
+                    <div class="person-list" id="msgList">
+                        <div class="empty-tip">暂无数据，点击「加载通知」获取消息列表</div>
+                    </div>
+                    <div class="pager" id="msgPager" style="display:none;">
+                        <button type="button" class="pager-btn" id="msgPgPrev" onclick="msgGoPage(msgPage-1)" title="上一页">◀ 上页</button>
+                        <span class="pager-info clickable" id="msgPgInfo" onclick="toggleMsgPagePop(event)" title="点击选择页码跳转">第 - / - 页</span>
+                        <button type="button" class="pager-btn" id="msgPgNext" onclick="msgGoPage(msgPage+1)" title="下一页">下页 ▶</button>
+                    </div>
+                </div>
+                <div class="detail-panel" id="msgDetailPanel">
+                    <div class="empty-tip">👈 点击左侧消息查看完整内容</div>
+                </div>
+            </div>
+        </div>
     </div><!-- /body -->
 </div><!-- /container -->
 
@@ -567,6 +614,9 @@ const FORUM_DETAIL_PATH = '/forum/getForumPostDetails';
 const FORUM_LEARN_LIST_PATH = '/forumLearn/queryForumLearnUserRecord';
 const FORUM_LEARN_SAVE_PATH = '/forumLearn/saveForumLearnDuration';
 const FORUM_RANK_PATH = '/forumLearn/queryForumRankingList';
+// 通知消息接口
+const MSG_LIST_PATH = '/userCommon/getAllMessage';
+const MSG_DETAIL_PATH = '/userCommon/getMessageDetail';
 const ORIGIN = 'https://qddxt.keyclass.cn';
 const REFERER = 'https://qddxt.keyclass.cn/';
 const COMPANY_ID = 15;
@@ -1113,8 +1163,10 @@ function renderStatusEntry(entry) {
 function defaultStatusForView(view) {
     if (view === 'weekly') {
         if (excelData.length > 0) return { msg: `✅ 已加载 ${excelData.length} 条${weeklyTypeLabel()}清单，点击人名查看详情`, state: 'online' };
-    } else if (newsData.length > 0) {
-        return { msg: `✅ ${newsPageStatusText()}，点击文章查看内容`, state: 'online' };
+    } else if (view === 'news') {
+        if (newsData.length > 0) return { msg: `✅ ${newsPageStatusText()}，点击文章查看内容`, state: 'online' };
+    } else if (view === 'msg') {
+        if (msgData.length > 0) return { msg: `✅ ${msgPageStatusText()}`, state: 'online' };
     }
     return envStatus;
 }
@@ -1298,7 +1350,7 @@ function leaveDetailView(wrapId) {
 // 返回键（浏览器/手机手势）：从详情回到列表视图，而不是退出页面
 window.addEventListener('popstate', () => {
     if (detailLeavePending) { detailLeavePending = false; return; }
-    ['browseWrap', 'newsWrap'].forEach(id => {
+    ['browseWrap', 'newsWrap', 'msgWrap'].forEach(id => {
         const w = document.getElementById(id);
         if (w) w.classList.remove('show-detail');
     });
@@ -1572,22 +1624,287 @@ let currentView = 'weekly';
 function switchView(view) {
     currentView = view;
     const isWeekly = view === 'weekly';
+    const isNews = view === 'news';
+    const isMsg = view === 'msg';
     document.getElementById('viewBtnWeekly').classList.toggle('active', isWeekly);
-    document.getElementById('viewBtnNews').classList.toggle('active', !isWeekly);
-    // 操作按钮：周报视图显示「加载周报/导出周报」，资讯视图显示「加载热点资讯」
+    document.getElementById('viewBtnNews').classList.toggle('active', isNews);
+    document.getElementById('viewBtnMsg').classList.toggle('active', isMsg);
+    // 操作按钮：周报视图显示「加载周报/导出周报」，资讯/通知视图显示各自加载按钮
     document.getElementById('loadBrowseBtn').style.display = isWeekly ? '' : 'none';
     document.getElementById('tabBtnExport').style.display = isWeekly ? '' : 'none';
-    document.getElementById('loadNewsBtn').style.display = isWeekly ? 'none' : '';
-    document.getElementById('newsPageSizeSel').style.display = isWeekly ? 'none' : '';
+    document.getElementById('loadNewsBtn').style.display = isNews ? '' : 'none';
+    document.getElementById('newsPageSizeSel').style.display = isNews ? '' : 'none';
+    document.getElementById('loadMsgBtn').style.display = isMsg ? '' : 'none';
     // 日期范围仅周报视图需要
     document.getElementById('dateRangeWrap').style.display = isWeekly ? '' : 'none';
     // 内容面板
     document.getElementById('paneWeekly').style.display = isWeekly ? '' : 'none';
-    document.getElementById('paneNews').style.display = isWeekly ? 'none' : '';
+    document.getElementById('paneNews').style.display = isNews ? '' : 'none';
+    document.getElementById('paneMsg').style.display = isMsg ? '' : 'none';
     // 状态栏按视图恢复对应状态（未加载过的视图回退到环境检测/数据默认提示）
     refreshStatusBar();
     // 阅读量排名徽章仅在资讯视图且有数据时显示
     renderRankChip();
+}
+
+// ==================== 通知列表 ====================
+const MSG_PAGE_SIZE = 10;   // 每页条数（与接口默认一致）
+let msgData = [];           // 当前页消息列表
+let msgPage = 1;            // 当前页码
+let msgTotalCount = 0;      // 消息总数（接口返回 totalCount）
+let msgLoaded = false;      // 是否已成功加载过
+let msgPagingBusy = false;  // 翻页请求进行中，防止重复点击
+let selectedMsgIndex = -1;
+let msgDetailCache = new Map(); // messageId -> 消息详情（会话内缓存）
+
+function msgTotalPages() {
+    return Math.max(1, Math.ceil(msgTotalCount / MSG_PAGE_SIZE));
+}
+
+// 加载通知列表：复用登录token，从第1页开始
+async function loadMsgData() {
+    const btn = document.getElementById('loadMsgBtn');
+    btn.disabled = true;
+    updateBrowseStatus('正在登录鉴权...', 'checking');
+    try {
+        await ensureLogin();
+        updateBrowseStatus('正在获取通知列表...', 'checking');
+        await fetchMsgPage(1);
+        msgLoaded = true;
+        selectedMsgIndex = -1;
+        resetMsgDetailPanel();
+        renderMsgList();
+        renderMsgPager();
+        if (msgData.length === 0) {
+            updateBrowseStatus('⚠️ 暂无通知消息', 'error');
+        } else {
+            updateBrowseStatus(msgPageStatusText());
+        }
+    } catch (err) {
+        updateBrowseStatus(`❌ 加载失败: ${err.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function msgPageStatusText() {
+    return `已加载第 ${msgPage}/${msgTotalPages()} 页（共 ${msgTotalCount} 条通知），点击消息查看完整内容`;
+}
+
+// 抓取指定页：token 失效自动重登重试一次
+async function fetchMsgPage(page) {
+    const buildUrl = () =>
+        `${MSG_LIST_PATH}?currentPage=${page}&pageSize=${MSG_PAGE_SIZE}&token=${authToken}&companyId=${COMPANY_ID}`;
+    let data = await apiGet(buildUrl());
+    if (isAuthExpired(data)) {
+        clearToken();
+        await ensureLogin(true);
+        data = await apiGet(buildUrl());
+    }
+    if (!data || data.resultCode !== 0) {
+        throw new Error(`获取通知列表失败: ${data?.resultMessage || '未知错误'}`);
+    }
+    msgTotalCount = data.totalCount || 0;
+    msgData = data.resultData || [];
+    msgPage = page;
+    return msgData.length;
+}
+
+// 上一页/下一页/页码下拉跳转
+async function msgGoPage(page) {
+    if (msgPagingBusy) return;
+    const target = Math.min(Math.max(1, page), msgTotalPages());
+    if (target === msgPage) return;
+    msgPagingBusy = true;
+    renderMsgPager();
+    updateBrowseStatus('正在获取通知列表...', 'checking');
+    try {
+        await fetchMsgPage(target);
+        selectedMsgIndex = -1;
+        resetMsgDetailPanel();
+        renderMsgList();
+        updateBrowseStatus(msgPageStatusText());
+    } catch (err) {
+        updateBrowseStatus(`❌ 翻页失败: ${err.message}`, 'error');
+    } finally {
+        msgPagingBusy = false;
+        renderMsgPager();
+    }
+}
+
+// 渲染分页控件：总数超过一页时显示；中间页码可点击弹出页码列表跳转
+function renderMsgPager() {
+    const pager = document.getElementById('msgPager');
+    if (!pager) return;
+    const show = msgLoaded && msgTotalCount > MSG_PAGE_SIZE;
+    pager.style.display = show ? 'flex' : 'none';
+    if (!show) return;
+    const totalPages = msgTotalPages();
+    document.getElementById('msgPgInfo').textContent = `第 ${msgPage}/${totalPages} 页`;
+    document.getElementById('msgPgPrev').disabled = msgPagingBusy || msgPage <= 1;
+    document.getElementById('msgPgNext').disabled = msgPagingBusy || msgPage >= totalPages;
+    // 弹层已打开时同步当前页高亮
+    const pop = document.getElementById('msgPagePop');
+    if (pop) {
+        pop.querySelectorAll('button').forEach((b, i) => b.classList.toggle('cur', i + 1 === msgPage));
+    }
+}
+
+// 点击「第 x/y 页」：弹出/收起页码列表弹层
+function toggleMsgPagePop(ev) {
+    ev.stopPropagation();
+    const pager = document.getElementById('msgPager');
+    if (pager.style.display === 'none') return;
+    const existing = document.getElementById('msgPagePop');
+    if (existing) { existing.remove(); return; }
+    const totalPages = msgTotalPages();
+    const pop = document.createElement('div');
+    pop.className = 'msg-page-pop';
+    pop.id = 'msgPagePop';
+    pop.innerHTML = Array.from({ length: totalPages }, (_, i) =>
+        `<button type="button" class="${i + 1 === msgPage ? 'cur' : ''}" onclick="msgPopGo(${i + 1})">第 ${i + 1} 页</button>`).join('');
+    pager.appendChild(pop);
+    // 让当前页滚动到弹层可视区中间
+    const cur = pop.querySelector('button.cur');
+    if (cur) pop.scrollTop = cur.offsetTop - pop.clientHeight / 2;
+}
+
+// 弹层中选择页码：关闭弹层并跳转
+function msgPopGo(page) {
+    const pop = document.getElementById('msgPagePop');
+    if (pop) pop.remove();
+    msgGoPage(page);
+}
+
+// 点击弹层外部任意位置关闭
+document.addEventListener('click', (ev) => {
+    const pop = document.getElementById('msgPagePop');
+    if (pop && !pop.contains(ev.target)) pop.remove();
+});
+
+// 渲染消息卡片：标题 + 日期 + 内容单行省略
+function renderMsgList() {
+    const listEl = document.getElementById('msgList');
+    if (msgData.length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无数据，点击「加载通知」获取消息列表</div>';
+        return;
+    }
+    listEl.innerHTML = msgData.map((d, i) => `
+        <div class="person-card ${i === selectedMsgIndex ? 'active' : ''}" onclick="selectMsg(${i})">
+            <div class="p-title">${escapeHtml(d.messageTitle || '无标题')}</div>
+            <div class="msg-time">🕐 ${escapeHtml(d.messageTime || '-')}</div>
+            <div class="msg-content">${escapeHtml((d.sendContent || '').replace(/\s+/g, ' ').trim())}</div>
+        </div>`).join('');
+}
+
+// 点击消息：按 messageId 拉取详情并渲染完整内容；forumPostId 非空时提供帖子跳转
+async function selectMsg(i) {
+    selectedMsgIndex = i;
+    enterDetailView('msgWrap');
+    renderMsgList();
+    const d = msgData[i];
+    if (!d) return;
+    const panel = document.getElementById('msgDetailPanel');
+    const cached = msgDetailCache.get(d.messageId);
+    if (cached) { renderMsgDetail(cached); return; }
+    panel.innerHTML = '<div class="empty-tip">⏳ 正在获取消息详情...</div>';
+    try {
+        const detail = await fetchMsgDetail(d.messageId);
+        msgDetailCache.set(d.messageId, detail);
+        if (selectedMsgIndex !== i) return; // 期间已切换
+        renderMsgDetail(detail);
+    } catch (e) {
+        if (selectedMsgIndex !== i) return;
+        panel.innerHTML = `<div class="empty-tip">❌ 获取消息详情失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="selectMsg(${i})">🔄 重试</button></div>`;
+    }
+}
+
+// 获取消息详情（GET getMessageDetail），token 失效自动重登重试一次
+async function fetchMsgDetail(messageId) {
+    const buildUrl = () => `${MSG_DETAIL_PATH}?messageId=${messageId}&token=${authToken}&companyId=${COMPANY_ID}`;
+    let data = await apiGet(buildUrl());
+    if (isAuthExpired(data)) {
+        clearToken();
+        await ensureLogin(true);
+        data = await apiGet(buildUrl());
+    }
+    if (!data || data.resultCode !== 0 || !data.resultData) {
+        throw new Error(data?.resultMessage || '获取消息详情失败');
+    }
+    return data.resultData;
+}
+
+// 渲染消息详情：标题/发送人/时间/完整内容；关联帖子时显示跳转按钮；otherContent 换行追加；资产信息块
+function renderMsgDetail(d) {
+    const panel = document.getElementById('msgDetailPanel');
+    const postLink = d.forumPostId
+        ? `<div style="margin-top:10px;"><button type="button" class="btn btn-primary btn-xs" onclick="openMsgPost(${d.forumPostId})" title="按热点资讯的方式查看该帖子内容">📄 查看相关帖子内容 →</button></div>`
+        : '';
+    // 资产类通知：展示借出资产明细（日期截取 yyyy-mm-dd）
+    const a = d.assetsSitMsgRespDTO;
+    const assetsHtml = a ? `
+        <div class="detail-section" style="margin-top:12px;">
+            <h4>📦 资产信息</h4>
+            <div class="learn-names" style="line-height:2;">
+                资产名称：${escapeHtml(a.assetsName || '-')}<br>
+                资产编号：${escapeHtml(a.assetsCode || '-')}<br>
+                借出人：${escapeHtml(a.trueName || '-')}<br>
+                借出日期：${escapeHtml((a.lendDate || '-').slice(0, 10))}<br>
+                预计归还日期：${escapeHtml((a.expectedReturnDate || '-').slice(0, 10))}<br>
+                备注：${escapeHtml(a.remark || '')}
+            </div>
+        </div>` : '';
+    // otherContent 追加在 messageContent 之后换行显示
+    const contentText = [d.messageContent, d.otherContent].filter(s => s != null && s !== '').join('\n');
+    panel.innerHTML = `
+        <button class="btn-back" onclick="backToMsgList()">← 返回列表</button>
+        <div class="detail-header">
+            <h3>${escapeHtml(d.messageTitle || '无标题')}</h3>
+            <div class="article-meta">发送人：${escapeHtml(d.messageSendUser || '-')} ｜ 时间：${escapeHtml(d.messageTime || '-')}</div>
+            ${postLink}
+        </div>
+        <div class="content" style="margin-top:12px;">${escapeHtml(contentText || '（无内容）')}</div>
+        ${assetsHtml}`;
+    panel.scrollTop = 0;
+}
+
+// 通知关联的帖子：按热点资讯的方式（缓存 → 接口）拉取帖子内容，并在通知面板内展示
+async function openMsgPost(postId) {
+    const panel = document.getElementById('msgDetailPanel');
+    panel.innerHTML = '<div class="empty-tip">⏳ 正在获取帖子内容...</div>';
+    try {
+        let detail = await wrCacheGet(STORE_DETAILS, String(postId));
+        if (!detail) {
+            detail = await fetchNewsDetail(postId);
+            wrCachePutMany(STORE_DETAILS, [[String(postId), detail]]); // 与热点资讯共用详情缓存
+        }
+        rememberDetail(postId, detail);
+        renderNewsDetail(detail, 'msgDetailPanel', {
+            noLearn: true,
+            backHtml: '<button class="btn-back always" onclick="backToMsgDetail()">← 返回原通知</button>'
+        });
+    } catch (e) {
+        panel.innerHTML = `<div class="empty-tip">❌ 获取帖子内容失败：${escapeHtml(e.message)}<br><button class="btn btn-primary btn-xs" style="margin-top:10px" onclick="openMsgPost(${postId})">🔄 重试</button></div>`;
+    }
+}
+
+// 从帖子内容返回消息详情
+function backToMsgDetail() {
+    const d = msgData[selectedMsgIndex];
+    const detail = d && msgDetailCache.get(d.messageId);
+    if (detail) renderMsgDetail(detail);
+    else resetMsgDetailPanel();
+}
+
+function backToMsgList() {
+    leaveDetailView('msgWrap');
+    selectedMsgIndex = -1;
+    resetMsgDetailPanel();
+}
+
+function resetMsgDetailPanel() {
+    document.getElementById('msgDetailPanel').innerHTML =
+        '<div class="empty-tip">👈 点击左侧消息查看完整内容</div>';
 }
 
 // ==================== 热点资讯 ====================
@@ -2257,12 +2574,18 @@ function backToNewsList() {
 }
 
 // 渲染文章详情：大类>子类、标题、作者、发布时间、富文本正文（保留原始格式）、已学习名单占位
-function renderNewsDetail(d) {
-    const panel = document.getElementById('newsDetailPanel');
+// panelId/backHtml/noLearn：供通知视图复用（在通知面板展示帖子内容、自定义返回按钮、不渲染已学习名单）
+function renderNewsDetail(d, panelId = 'newsDetailPanel', opts = {}) {
+    const panel = document.getElementById(panelId);
     const cat = [d.parentPlateName, d.plateName].filter(Boolean).join(' > ');
     const contentHtml = sanitizeArticleHtml(d.content || '');
+    const learnHtml = opts.noLearn ? '' : `
+        <div class="learn-section" id="learnSection" data-postid="${d.postId}">
+            <h4>📖 已学习（<span id="learnCount">-</span>）</h4>
+            <div class="learn-names" id="learnNames"><span style="color:#bbb">名单加载中...</span></div>
+        </div>`;
     panel.innerHTML = `
-        <button class="btn-back" onclick="backToNewsList()">← 返回列表</button>
+        ${opts.backHtml || '<button class="btn-back" onclick="backToNewsList()">← 返回列表</button>'}
         <div class="detail-header">
             ${cat ? `<div class="news-cat">${escapeHtml(cat)}</div>` : ''}
             <h3>${escapeHtml(d.title || '无标题')}</h3>
@@ -2276,10 +2599,7 @@ function renderNewsDetail(d) {
             </div>
         </div>
         <div class="article-body">${contentHtml || '<span style="color:#bbb">（无内容）</span>'}</div>
-        <div class="learn-section" id="learnSection" data-postid="${d.postId}">
-            <h4>📖 已学习（<span id="learnCount">-</span>）</h4>
-            <div class="learn-names" id="learnNames"><span style="color:#bbb">名单加载中...</span></div>
-        </div>
+        ${learnHtml}
     `;
     panel.scrollTop = 0;
 }
