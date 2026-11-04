@@ -485,10 +485,11 @@
                         </div>
                         <!-- 批量查询控制：并发数/每页条数/实时刷新开关（默认关闭，大数据量建议查询完成后统一显示） -->
                         <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <label for="fuConcurrency" style="font-weight: bold; color: #555; margin: 0;">并发数:</label>
-                            <select id="fuConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                            <label for="fuConcurrency" style="font-weight: bold; color: #555; margin: 0; display: none;">并发数:</label>
+                            <select id="fuConcurrency" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px; display: none;">
+                                <option value="1" selected>1</option>
                                 <option value="5">5</option>
-                                <option value="10" selected>10</option>
+                                <option value="10">10</option>
                                 <option value="20">20</option>
                                 <option value="30">30</option>
                             </select>
@@ -4215,10 +4216,7 @@ function exportRegisteredUsers() {
         
         // 统一的查询函数，处理单个ID的三级查询
         async function queryFollowUpInfo(userId, token) {
-            // 检查缓存中是否已有结果
-            if (followUpInfoCache.has(userId)) {
-                return followUpInfoCache.get(userId);
-            }
+            // 不再读缓存：每次都重新查询（仍会写入缓存供套餐tab单条补查使用）
             
             // 处理手机号格式：去除+86或0086，并去除空格
             let processedValue = userId.toString().replace(/\+/g, '').replace(/\s+/g, '');
@@ -4331,18 +4329,18 @@ function exportRegisteredUsers() {
                     };
                 } else {
                     // 第一次查询未找到信息，进行二次查询
-                    try {
-                        // 构建二次查询的payload
+                    // 二次查询封装：listType 1=公海在池客户（当前归属），listType 2=跟进记录
+                    const queryFollowList = async (listType, remarkPrefix) => {
                         const secondaryPayload = {
-                            "listType": 2,
+                            "listType": listType,
                             "sortType": 1,
                             "userBindType": 1,
                             "sortItem": 3,
-                            "packagePast": "",
-                            "finalActiveStartTime": "",
-                            "finalActiveEndTime": "",
                             "seaNotDealNum": "",
                             "contactType": "",
+                            "finalActiveStartTime": "",
+                            "finalActiveEndTime": "",
+                            "packagePast": "",
                             "seaNotInteractNum": "",
                             "shareUserId": "",
                             "getTrialClass": "",
@@ -4362,10 +4360,12 @@ function exportRegisteredUsers() {
                             "feedbackType": "",
                             "salesmanTalkId": "",
                             "isHasShareUserId": "",
+                            "changeReason": "",
+                            "status": "",
                             "currPage": 0,
                             "pageSize": 10
                         };
-                        
+
                         const secondaryResponse = await fetchWithRetry('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
                             method: 'POST',
                             headers: {
@@ -4382,57 +4382,61 @@ function exportRegisteredUsers() {
                             body: JSON.stringify(secondaryPayload),
                             credentials: 'include'
                         });
-                        
+
                         lastResponseTime = secondaryResponse.responseTime || 0;
                         await dynamicDelay(lastResponseTime);
-                        
+
                         const secondaryData = await secondaryResponse.json();
-                        
-                        if (secondaryData.resultCode === 0 && secondaryData.resultData && secondaryData.resultData.length > 0) {
-                            const followRecord = secondaryData.resultData[0];
-                            let staffName = '-';
-                            let staffUserId = '-';
-                            let staffTalkId = '-';
-                            let remark = '二次查询获取';
-                            let foundValidInfo = false;
-                            
-                            // 检查是否有有效的顾问信息
-                            if (followRecord.staffName) {
-                                // 最新记录有顾问信息
-                                staffName = followRecord.staffName || '-';
-                                staffUserId = followRecord.staffUserId || '-';
-                                staffTalkId = followRecord.staffTalkId || '-';
-                                foundValidInfo = true;
-                            }
-                            
-                            // 收集所有staffName不为空的记录，格式化为日期+跟进人
-                            const staffRecords = secondaryData.resultData.filter(record => record.staffName);
-                            if (staffRecords.length > 0) {
-                                const formattedRecords = staffRecords.map(record => {
-                                    // 格式化日期为yyyy-mm-dd
-                                    const date = new Date(record.createTime);
-                                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                                    return `${formattedDate}:${record.staffName}`;
-                                }).join(', ');
-                                
-                                // 添加到备注中
-                                remark = `二次查询获取，${formattedRecords}`;
-                            }
-                            
-                            if (foundValidInfo) {
-                                result = {
-                                    userId: userId,
-                                    staffName: staffName,
-                                    staffUserId: staffUserId,
-                                    staffTalkId: staffTalkId,
-                                    remark: remark
-                                };
-                            } else {
-                                // 二次查询未找到有效的顾问信息，进行第三次查询
-                                await performThirdQuery(processedValue, token);
-                            }
+                        if (!(secondaryData.resultCode === 0 && secondaryData.resultData && secondaryData.resultData.length > 0)) {
+                            return null;
+                        }
+
+                        const followRecord = secondaryData.resultData[0];
+                        let staffName = '-';
+                        let staffUserId = '-';
+                        let staffTalkId = '-';
+                        let remark = remarkPrefix;
+                        let foundValidInfo = false;
+
+                        // 检查是否有有效的顾问信息
+                        if (followRecord.staffName) {
+                            staffName = followRecord.staffName || '-';
+                            staffUserId = followRecord.staffUserId || '-';
+                            staffTalkId = followRecord.staffTalkId || '-';
+                            foundValidInfo = true;
+                        }
+
+                        // 收集所有staffName不为空的记录，格式化为日期+跟进人
+                        const staffRecords = secondaryData.resultData.filter(record => record.staffName);
+                        if (staffRecords.length > 0) {
+                            const formattedRecords = staffRecords.map(record => {
+                                // 格式化日期为yyyy-mm-dd
+                                const date = new Date(record.createTime);
+                                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                                return `${formattedDate}:${record.staffName}`;
+                            }).join(', ');
+
+                            // 添加到备注中
+                            remark = `${remarkPrefix}，${formattedRecords}`;
+                        }
+
+                        if (!foundValidInfo) return null;
+                        return {
+                            userId: userId,
+                            staffName: staffName,
+                            staffUserId: staffUserId,
+                            staffTalkId: staffTalkId,
+                            remark: remark
+                        };
+                    };
+
+                    try {
+                        // 先查listType 1（当前归属），查不到再查listType 2（跟进记录），都无有效数据才降级第三次查询
+                        const followResult = await queryFollowList(1, '二次查询获取')
+                            || await queryFollowList(2, '二次查询获取(跟进记录)');
+                        if (followResult) {
+                            result = followResult;
                         } else {
-                            // 二次查询失败，进行第三次查询
                             await performThirdQuery(processedValue, token);
                         }
                     } catch (secondaryError) {
@@ -4787,7 +4791,8 @@ function exportRegisteredUsers() {
                 if (!firstIndexOf.has(id)) firstIndexOf.set(id, idx);
             });
 
-            const concurrency = parseInt(document.getElementById('fuConcurrency').value) || 10;
+            // 强制串行查询（并发数固定为1）：并发请求会触发服务器限流，导致降级查询链走到不同层级，批量与手动结果不一致
+            const concurrency = 1;
             // 实时刷新开关：默认关闭（查询过程中只更新进度文字，不重绘表格，降低资源占用）
             const liveRefresh = document.getElementById('fuLiveRefresh').checked;
 
@@ -4842,17 +4847,18 @@ function exportRegisteredUsers() {
                     nextIndex++;
                     try {
                         const result = await queryFollowUpInfo(uniqueIds[index], token);
-                        fuResults.push(result);
+                        // 必须按ID下标写入：worker并发完成顺序随机，push会导致结果与fuRowIndices错位
+                        fuResults[index] = result;
                         if (fuIsFailedResult(result)) fuSubQueryFailures++;
                     } catch (error) {
                         // 失败计数聚合，不逐条console.error刷屏
-                        fuResults.push({
+                        fuResults[index] = {
                             userId: uniqueIds[index],
                             staffName: '-',
                             staffUserId: '-',
                             staffTalkId: '-',
                             remark: '查询失败'
-                        });
+                        };
                         fuSubQueryFailures++;
                     }
                     completed++;
@@ -5593,17 +5599,17 @@ function exportRegisteredUsers() {
                 } else {
                     // 第一次查询未找到信息，进行二次查询
                     try {
-                        // 构建二次查询的payload
-                        const secondaryPayload = {
-                            "listType": 2,
+                        // 二次查询：依次尝试 listType 1（公海在池客户，当前归属）与 listType 2（跟进记录），查到有效顾问信息即停
+                        const buildFollowPayload = (listType) => ({
+                            "listType": listType,
                             "sortType": 1,
                             "userBindType": 1,
                             "sortItem": 3,
-                            "packagePast": "",
-                            "finalActiveStartTime": "",
-                            "finalActiveEndTime": "",
                             "seaNotDealNum": "",
                             "contactType": "",
+                            "finalActiveStartTime": "",
+                            "finalActiveEndTime": "",
+                            "packagePast": "",
                             "seaNotInteractNum": "",
                             "shareUserId": "",
                             "getTrialClass": "",
@@ -5623,36 +5629,47 @@ function exportRegisteredUsers() {
                             "feedbackType": "",
                             "salesmanTalkId": "",
                             "isHasShareUserId": "",
+                            "changeReason": "",
+                            "status": "",
                             "currPage": 0,
                             "pageSize": 10
-                        };
-                        
-                        // 发送二次查询请求
-                        const secondaryResponse = await fetchWithRetry('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json, text/plain, */*',
-                                'User-Agent': navigator.userAgent,
-                                'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
-                                'Origin': 'https://www.talk915.com',
-                                'Sec-Fetch-Dest': 'empty',
-                                'Sec-Fetch-Mode': 'cors',
-                                'Sec-Fetch-Site': 'same-origin',
-                                'token': token
-                            },
-                            body: JSON.stringify(secondaryPayload),
-                            credentials: 'include'
                         });
+
+                        let secondaryData = null;
+                        let remarkPrefix = '二次查询获取';
+                        for (const lt of [1, 2]) {
+                            // 发送二次查询请求
+                            const secondaryResponse = await fetchWithRetry('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json, text/plain, */*',
+                                    'User-Agent': navigator.userAgent,
+                                    'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                                    'Origin': 'https://www.talk915.com',
+                                    'Sec-Fetch-Dest': 'empty',
+                                    'Sec-Fetch-Mode': 'cors',
+                                    'Sec-Fetch-Site': 'same-origin',
+                                    'token': token
+                                },
+                                body: JSON.stringify(buildFollowPayload(lt)),
+                                credentials: 'include'
+                            });
+
+                            // 记录响应时间
+                            lastResponseTime = secondaryResponse.responseTime || lastResponseTime;
+
+                            const listData = await secondaryResponse.json();
+                            if (listData.resultCode === 0 && listData.resultData && listData.resultData.length > 0
+                                && listData.resultData.some(record => record.staffName)) {
+                                secondaryData = listData;
+                                if (lt === 2) remarkPrefix = '二次查询获取(跟进记录)';
+                                break;
+                            }
+                        }
                         
-                        // 记录响应时间
-                        lastResponseTime = secondaryResponse.responseTime || lastResponseTime;
-                        
-                        // 解析二次查询响应数据
-                        const secondaryData = await secondaryResponse.json();
-                        
-                        // 处理二次查询结果
-                        if (secondaryData.resultCode === 0 && secondaryData.resultData && secondaryData.resultData.length > 0) {
+                        // 处理二次查询结果（两个listType都没查到时secondaryData为null，直接走第三次查询）
+                        if (secondaryData && secondaryData.resultCode === 0 && secondaryData.resultData && secondaryData.resultData.length > 0) {
                             const followRecord = secondaryData.resultData[0];
                             let foundValidInfo = false;
                             
@@ -5676,7 +5693,7 @@ function exportRegisteredUsers() {
                                 }).join(', ');
                                 
                                 // 添加到备注中
-                                remark = `二次查询获取，${formattedRecords}`;
+                                remark = `${remarkPrefix}，${formattedRecords}`;
                             }
                             
                             if (!foundValidInfo) {
