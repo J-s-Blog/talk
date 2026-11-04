@@ -271,6 +271,8 @@
         /* 文章卡片「已读」徽章（当前登录用户已在已学习名单中） */
         .person-card .p-read { display: inline-block; font-size: 10px; color: #2e7d32; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
         .person-card .p-unk { display: inline-block; font-size: 10px; color: #757575; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 0 5px; margin-right: 5px; vertical-align: 2px; }
+        /* 大列表分段渲染的「加载更多」提示条 */
+        .render-more { text-align: center; font-size: 12px; color: #533483; padding: 10px 0 14px; }
         .news-cat { font-size: 11px; color: #533483; background: #ede7f6; border-radius: 4px; padding: 1px 7px; display: inline-block; margin-bottom: 6px; }
         /* 富文本正文：还原文章原始格式（字体粗细、大小、表格、图片、列表等） */
         .article-body { font-size: 15px; line-height: 1.9; color: #333; word-break: break-word; }
@@ -503,7 +505,7 @@
                         <button type="button" class="btn" onclick="clearNewsSelection()">清空</button>
                         <button type="button" class="btn btn-success" id="newsDownloadBtn" onclick="openPackModal()" disabled title="批量下载所选文章（合并 Word 或 zip 打包）">下载</button>
                     </div>
-                    <div class="person-list" id="newsList">
+                    <div class="person-list" id="newsList" onscroll="onNewsListScroll()">
                         <div class="empty-tip">暂无数据，点击「加载热点资讯」获取文章列表</div>
                     </div>
                     <div class="pager" id="newsPager" style="display:none;">
@@ -1591,7 +1593,7 @@ function switchView(view) {
 // ==================== 热点资讯 ====================
 let newsData = [];        // 文章列表摘要（当前页或全部）
 let selectedNewsIndex = -1;
-let newsDetailCache = {}; // postId -> 详情，避免重复请求
+let newsDetailCache = new Map(); // postId -> 详情（Map 实现 LRU，见 rememberDetail）
 let newsSelectedIds = new Set(); // 批量下载选中的文章（String(postId)，跨筛选/翻页保留）
 const NEWS_PAGE_SIZE = 100; // 分页模式每页条数
 let newsPage = 1;           // 当前页码（分页模式）
@@ -1612,12 +1614,15 @@ let newsPrefetchBusy = false;    // 预读取请求进行中（一次只预读�
 
 // ==================== 本地缓存（IndexedDB）：已读状态 + 已看帖子 ====================
 // 数据量大（帖子内容含富文本），故用 IndexedDB 而非 localStorage。
+// 详情内容存独立 store 且不整批载入内存（内存占用优化）：按需单键读取 + 内存 LRU 上限。
 // readStatus: postId -> { s: true|'self', u: 当前登录用户ID, t: 记录时间 }
-// posts:      postId -> { list: 列表摘要, detail: 已看过的详情内容(可null), t: 记录时间 }
+// posts:      postId -> { list: 列表摘要, t: 记录时间 }
+// details:    postId -> 帖子完整详情（富文本）
 const WR_CACHE_DB = 'wr_cache';
-const WR_CACHE_VER = 1;
+const WR_CACHE_VER = 2;
 const STORE_READ_STATUS = 'readStatus';
 const STORE_POSTS = 'posts';
+const STORE_DETAILS = 'details';
 let wrCacheDb = null;
 
 function openWrCache() {
@@ -1625,10 +1630,25 @@ function openWrCache() {
     if (!('indexedDB' in window)) return Promise.reject(new Error('当前环境不支持 IndexedDB'));
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(WR_CACHE_DB, WR_CACHE_VER);
-        req.onupgradeneeded = () => {
+        req.onupgradeneeded = (ev) => {
             const db = req.result;
             if (!db.objectStoreNames.contains(STORE_READ_STATUS)) db.createObjectStore(STORE_READ_STATUS);
             if (!db.objectStoreNames.contains(STORE_POSTS)) db.createObjectStore(STORE_POSTS);
+            if (!db.objectStoreNames.contains(STORE_DETAILS)) db.createObjectStore(STORE_DETAILS);
+            // v1→v2 迁移：旧版详情存在 posts 里，挪到独立的 details store
+            if (ev.oldVersion < 2 && db.objectStoreNames.contains(STORE_POSTS)) {
+                const posts = req.transaction.objectStore(STORE_POSTS);
+                const details = req.transaction.objectStore(STORE_DETAILS);
+                const c = posts.openCursor();
+                c.onsuccess = () => {
+                    const cur = c.result;
+                    if (!cur) return;
+                    const v = cur.value;
+                    if (v && v.detail) details.put(v.detail, cur.key);
+                    cur.update({ list: v?.list ?? null, t: v?.t ?? Date.now() });
+                    cur.continue();
+                };
+            }
         };
         req.onsuccess = () => { wrCacheDb = req.result; resolve(wrCacheDb); };
         req.onerror = () => reject(req.error || new Error('IndexedDB 打开失败'));
@@ -1648,6 +1668,19 @@ async function wrCachePutMany(store, entries) {
             tx.onerror = () => reject(tx.error);
         });
     } catch (e) { /* 缓存失败不影响功能 */ }
+}
+
+// 读取单条记录
+async function wrCacheGet(store, key) {
+    try {
+        const db = await openWrCache();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readonly');
+            const req = tx.objectStore(store).get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) { return undefined; }
 }
 
 // 读取一个 store 全部记录：返回 [key, value][]
@@ -1679,21 +1712,32 @@ function setNewsRead(postId, val) {
     }
 }
 
-// 启动时从 IndexedDB 恢复：已读状态（仅当前登录用户的记录）+ 已看过的帖子详情
+// 启动时从 IndexedDB 恢复：仅已读状态（仅当前登录用户的记录）。
+// 详情内容不再整批载入内存（数千篇富文本可达数百MB），改为打开帖子时按需单键读取
 async function loadNewsCache() {
-    const [readRows, postRows] = await Promise.all([wrCacheGetAll(STORE_READ_STATUS), wrCacheGetAll(STORE_POSTS)]);
+    const readRows = await wrCacheGetAll(STORE_READ_STATUS);
     readRows.forEach(([key, v]) => {
         if (v && v.u === currentUserId && (v.s === true || v.s === 'self')) newsReadMap.set(String(key), v.s);
-    });
-    postRows.forEach(([key, v]) => {
-        if (v && v.detail) newsDetailCache[v.detail.postId ?? key] = v.detail;
     });
     if (newsData.length) renderNewsList(); // 已有列表在显示时刷新徽章/未读筛选
 }
 
-// 已显示的帖子摘要 + 已抓取的详情落库（newsDetailCache 常驻内存，确保不覆盖已有详情）
+// 帖子详情内存缓存 LRU 上限：超出后淘汰最旧的条目（IDB 里仍有持久化，需要时会再读）
+// 数千篇富文本详情若全部常驻内存可达数百MB，是内存占用的主要来源之一
+const NEWS_DETAIL_MEM_MAX = 150;
+function rememberDetail(postId, detail) {
+    const key = String(postId);
+    newsDetailCache.delete(key); // 先删再放，保证 Map 迭代顺序 = 最近使用顺序
+    newsDetailCache.set(key, detail);
+    while (newsDetailCache.size > NEWS_DETAIL_MEM_MAX) {
+        const oldest = newsDetailCache.keys().next().value;
+        newsDetailCache.delete(oldest);
+    }
+}
+
+// 已显示的帖子列表摘要落库（详情另存 details store，见 selectNews/fetchNewsDetail 调用处）
 function cacheListRecords(records) {
-    const entries = records.map(d => [String(d.postId), { list: d, detail: newsDetailCache[d.postId] || null, t: Date.now() }]);
+    const entries = records.map(d => [String(d.postId), { list: d, t: Date.now() }]);
     wrCachePutMany(STORE_POSTS, entries);
 }
 
@@ -1901,6 +1945,7 @@ async function newsGoPage(page) {
         selectedNewsIndex = -1;
         leaveDetailView('newsWrap');
         resetNewsDetailPanel();
+        resetNewsRenderLimit();
         renderNewsList();
         renderNewsPager();
         updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`);
@@ -1918,6 +1963,7 @@ async function newsGoPage(page) {
         selectedNewsIndex = -1;
         leaveDetailView('newsWrap');
         resetNewsDetailPanel();
+        resetNewsRenderLimit();
         renderNewsList();
         renderNewsPager();
         updateBrowseStatus(`✅ ${newsPageStatusText()}，点击文章查看内容`);
@@ -1952,6 +1998,7 @@ function syncNewsAfterLoad() {
     resetNewsDetailPanel();
     document.getElementById('newsSearch').value = '';
     newsSelectedIds.clear(); // 重新加载/切换分页模式：筛选上下文已重置，清空已选状态
+    resetNewsRenderLimit();
     renderNewsList();
     renderNewsPager();
 }
@@ -1977,6 +2024,12 @@ function getFilteredNewsItems() {
         });
 }
 
+// 大列表分段渲染：「全部」模式近3000张卡片一次性渲染会占用大量DOM内存（数百MB），
+// 每次只渲染前 newsRenderLimit 张，滚动到底部自动追加下一批
+let newsRenderLimit = 300;
+const NEWS_RENDER_CHUNK = 300;
+function resetNewsRenderLimit() { newsRenderLimit = NEWS_RENDER_CHUNK; }
+
 function renderNewsList(keepScroll) {
     const listEl = document.getElementById('newsList');
     const prevScroll = listEl.scrollTop; // 渐进重绘时恢复滚动位置，避免浏览被打断
@@ -1986,10 +2039,14 @@ function renderNewsList(keepScroll) {
         return;
     }
     const items = getFilteredNewsItems();
+    const visible = items.slice(0, newsRenderLimit);
+    const moreHtml = items.length > visible.length
+        ? `<div class="render-more" id="newsRenderMore">⬇️ 已显示 ${visible.length} / ${items.length} 篇，滚动加载更多...</div>`
+        : (visible.length > 0 ? `<div class="render-more" style="color:#999">已显示全部 ${items.length} 篇</div>` : '');
 
     listEl.innerHTML = items.length === 0
         ? '<div class="empty-tip">未找到匹配文章</div>'
-        : items.map(({ d, i }) => `
+        : visible.map(({ d, i }) => `
             <div class="person-card ${i === selectedNewsIndex ? 'active' : ''} ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''}" onclick="selectNews(${i})">
                 <label class="news-check" title="选择文章（批量下载用）" onclick="event.stopPropagation()">
                     <input type="checkbox" ${newsSelectedIds.has(String(d.postId)) ? 'checked' : ''} onchange="onNewsCheck(this, '${String(d.postId)}')">
@@ -1999,11 +2056,34 @@ function renderNewsList(keepScroll) {
                     ${escapeHtml(d.userName || '-')} · ${escapeHtml((d.createTime || '').slice(0, 10))}<br>
                     👁 ${d.readNum} 阅读 · 👍 ${d.likedNum} 点赞
                 </div>
-            </div>`).join('');
+            </div>`).join('') + moreHtml;
     if (keepScroll && prevScroll) listEl.scrollTop = prevScroll;
     updateNewsBulkBar();
     // 批量检查进行中时不覆盖状态栏（检查进度由 worker 统一维护，完成后此处再恢复筛选提示）
     if (!newsReadChecking) syncFilterStatus('news');
+}
+
+// 列表滚动到底部附近时追加渲染下一批卡片（内存优化：DOM 节点数只随实际浏览量增长）
+function onNewsListScroll() {
+    const listEl = document.getElementById('newsList');
+    const items = getFilteredNewsItems();
+    if (newsRenderLimit >= items.length) return;
+    if (listEl.scrollTop + listEl.clientHeight < listEl.scrollHeight - 500) return;
+    newsRenderLimit += NEWS_RENDER_CHUNK;
+    renderNewsList(true);
+}
+
+// 筛选条件（搜索关键词/只看置顶）变更：清空已选状态，保证与当前列表同步
+function onNewsFilterChange() {
+    if (newsSelectedIds.size > 0) newsSelectedIds.clear();
+    resetNewsRenderLimit();
+    renderNewsList();
+    const unreadOn = document.getElementById('unreadFilter')?.checked;
+    if (unreadOn) {
+        refreshNewsReadStatus(); // 勾选「只看未读」时才开始检查已读状态
+    } else {
+        newsReadCheckSeq++; // 取消勾选：使进行中的检查批次失效，worker 循环随即退出，不再发请求
+    }
 }
 
 // 复选框勾选/取消：只更新计数与卡片样式，不整列重绘（保持列表滚动位置）
@@ -2126,18 +2206,6 @@ function exportNewsAuthorStats() {
     XLSX.writeFile(wb, filename);
 }
 
-// 筛选条件（搜索关键词/只看置顶）变更：清空已选状态，保证与当前列表同步
-function onNewsFilterChange() {
-    if (newsSelectedIds.size > 0) newsSelectedIds.clear();
-    renderNewsList();
-    const unreadOn = document.getElementById('unreadFilter')?.checked;
-    if (unreadOn) {
-        refreshNewsReadStatus(); // 勾选「只看未读」时才开始检查已读状态
-    } else {
-        newsReadCheckSeq++; // 取消勾选：使进行中的检查批次失效，worker 循环随即退出，不再发请求
-    }
-}
-
 // 点击文章：按需抓取详情（缓存），并自动获取已学习清单/标记已读，再渲染富文本内容
 async function selectNews(index) {
     selectedNewsIndex = index;
@@ -2146,17 +2214,21 @@ async function selectNews(index) {
     const d = newsData[index];
     if (!d) return;
     const panel = document.getElementById('newsDetailPanel');
-    if (newsDetailCache[d.postId]) {
-        renderNewsDetail(newsDetailCache[d.postId]);
+    const memDetail = newsDetailCache.get(String(d.postId));
+    if (memDetail) {
+        renderNewsDetail(memDetail);
         ensureLearnList(d.postId); // 已缓存详情时后台刷新清单，不阻塞渲染
         return;
     }
     panel.innerHTML = `<div class="empty-tip">⏳ 正在获取文章内容...</div>`;
     try {
-        const detail = await fetchNewsDetail(d.postId);
-        newsDetailCache[d.postId] = detail;
-        // 已看过的帖子内容持久化到 IndexedDB，下次打开（含跨会话）秒开
-        wrCachePutMany(STORE_POSTS, [[String(d.postId), { list: d, detail, t: Date.now() }]]);
+        // 三级获取：内存 LRU → IndexedDB（跨会话持久化，按需读取避免大批常驻内存）→ 网络
+        let detail = await wrCacheGet(STORE_DETAILS, String(d.postId));
+        if (!detail) {
+            detail = await fetchNewsDetail(d.postId);
+            wrCachePutMany(STORE_DETAILS, [[String(d.postId), detail]]); // 已看过的帖子内容持久化，下次打开（含跨会话）秒开
+        }
+        rememberDetail(d.postId, detail);
         if (selectedNewsIndex !== index) return; // 期间已切换
         renderNewsDetail(detail);
         ensureLearnList(d.postId); // 打开文章后自动执行：获取已学习清单 + 未读时标记已读
@@ -2218,15 +2290,16 @@ async function ensureLearnList(postId) {
     try {
         let users = await fetchLearnList(postId);
         // 登录用户ID未知（旧缓存token未记录ID）时，通过 isCurrentPerson 兜底判断
+        const cachedDetail = newsDetailCache.get(String(postId));
         const selfKnown = currentUserId != null;
         const selfLearned = selfKnown
             ? users.some(u => Number(u.userId) === Number(currentUserId))
-            : (newsDetailCache[postId]?.isCurrentPerson === 1);
+            : (cachedDetail?.isCurrentPerson === 1);
         // 文章作者是登录用户本人时，不调用标记已读
-        const isSelfAuthor = selfKnown && Number(newsDetailCache[postId]?.postUserId) === Number(currentUserId);
+        const isSelfAuthor = selfKnown && Number(cachedDetail?.postUserId) === Number(currentUserId);
         // 顺带学习自己的用户名（详情含作者名时），兜底用于列表识别自己发的帖子
-        if (isSelfAuthor && !currentUserName && newsDetailCache[postId]?.postUserName) {
-            currentUserName = newsDetailCache[postId].postUserName;
+        if (isSelfAuthor && !currentUserName && cachedDetail?.postUserName) {
+            currentUserName = cachedDetail.postUserName;
         }
         // 同步已读缓存：自己发的记为 'self'（不显示已读徽章、也不算未读），已学习记为 true（均持久化）
         if (isSelfAuthor) setNewsRead(postId, 'self');
@@ -2592,7 +2665,7 @@ async function downloadNewsWordById(postId) {
     setNewsExportButtonsDisabled(true);
     try {
         updateBrowseStatus('正在生成 Word（图片内嵌中）...', 'checking');
-        let detail = newsDetailCache[postId];
+        let detail = newsDetailCache.get(String(postId));
         if (!detail) detail = await fetchNewsDetail(postId);
         const bodyHtml = await inlineArticleImages(sanitizeArticleHtml(detail.content || ''));
         const inner = buildArticleExportHtml(detail, { bodyHtml });
@@ -2660,10 +2733,10 @@ async function runNewsExport(tasks, mode, fileBase) {
             progressFill.style.width = pct + '%';
             progressText.textContent = `正在获取文章内容: ${i + 1}/${total}（${pct}%）- ${t.title || t.postId}`;
             try {
-                let detail = newsDetailCache[t.postId];
+                let detail = newsDetailCache.get(String(t.postId));
                 if (!detail) {
                     detail = await fetchNewsDetail(t.postId);
-                    newsDetailCache[t.postId] = detail;
+                    rememberDetail(t.postId, detail);
                     await sleep(300 + Math.random() * 300);
                 }
                 const bodyHtml = await inlineArticleImages(sanitizeArticleHtml(detail.content || ''));
