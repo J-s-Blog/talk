@@ -2627,17 +2627,17 @@
                         : []
                 }));
         }
-        function mtNowStr() {
-            const d = new Date();
-            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-        }
         // 区分失败原因：TypeError 通常是 CORS 跨域拦截或网络不通
         function mtNetErrMsg(e) {
             return e instanceof TypeError ? '连接失败(CORS/网络)' : '网络错误';
         }
+        // 状态文字未变化时跳过 DOM 写入，避免每次轮询都触发重排
         function mtSetStatus(text, cls) {
             const el = document.getElementById('mt-sync-status');
             if (!el) return;
+            if (el.dataset.text === text && el.dataset.cls === (cls || '')) return;
+            el.dataset.text = text;
+            el.dataset.cls = cls || '';
             el.innerText = text;
             el.className = 'mt-sync' + (cls ? ' ' + cls : '');
         }
@@ -2657,14 +2657,14 @@
 
                 const csig = mtSignature(cloud);
                 const lsig = mtSignature(mtState.tasks);
-                if (csig === lsig) { mtSetStatus('已同步 ' + mtNowStr(), 'ok'); return 'same'; }
+                if (csig === lsig) { mtSetStatus('已同步', 'ok'); return 'same'; }
                 if (csig === mtState.ssig) { if (showStatus) mtSetStatus('本地有修改待推送', ''); return 'waitpush'; }
                 if (lsig === mtState.ssig) {
                     // 本地无未上传修改 → 云端较新，静默应用
                     mtState.tasks = cloud;
                     mtState.ssig = csig;
                     renderMiniTodoPanel();
-                    mtSetStatus('已从云端更新 ' + mtNowStr(), 'ok');
+                    mtSetStatus('已从云端更新', 'ok');
                     return 'applied';
                 }
                 mtShowConflict(cloud, csig); // 三者互不相等 → 冲突
@@ -2695,7 +2695,7 @@
                 }
                 if (res.ok) {
                     mtState.ssig = mtSignature(mtState.tasks);
-                    mtSetStatus('已推送 ' + mtNowStr(), 'ok');
+                    mtSetStatus('已推送', 'ok');
                 } else {
                     mtSetStatus('推送失败 (' + res.status + ')', 'err');
                 }
