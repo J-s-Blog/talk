@@ -1080,6 +1080,11 @@
 
     <!-- 主应用视图 -->
     <div id="app-view" class="app-layout hidden">
+        <!-- 手机端：任务 / 待办 切换 tab（置顶，切换时不遮挡日历） -->
+        <div id="mobile-mode-tabs" class="mobile-mode-tabs">
+            <button id="mtab-tasks" class="active" onclick="switchMobileTab('tasks')">📅 任务</button>
+            <button id="mtab-todo" onclick="switchMobileTab('todo')">✅ 待办</button>
+        </div>
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>📅 日历</h3>
@@ -1136,9 +1141,32 @@
                     </div>
                 </div>
             </div>
+
+            <!-- MiniTodo 待办面板（PC：侧边栏底部；手机：待办 tab 内） -->
+            <div id="mt-panel" class="mt-panel hidden">
+                <div class="mt-panel-header">
+                    <span class="mt-panel-title">✅ MiniTodo</span>
+                    <span id="mt-panel-count" class="mt-panel-count"></span>
+                    <div class="mt-panel-actions">
+                        <button class="btn btn-xs btn-secondary" onclick="openMtSettings()" title="同步设置">⚙</button>
+                        <button class="btn btn-xs btn-primary" onclick="openMtTaskModal()" title="新建待办">＋</button>
+                    </div>
+                </div>
+                <div id="mt-filter" class="mt-filter">
+                    <button data-f="pending" class="active" onclick="mtSetFilter('pending')">待完成</button>
+                    <button data-f="done" onclick="mtSetFilter('done')">已完成</button>
+                    <button data-f="all" onclick="mtSetFilter('all')">全部</button>
+                </div>
+                <div class="mt-panel-sub">
+                    <span id="mt-sync-status" class="mt-sync hidden"></span>
+                    <button class="btn btn-xs btn-secondary" onclick="miniManualSync()" title="立即同步">⟳ 同步</button>
+                </div>
+                <div id="mt-panel-list" class="mt-panel-list"></div>
+            </div>
         </div>
 
         <div class="main-content">
+            <div id="mt-mobile-container"></div>
             <div class="toolbar">
                 <!-- Category Filter remains here -->
                 <div id="category-list" class="category-filter"></div>
@@ -1238,6 +1266,338 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeMonthPicker()">取消</button>
                 <button class="btn btn-primary" onclick="confirmMonthPicker()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MiniTodo 待办编辑弹窗 -->
+    <style>
+        .mt-sync {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            background: var(--border);
+            border-radius: 10px;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+        .mt-sync.ok {
+            color: #065f46;
+            background: #d1fae5;
+        }
+        .mt-sync.err {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+        .mt-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+        .mt-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mt-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            word-break: break-all;
+            min-width: 0;
+        }
+        .mt-text.done {
+            text-decoration: line-through;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        .mt-due {
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .mt-subs {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .mt-sub {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .mt-sub-text {
+            flex: 1;
+            word-break: break-all;
+            min-width: 0;
+        }
+        .mt-sub-text.done {
+            text-decoration: line-through;
+            color: var(--text-light);
+        }
+        .mt-sub-edit {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .mt-sub-edit .input {
+            height: 32px;
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+        .mt-sub-done {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .mt-hint {
+            font-size: 12px;
+            color: var(--text-light);
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 10px;
+            line-height: 1.7;
+        }
+        .mt-diff-sec {
+            margin-bottom: 10px;
+        }
+        .mt-diff-sec b {
+            font-size: 13px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .mt-diff-item {
+            font-size: 13px;
+            color: var(--text-light);
+            padding: 2px 0 2px 12px;
+            word-break: break-all;
+        }
+        .mt-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+        }
+        .mt-panel-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mt-panel-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .mt-panel-count {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+        }
+        .mt-panel-actions {
+            display: flex;
+            gap: 4px;
+            margin-left: auto;
+        }
+        .mt-filter {
+            display: flex;
+            gap: 4px;
+        }
+        .mt-filter button {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 0;
+            border: 1px solid var(--border);
+            background: var(--card);
+            border-radius: 6px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .mt-filter button.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .mt-panel-sub {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mt-panel-sub .mt-sync {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .mt-panel-sub .btn {
+            flex-shrink: 0;
+        }
+        .mt-panel-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            max-height: 38vh;
+        }
+        .mt-panel .mt-item {
+            padding: 8px 10px;
+            margin-bottom: 0;
+        }
+        .mt-panel .mt-text {
+            font-size: 13px;
+        }
+        .mt-panel-empty {
+            font-size: 12px;
+            color: var(--text-light);
+            text-align: center;
+            padding: 14px 6px;
+            line-height: 1.8;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+        .mobile-mode-tabs {
+            display: none;
+        }
+        #mt-mobile-container {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .mt-main {
+                flex-wrap: wrap;
+            }
+            .mt-main .btn {
+                order: 10;
+            }
+
+            /* 手机端：任务 / 待办 切换 tab */
+            .mobile-mode-tabs {
+                display: flex;
+                gap: 8px;
+                padding: 10px 15px 0;
+            }
+            .mobile-mode-tabs button {
+                flex: 1;
+                padding: 9px 0;
+                border-radius: 10px;
+                border: 1px solid var(--border);
+                background: var(--card);
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text);
+            }
+            .mobile-mode-tabs button.active {
+                background: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
+            }
+            /* 待办 tab：作为独立页面，隐藏日历/侧边栏/任务区，仅顶部 tab + 待办面板 */
+            body:not(.mt-tab-todo) .sidebar .mt-panel {
+                display: none;
+            }
+            body.mt-tab-todo .sidebar,
+            body.mt-tab-todo .toolbar,
+            body.mt-tab-todo .task-area {
+                display: none;
+            }
+            body.mt-tab-todo #mt-mobile-container {
+                display: block;
+            }
+            .mt-panel-list {
+                max-height: none;
+            }
+        }
+    </style>
+
+    <div id="mt-task-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="mt-task-modal-title">新建待办</h3>
+                <button class="modal-close" onclick="closeModal('mt-task-modal')">×</button>
+            </div>
+            <div class="form-group">
+                <label>待办内容</label>
+                <input type="text" id="mt-text" class="input" placeholder="例如：写季度报告">
+            </div>
+            <div class="form-group">
+                <label>截止日期（可选）</label>
+                <input type="date" id="mt-due" class="input">
+            </div>
+            <div class="form-group">
+                <label>子任务</label>
+                <div id="mt-subs-edit"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="mt-delete-task" class="btn btn-danger hidden" onclick="deleteMtTask()">删除</button>
+                <button class="btn btn-primary" onclick="saveMtTask()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MiniTodo WebDAV 同步设置弹窗 -->
+    <div id="mt-settings-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚙ MiniTodo 同步设置</h3>
+                <button class="modal-close" onclick="closeModal('mt-settings-modal')">×</button>
+            </div>
+            <div class="form-group">
+                <label>WebDAV 地址（以 / 结尾）</label>
+                <input type="text" id="mt-url" class="input" placeholder="https://dav.example.com/dav/">
+            </div>
+            <div class="form-group" style="display:flex; gap:10px">
+                <div style="flex:1">
+                    <label>用户名</label>
+                    <input type="text" id="mt-user" class="input" autocomplete="off">
+                </div>
+                <div style="flex:1">
+                    <label>密码</label>
+                    <input type="password" id="mt-pass" class="input" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>远端文件夹名</label>
+                <input type="text" id="mt-dir" class="input" value="miniTodo">
+            </div>
+            <div class="mt-hint">
+                与 MiniTodo 桌面端共用同一 WebDAV 空间，按「实时同步」协议读写
+                <b>&lt;dir&gt;/state.json</b>（与桌面端 autobk=3 完全兼容）。<br>
+                注意：浏览器直连需要 WebDAV 服务器允许跨域访问（CORS）；若本页通过 https 打开，地址也必须为 https。
+            </div>
+            <div id="mt-test-result" class="mt-hint hidden" style="margin-bottom:10px; white-space:pre-line"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="mtTestConnection()">测试连接</button>
+                <button class="btn btn-secondary" onclick="closeModal('mt-settings-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveMtSettings()">保存并连接</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MiniTodo 冲突选择弹窗 -->
+    <div id="mt-conflict-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚠️ 云端与本地均有修改</h3>
+            </div>
+            <div id="mt-conflict-body" style="max-height:320px; overflow:auto"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="mtResolveConflict(false)">保留本地上传</button>
+                <button class="btn btn-primary" onclick="mtResolveConflict(true)">用云端覆盖本地</button>
             </div>
         </div>
     </div>
@@ -1351,6 +1711,10 @@
         function handleLogout() {
             sessionStorage.removeItem('mylist_session');
             state.cryptoKey = null;
+            mtStopSync();          // 停止 MiniTodo WebDAV 轮询/防抖推送
+            mtState.cfg = null;    // 下次登录重新连接（配置仍在 localStorage）
+            document.getElementById('mt-panel')?.classList.add('hidden');
+            switchMobileTab('tasks'); // 复位移动端 tab
             document.getElementById('app-view').classList.add('hidden');
             document.getElementById('auth-view').classList.remove('hidden');
         }
@@ -1364,6 +1728,7 @@
             renderCalendar();
             renderCategories();
             setView('all'); // 初始化：默认「所有」视图 + 「未完成」筛选
+            mtStartup();    // 初始化 MiniTodo 待办面板与 WebDAV 同步
         }
 
         async function loadData() {
@@ -1489,7 +1854,7 @@
             exitTrashMode();
             document.querySelectorAll('.view-switcher button').forEach(b => b.classList.remove('active'));
             document.getElementById(`view-${mode}`).classList.add('active');
-            
+
             const timeNav = document.getElementById('time-nav-container');
             const navDisplay = document.getElementById('time-nav-display');
             const nowBtn = document.getElementById('time-nav-now');
@@ -2197,6 +2562,452 @@
 
             const fileName = `myList_${descPart}_${timeStr}.xlsx`;
             XLSX.writeFile(wb, fileName);
+        }
+
+        // ==================== MiniTodo WebDAV 同步 ====================
+        // 协议依据《MiniTodo WebDAV 同步集成文档》v1.7.0：
+        // 只读写 <url>/<dir>/state.json（实时同步主文件）；推送走 PUT state.tmp + MOVE 原子替换；
+        // 每 30 秒轮询拉取；任务变化后 10 秒防抖推送；指纹判重；双端修改时弹冲突选择框。
+        const MT_CFG_KEY = 'minitodo_webdav_cfg';
+        const mtState = {
+            cfg: null,        // { url, user, pass, dir }，保存在 localStorage
+            tasks: [],        // 与 state.json 同构：[{ text, due, done, subs: [{text,due,done}] }]
+            ssig: '',         // 上次成功推送内容的指纹（内存态）
+            pushTimer: null,  // 10s 防抖定时器
+            pollTimer: null,  // 30s 轮询定时器
+            syncing: false,
+            conflictOpen: false,
+            pendingCloud: null,
+            editingIndex: null,
+            filter: 'pending' // 面板筛选：pending | done | all
+        };
+        let mtEditSubs = [];
+
+        // --- 指纹（内容变 → 指纹变即可，不要求与桌面端一致）---
+        function mtSignature(tasks) {
+            let s = '';
+            for (const t of tasks) {
+                s += (t.text || '') + '\x1f' + (t.due || '') + '\x1f' + (t.done ? '1' : '0') + '\x1e';
+                for (const sub of (t.subs || [])) {
+                    s += (sub.text || '') + '\x1f' + (sub.due || '') + '\x1f' + (sub.done ? '1' : '0') + '\x1e';
+                }
+            }
+            return s;
+        }
+        function mtTaskSig(t) { return mtSignature([t]); }
+
+        function mtLoadCfg() {
+            try { return JSON.parse(localStorage.getItem(MT_CFG_KEY)); } catch { return null; }
+        }
+        function mtSaveCfg(cfg) { localStorage.setItem(MT_CFG_KEY, JSON.stringify(cfg)); }
+
+        // --- WebDAV 请求辅助 ---
+        function mtAuthHeaders(extra = {}) {
+            const h = { ...extra };
+            if (mtState.cfg && (mtState.cfg.user || mtState.cfg.pass)) {
+                h['Authorization'] = 'Basic ' + btoa(unescape(encodeURIComponent(mtState.cfg.user + ':' + mtState.cfg.pass)));
+            }
+            return h;
+        }
+        function mtUrl(name) {
+            const base = mtState.cfg.url.replace(/\/+$/, '');
+            return base + '/' + encodeURIComponent(mtState.cfg.dir || 'miniTodo') + '/' + name;
+        }
+        function mtNormalize(tasks) {
+            return (Array.isArray(tasks) ? tasks : [])
+                .filter(t => t && typeof t.text === 'string')
+                .map(t => ({
+                    text: t.text,
+                    due: typeof t.due === 'string' ? t.due : '',
+                    done: !!t.done,
+                    expanded: false, // 纯 UI 状态不参与同步
+                    subs: Array.isArray(t.subs)
+                        ? t.subs.filter(s => s && typeof s.text === 'string')
+                            .map(s => ({ text: s.text, due: typeof s.due === 'string' ? s.due : '', done: !!s.done }))
+                        : []
+                }));
+        }
+        function mtNowStr() {
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        }
+        // 区分失败原因：TypeError 通常是 CORS 跨域拦截或网络不通
+        function mtNetErrMsg(e) {
+            return e instanceof TypeError ? '连接失败(CORS/网络)' : '网络错误';
+        }
+        function mtSetStatus(text, cls) {
+            const el = document.getElementById('mt-sync-status');
+            if (!el) return;
+            el.innerText = text;
+            el.className = 'mt-sync' + (cls ? ' ' + cls : '');
+        }
+
+        // --- 拉取（云端 → 本地）---
+        // 返回值：'same' | 'waitpush' | 'applied' | 'conflict' | '404' | 'invalid' | 'error'
+        async function mtPull(showStatus = true) {
+            if (!mtState.cfg || mtState.conflictOpen || mtState.syncing) return 'error';
+            try {
+                if (showStatus) mtSetStatus('同步中…', '');
+                const res = await fetch(mtUrl('state.json'), { method: 'GET', headers: mtAuthHeaders(), cache: 'no-store' });
+                if (res.status === 404) { if (showStatus) mtSetStatus('云端为空', 'err'); return '404'; }
+                if (!res.ok) { if (showStatus) mtSetStatus('拉取失败 (' + res.status + ')', 'err'); return 'error'; }
+                let cloud = null;
+                try { cloud = mtNormalize((await res.json()).tasks); }
+                catch { if (showStatus) mtSetStatus('云端数据非法，已忽略', 'err'); return 'invalid'; }
+
+                const csig = mtSignature(cloud);
+                const lsig = mtSignature(mtState.tasks);
+                if (csig === lsig) { if (showStatus) mtSetStatus('已同步 ' + mtNowStr(), 'ok'); return 'same'; }
+                if (csig === mtState.ssig) { if (showStatus) mtSetStatus('本地有修改待推送', ''); return 'waitpush'; }
+                if (lsig === mtState.ssig) {
+                    // 本地无未上传修改 → 云端较新，静默应用
+                    mtState.tasks = cloud;
+                    mtState.ssig = csig;
+                    renderMiniTodoPanel();
+                    if (showStatus) mtSetStatus('已从云端更新 ' + mtNowStr(), 'ok');
+                    return 'applied';
+                }
+                mtShowConflict(cloud, csig); // 三者互不相等 → 冲突
+                return 'conflict';
+            } catch (e) {
+                if (showStatus) mtSetStatus(mtNetErrMsg(e) + '，点「⟳ 同步」重试', 'err');
+                return 'error';
+            }
+        }
+
+        // --- 推送（本地 → 云端，原子写）---
+        async function mtPushNow() {
+            if (!mtState.cfg || mtState.conflictOpen || mtState.syncing) return;
+            mtState.syncing = true;
+            mtSetStatus('推送中…', '');
+            try {
+                const body = JSON.stringify({ tasks: mtState.tasks });
+                const headers = mtAuthHeaders({ 'Content-Type': 'application/json' });
+                let res = await fetch(mtUrl('state.tmp'), { method: 'PUT', headers, body });
+                if (res.ok) {
+                    // MOVE 原子替换（Destination 必须为绝对 URL）
+                    const dest = mtUrl('state.json');
+                    res = await fetch(mtUrl('state.tmp'), { method: 'MOVE', headers: mtAuthHeaders({ 'Destination': dest, 'Overwrite': 'T' }) });
+                }
+                if (!res.ok) {
+                    // 服务器不支持 MOVE → 回退：直接覆盖 PUT state.json
+                    res = await fetch(mtUrl('state.json'), { method: 'PUT', headers, body });
+                }
+                if (res.ok) {
+                    mtState.ssig = mtSignature(mtState.tasks);
+                    mtSetStatus('已推送 ' + mtNowStr(), 'ok');
+                } else {
+                    mtSetStatus('推送失败 (' + res.status + ')', 'err');
+                }
+            } catch (e) {
+                mtSetStatus('推送失败(' + mtNetErrMsg(e) + ')', 'err');
+            } finally {
+                mtState.syncing = false;
+            }
+        }
+        function mtSchedulePush(delay = 10000) {
+            if (!mtState.cfg) return;
+            clearTimeout(mtState.pushTimer);
+            mtState.pushTimer = setTimeout(mtPushNow, delay);
+            mtSetStatus('10 秒后推送…', '');
+        }
+
+        // --- MKCOL 确保工作文件夹存在（405 视为已存在）---
+        async function mtEnsureDir() {
+            try {
+                const res = await fetch(mtUrl(''), { method: 'MKCOL', headers: mtAuthHeaders() });
+                return res.ok || res.status === 405;
+            } catch { return false; }
+        }
+
+        // --- 初始化与轮询 ---
+        async function mtInitSync() {
+            mtSetStatus('连接中…', '');
+            await mtEnsureDir();
+            const r = await mtPull(true);
+            if (r === '404') mtPushNow(); // 云端无主文件 → 推送本地
+            clearInterval(mtState.pollTimer);
+            mtState.pollTimer = setInterval(() => mtPull(false), 30000);
+        }
+        function mtStopSync() {
+            clearInterval(mtState.pollTimer); mtState.pollTimer = null;
+            clearTimeout(mtState.pushTimer); mtState.pushTimer = null;
+            mtState.conflictOpen = false;
+            mtState.pendingCloud = null;
+        }
+
+        // --- 视图入口 / 面板布局 ---
+        // 登录后启动：显示面板，读取 localStorage 配置并开始同步
+        function mtStartup() {
+            const panel = document.getElementById('mt-panel');
+            if (panel) panel.classList.remove('hidden');
+            const cfg = mtLoadCfg();
+            if (cfg && cfg.url) {
+                mtState.cfg = cfg;
+                mtInitSync();
+            } else {
+                renderMiniTodoPanel();
+            }
+            mtPlacePanel();
+        }
+        // 面板摆放：PC 在侧边栏底部；手机「待办」tab 时移入主区容器
+        function mtPlacePanel() {
+            const panel = document.getElementById('mt-panel');
+            if (!panel) return;
+            const mobileBox = document.getElementById('mt-mobile-container');
+            const sidebar = document.querySelector('.app-layout .sidebar');
+            if (window.matchMedia('(max-width: 768px)').matches && state.mobileTab === 'todo') {
+                if (panel.parentElement !== mobileBox) mobileBox.appendChild(panel);
+            } else if (sidebar && panel.parentElement !== sidebar) {
+                sidebar.appendChild(panel);
+            }
+        }
+        // 手机端 任务/待办 tab 切换
+        function switchMobileTab(tab) {
+            state.mobileTab = tab;
+            document.getElementById('mtab-tasks')?.classList.toggle('active', tab === 'tasks');
+            document.getElementById('mtab-todo')?.classList.toggle('active', tab === 'todo');
+            document.body.classList.toggle('mt-tab-todo', tab === 'todo');
+            mtPlacePanel();
+        }
+        // 跨越断点时复位（旋转屏幕/缩放窗口）
+        let mtResizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(mtResizeTimer);
+            mtResizeTimer = setTimeout(() => {
+                if (!window.matchMedia('(max-width: 768px)').matches && state.mobileTab === 'todo') {
+                    switchMobileTab('tasks');
+                }
+                mtPlacePanel();
+            }, 150);
+        });
+        async function miniManualSync() {
+            if (!mtState.cfg) { openMtSettings(); return; }
+            const r = await mtPull(true);
+            if (r === '404' || r === 'waitpush') mtPushNow();
+        }
+
+        // --- 冲突选择框（暂停轮询，直至用户选择）---
+        function mtShowConflict(cloud, csig) {
+            mtState.conflictOpen = true;
+            mtStopSync();
+            const local = mtState.tasks;
+            const cm = new Map(cloud.map(t => [t.text, t]));
+            const lm = new Map(local.map(t => [t.text, t]));
+            const onlyLocal = local.filter(t => !cm.has(t.text));
+            const onlyCloud = cloud.filter(t => !lm.has(t.text));
+            const diff = cloud.filter(t => lm.has(t.text) && mtTaskSig(t) !== mtTaskSig(lm.get(t.text)));
+            const fold = arr => arr.length > 12
+                ? arr.slice(0, 12).concat([{ text: `… 共 ${arr.length} 条，已折叠`, due: '' }])
+                : arr;
+            const sec = (title, arr) => arr.length
+                ? `<div class="mt-diff-sec"><b>${title}</b>` +
+                  fold(arr).map(t => `<div class="mt-diff-item">${escapeHtml(t.text)}${t.due ? '（' + escapeHtml(t.due) + '）' : ''}</div>`).join('') +
+                  '</div>'
+                : '';
+            const html = sec('仅本地有：', onlyLocal) + sec('仅云端有：', onlyCloud) + sec('内容不同：', diff);
+            document.getElementById('mt-conflict-body').innerHTML = html || '<div class="mt-diff-item">无差异</div>';
+            mtState.pendingCloud = { cloud, csig };
+            document.getElementById('mt-conflict-modal').classList.remove('hidden');
+        }
+        function mtResolveConflict(useCloud) {
+            const { cloud, csig } = mtState.pendingCloud;
+            if (useCloud) {
+                mtState.tasks = cloud;
+                mtState.ssig = csig; // 视为已同步
+                mtSetStatus('已用云端覆盖本地', 'ok');
+            } else {
+                mtState.ssig = '';   // 清空指纹 → 立即推送覆盖云端
+            }
+            mtState.conflictOpen = false;
+            mtState.pendingCloud = null;
+            document.getElementById('mt-conflict-modal').classList.add('hidden');
+            renderMiniTodoPanel();
+            if (!useCloud) mtPushNow();
+            clearInterval(mtState.pollTimer);
+            mtState.pollTimer = setInterval(() => mtPull(false), 30000); // 恢复轮询
+        }
+
+        // --- MiniTodo 待办面板渲染 ---
+        const MT_CK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        function mtSetFilter(f) {
+            mtState.filter = f;
+            document.querySelectorAll('#mt-filter button').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+            renderMiniTodoPanel();
+        }
+        function renderMiniTodoPanel() {
+            const list = document.getElementById('mt-panel-list');
+            if (!list) return;
+            const countEl = document.getElementById('mt-panel-count');
+            if (countEl) {
+                const doneN = mtState.tasks.filter(t => t.done).length;
+                countEl.innerText = mtState.cfg
+                    ? `${mtState.tasks.length - doneN}/${doneN}/${mtState.tasks.length}`
+                    : '';
+            }
+
+            if (!mtState.cfg) {
+                list.innerHTML = '<div class="mt-panel-empty">未配置同步<br>点击 ⚙ 填写 WebDAV 设置</div>';
+                return;
+            }
+            // 筛选：待完成 / 已完成 / 全部
+            const shown = mtState.filter === 'all'
+                ? mtState.tasks
+                : mtState.tasks.filter(t => mtState.filter === 'done' ? t.done : !t.done);
+
+            if (!shown.length) {
+                const tip = mtState.tasks.length
+                    ? (mtState.filter === 'done' ? '暂无已完成事项' : '全部待办已完成 🎉')
+                    : '暂无待办<br>点击 ＋ 新建';
+                list.innerHTML = `<div class="mt-panel-empty">${tip}</div>`;
+                return;
+            }
+            list.innerHTML = shown.map(t => {
+                const i = mtState.tasks.indexOf(t);
+                const subs = t.subs || [];
+                const subHtml = subs.length
+                    ? `<div class="mt-subs">${subs.map((s, j) => `
+                        <div class="mt-sub">
+                            <span class="ck ${s.done ? 'on' : ''}" onclick="mtToggleSub(${i},${j})">${MT_CK_SVG}</span>
+                            <span class="mt-sub-text ${s.done ? 'done' : ''}">${escapeHtml(s.text)}</span>
+                            ${s.due ? `<span class="mt-due">${escapeHtml(s.due)}</span>` : ''}
+                        </div>`).join('')}</div>`
+                    : '';
+                return `<div class="mt-item">
+                    <div class="mt-main">
+                        <span class="ck ${t.done ? 'on' : ''}" onclick="mtToggleTask(${i})">${MT_CK_SVG}</span>
+                        <span class="mt-text ${t.done ? 'done' : ''}" onclick="openMtTaskModal(${i})" title="点击编辑">${escapeHtml(t.text)}</span>
+                        ${t.due ? `<span class="mt-due">📅 ${escapeHtml(t.due)}</span>` : ''}
+                    </div>
+                    ${subHtml}
+                </div>`;
+            }).join('');
+        }
+
+        // --- MiniTodo 待办操作（变更后 10 秒防抖推送）---
+        function mtToggleTask(i) {
+            const t = mtState.tasks[i];
+            if (!t) return;
+            t.done = !t.done;
+            renderMiniTodoPanel();
+            mtSchedulePush();
+        }
+        function mtToggleSub(i, j) {
+            const s = mtState.tasks[i] && mtState.tasks[i].subs[j];
+            if (!s) return;
+            s.done = !s.done;
+            renderMiniTodoPanel();
+            mtSchedulePush();
+        }
+        function openMtTaskModal(i = null) {
+            mtState.editingIndex = i;
+            const t = i === null ? { text: '', due: '', subs: [] } : (mtState.tasks[i] || { text: '', due: '', subs: [] });
+            mtEditSubs = (t.subs || []).map(s => ({ text: s.text, due: s.due || '', done: !!s.done }));
+            document.getElementById('mt-task-modal-title').innerText = i === null ? '新建待办' : '编辑待办';
+            document.getElementById('mt-delete-task').classList.toggle('hidden', i === null);
+            document.getElementById('mt-text').value = t.text;
+            document.getElementById('mt-due').value = t.due || '';
+            mtRenderSubs();
+            document.getElementById('mt-task-modal').classList.remove('hidden');
+        }
+        function mtRenderSubs() {
+            document.getElementById('mt-subs-edit').innerHTML = mtEditSubs.map((s, j) => `
+                <div class="mt-sub-edit">
+                    <input class="input" style="flex:1" value="${escapeHtml(s.text)}" placeholder="子任务内容" oninput="mtSubInput(${j},'text',this.value)">
+                    <input class="input" type="date" style="width:150px" value="${escapeHtml(s.due || '')}" onchange="mtSubInput(${j},'due',this.value)">
+                    <label class="mt-sub-done"><input type="checkbox" ${s.done ? 'checked' : ''} onchange="mtSubInput(${j},'done',this.checked)">完成</label>
+                    <button class="btn btn-xs btn-danger" onclick="mtSubRemove(${j})" title="删除子任务">×</button>
+                </div>`).join('') + '<button class="btn btn-xs btn-secondary" onclick="mtSubAdd()">+ 添加子任务</button>';
+        }
+        function mtSubAdd() { mtEditSubs.push({ text: '', due: '', done: false }); mtRenderSubs(); }
+        function mtSubRemove(j) { mtEditSubs.splice(j, 1); mtRenderSubs(); }
+        function mtSubInput(j, key, val) { if (mtEditSubs[j]) mtEditSubs[j][key] = val; }
+        function saveMtTask() {
+            const text = document.getElementById('mt-text').value.trim();
+            if (!text) { alert('请输入待办内容'); return; }
+            const due = document.getElementById('mt-due').value;
+            const item = {
+                text,
+                due,
+                done: mtState.editingIndex !== null ? (mtState.tasks[mtState.editingIndex]?.done || false) : false,
+                subs: mtEditSubs.filter(s => s.text.trim()).map(s => ({ text: s.text.trim(), due: s.due || '', done: !!s.done }))
+            };
+            if (mtState.editingIndex !== null) mtState.tasks[mtState.editingIndex] = item;
+            else mtState.tasks.push(item);
+            document.getElementById('mt-task-modal').classList.add('hidden');
+            renderMiniTodoPanel();
+            mtSchedulePush();
+        }
+        function deleteMtTask() {
+            if (mtState.editingIndex === null) return;
+            if (!confirm('删除该待办？')) return;
+            mtState.tasks.splice(mtState.editingIndex, 1);
+            document.getElementById('mt-task-modal').classList.add('hidden');
+            renderMiniTodoPanel();
+            mtSchedulePush();
+        }
+
+        // --- 同步设置 ---
+        function openMtSettings() {
+            const cfg = mtLoadCfg() || { url: '', user: '', pass: '', dir: 'miniTodo' };
+            document.getElementById('mt-url').value = cfg.url || '';
+            document.getElementById('mt-user').value = cfg.user || '';
+            document.getElementById('mt-pass').value = cfg.pass || '';
+            document.getElementById('mt-dir').value = cfg.dir || 'miniTodo';
+            const out = document.getElementById('mt-test-result');
+            out.classList.add('hidden');
+            out.innerText = '';
+            document.getElementById('mt-settings-modal').classList.remove('hidden');
+        }
+        // 用当前表单值测试连接，报告具体失败原因（不改动已保存配置）
+        async function mtTestConnection() {
+            const out = document.getElementById('mt-test-result');
+            let url = document.getElementById('mt-url').value.trim();
+            if (!/^https?:\/\//i.test(url)) { out.innerText = '❌ 地址需以 http:// 或 https:// 开头'; return; }
+            if (!url.endsWith('/')) url += '/';
+            const prevCfg = mtState.cfg;
+            mtState.cfg = {
+                url,
+                user: document.getElementById('mt-user').value.trim(),
+                pass: document.getElementById('mt-pass').value,
+                dir: (document.getElementById('mt-dir').value.trim() || 'miniTodo').replace(/[\\/]/g, '')
+            };
+            out.classList.remove('hidden');
+            out.innerText = '测试中…';
+            try {
+                const res = await fetch(mtUrl('state.json'), { method: 'GET', headers: mtAuthHeaders(), cache: 'no-store' });
+                if (res.status === 401 || res.status === 403) {
+                    out.innerText = `❌ 认证失败(${res.status})：用户名或密码错误（坚果云等需使用「应用密码」而非登录密码）`;
+                } else if (res.status === 404) {
+                    out.innerText = '✅ 连接成功（云端还没有 state.json，保存后将自动上传创建）';
+                } else if (res.ok) {
+                    out.innerText = '✅ 连接成功，已找到云端 state.json';
+                } else {
+                    out.innerText = `⚠️ 服务器返回 ${res.status}，请检查地址路径与文件夹名`;
+                }
+            } catch (e) {
+                out.innerText = '❌ 无法连接：请求被浏览器拦截（CORS 跨域未放行）或网络不通。\n'
+                    + '网页直连要求 WebDAV 服务端允许跨域；若为 https 页面则地址必须也是 https。';
+            } finally {
+                mtState.cfg = prevCfg;
+            }
+        }
+        async function saveMtSettings() {
+            let url = document.getElementById('mt-url').value.trim();
+            if (!url) { alert('请输入 WebDAV 地址'); return; }
+            if (!/^https?:\/\//i.test(url)) { alert('地址需以 http:// 或 https:// 开头'); return; }
+            if (!url.endsWith('/')) url += '/';
+            const cfg = {
+                url,
+                user: document.getElementById('mt-user').value.trim(),
+                pass: document.getElementById('mt-pass').value,
+                dir: (document.getElementById('mt-dir').value.trim() || 'miniTodo').replace(/[\\/]/g, '')
+            };
+            mtSaveCfg(cfg);
+            document.getElementById('mt-settings-modal').classList.add('hidden');
+            mtState.cfg = cfg;
+            mtStopSync();
+            await mtInitSync();
         }
 
         // Feature 1: Enter key login support
