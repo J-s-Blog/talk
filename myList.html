@@ -2657,20 +2657,20 @@
 
                 const csig = mtSignature(cloud);
                 const lsig = mtSignature(mtState.tasks);
-                if (csig === lsig) { if (showStatus) mtSetStatus('已同步 ' + mtNowStr(), 'ok'); return 'same'; }
+                if (csig === lsig) { mtSetStatus('已同步 ' + mtNowStr(), 'ok'); return 'same'; }
                 if (csig === mtState.ssig) { if (showStatus) mtSetStatus('本地有修改待推送', ''); return 'waitpush'; }
                 if (lsig === mtState.ssig) {
                     // 本地无未上传修改 → 云端较新，静默应用
                     mtState.tasks = cloud;
                     mtState.ssig = csig;
                     renderMiniTodoPanel();
-                    if (showStatus) mtSetStatus('已从云端更新 ' + mtNowStr(), 'ok');
+                    mtSetStatus('已从云端更新 ' + mtNowStr(), 'ok');
                     return 'applied';
                 }
                 mtShowConflict(cloud, csig); // 三者互不相等 → 冲突
                 return 'conflict';
             } catch (e) {
-                if (showStatus) mtSetStatus(mtNetErrMsg(e) + '，点「⟳ 同步」重试', 'err');
+                mtSetStatus(mtNetErrMsg(e) + '，点「⟳ 同步」重试', 'err');
                 return 'error';
             }
         }
@@ -2735,6 +2735,16 @@
             mtState.conflictOpen = false;
             mtState.pendingCloud = null;
         }
+        // 页面重新可见 / 网络恢复 / 窗口聚焦时立即同步（覆盖手机切后台被限流的情况）
+        function mtResumeSync() {
+            if (!mtState.cfg || mtState.conflictOpen || mtState.syncing) return;
+            mtPull(false);
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') mtResumeSync();
+        });
+        window.addEventListener('online', mtResumeSync);
+        window.addEventListener('focus', mtResumeSync);
 
         // --- 视图入口 / 面板布局 ---
         // 登录后启动：显示面板，读取 localStorage 配置并开始同步
