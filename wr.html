@@ -462,10 +462,10 @@
                 <button type="button" id="viewBtnNews" class="view-btn" onclick="switchView('news')">🔥 热点资讯</button>
                 <button type="button" id="viewBtnMsg" class="view-btn" onclick="switchView('msg')">🔔 通知</button>
                 <span class="nav-sep"></span>
-                <button type="button" id="loadBrowseBtn" onclick="loadBrowseData()">📥 加载周报</button>
-                <button type="button" id="tabBtnExport" onclick="runExport()">📤 导出周报</button>
-                <button type="button" id="loadNewsBtn" style="display:none" onclick="loadNewsData()">📥 加载热点资讯</button>
-                <button type="button" id="loadMsgBtn" style="display:none" onclick="loadMsgData()">📥 加载通知</button>
+                <button type="button" id="loadBrowseBtn" onclick="loadBrowseData()">加载</button>
+                <button type="button" id="tabBtnExport" onclick="runExport()">导出</button>
+                <button type="button" id="loadNewsBtn" style="display:none" onclick="loadNewsData()">加载</button>
+                <button type="button" id="loadMsgBtn" style="display:none" onclick="loadMsgData()">加载</button>
                 <select id="newsPageSizeSel" style="display:none" onchange="onNewsPageSizeChange()" title="加载分页：每页100/200/300条可翻页（自动预读取下一页），或一次性加载全部">
                     <option value="100" selected>每页100</option>
                     <option value="200">每页200</option>
@@ -554,7 +554,7 @@
             <div class="browse-wrap" id="msgWrap">
                 <div class="list-side">
                     <div class="person-list" id="msgList">
-                        <div class="empty-tip">暂无数据，点击「加载通知」获取消息列表</div>
+                        <div class="empty-tip">暂无数据，点击「加载」获取消息列表</div>
                     </div>
                     <div class="pager" id="msgPager" style="display:none;">
                         <button type="button" class="pager-btn" id="msgPgPrev" onclick="msgGoPage(msgPage-1)" title="上一页">◀ 上页</button>
