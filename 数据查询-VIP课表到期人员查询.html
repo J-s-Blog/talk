@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP课表到期人员信息查询</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+        /* ===== Tab 导航 ===== */
+        .tab-nav {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-nav .tab-btn {
+            padding: 10px 24px;
+            border: none;
+            background-color: #f8f9fa;
+            color: #333;
+            cursor: pointer;
+            font-size: 15px;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.2s;
+            flex: 1;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .tab-nav .tab-btn.active {
+            background-color: #007bff;
+            color: white;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: -2px;
+        }
+        .tab-nav .tab-btn:hover:not(.active) {
+            background-color: #e9ecef;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* ===== 通用表单 ===== */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="password"], input[type="date"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, input[type="date"]:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        .info-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 3px;
+        }
+        
+        /* ===== 按钮 ===== */
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn-success { background-color: #28a745; }
+        .btn-success:hover:not(:disabled) { background-color: #218838; }
+        .btn-info { background-color: #17a2b8; }
+        .btn-info:hover:not(:disabled) { background-color: #138496; }
+        .btn-warning { background-color: #ffc107; color: #333; }
+        .btn-warning:hover:not(:disabled) { background-color: #e0a800; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover:not(:disabled) { background-color: #c82333; }
+        
+        /* ===== 状态消息 ===== */
+        .status-message {
+            margin-top: 15px;
+            padding: 10px 14px;
+            border-radius: 4px;
+            display: none;
+            font-size: 14px;
+        }
+        .status-success {
+            color: #155724;
+            background-color: #d4edda;
+            display: block;
+            border-left: 4px solid #28a745;
+        }
+        .status-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            display: block;
+            border-left: 4px solid #dc3545;
+        }
+        .status-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            display: block;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        /* ===== 登录区 ===== */
+        .login-section {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .token-section {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .token-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .result-section {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 14px;
+        }
+        .token-display, .userid-display, .response-data {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 13px;
+            border: 1px solid #ddd;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .key-value-pair {
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .key-value-pair .key {
+            font-weight: bold;
+            display: inline-block;
+            width: 110px;
+            color: #555;
+        }
+        .token-help {
+            margin-top: 15px;
+            padding: 12px 15px;
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .token-help h4 {
+            margin: 0 0 8px 0;
+            color: #007bff;
+        }
+        .token-help ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        .token-help ol li {
+            margin-bottom: 4px;
+        }
+        
+        /* ===== 当前登录状态显示 ===== */
+        .current-status {
+            padding: 12px 16px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .current-status.show {
+            display: block;
+        }
+        .current-status.not-logged {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .current-status .cs-title {
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .current-status.not-logged .cs-title {
+            color: #721c24;
+        }
+        .current-status .cs-detail {
+            font-size: 13px;
+            color: #333;
+        }
+        
+        /* ===== 查询区 & 进度条（已移除，保留注释） ===== */
+        
+        /* ===== 表格 ===== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        table th {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            text-align: left;
+            font-weight: bold;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+        }
+        table tbody tr:hover {
+            background-color: #f0f7ff;
+        }
+        .table-container {
+            max-height: 600px;
+            overflow: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .table-container table {
+            min-width: 1200px;
+        }
+        
+        /* ===== 统计信息 ===== */
+        .stats-info {
+            margin-top: 10px;
+            padding: 12px 16px;
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+        }
+        .stats-info strong {
+            color: #007bff;
+            font-size: 16px;
+        }
+        
+        /* ===== 移动端适配 ===== */
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+                padding-bottom: 80px;
+            }
+            h1 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+            .tab-nav .tab-btn {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            table {
+                font-size: 12px;
+            }
+            table th, table td {
+                padding: 5px 6px;
+            }
+            .login-section, .token-section {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VIP课表到期人员信息查询</h1>
+        
+        <!-- 当前登录状态 -->
+        <div id="currentStatus" class="current-status not-logged">
+            <div class="cs-title">⚠️ 未检测到登录状态</div>
+            <div class="cs-detail">请先切换到「登录」Tab完成登录</div>
+        </div>
+        
+        <!-- Tab 导航 -->
+        <div class="tab-nav">
+            <button id="tabLogin" class="tab-btn active">🔐 登录</button>
+            <button id="tabQuery" class="tab-btn">📋 VIP课表到期查询</button>
+        </div>
+        
+        <!-- ============ 登录 Tab ============ -->
+        <div id="loginTab" class="tab-content active">
+            <div class="login-section">
+                <h3 style="margin-top: 0; color: #333;">用户名密码登录</h3>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginId">用户名:</label>
+                        <input type="text" id="loginId" name="loginId" placeholder="请输入管理员账号" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码:</label>
+                        <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                    </div>
+                    <button type="submit" id="loginBtn" style="width: 100%;">登录</button>
+                </form>
+            </div>
+            
+            <div class="token-section">
+                <h3>手动输入Token</h3>
+                <div class="form-group">
+                    <label for="manualToken">Token:</label>
+                    <input type="text" id="manualToken" name="manualToken" style="font-family: monospace; font-size: 13px;" placeholder="请输入从官网获取的token">
+                </div>
+                <div class="form-group">
+                    <label for="manualUserId">用户ID (可选):</label>
+                    <input type="text" id="manualUserId" name="manualUserId" placeholder="请输入用户ID">
+                </div>
+                <button type="button" id="saveTokenBtn" class="btn-success" style="width: 100%;">保存Token到本地</button>
+                
+                <div class="token-help">
+                    <h4>如何获取官网Token：</h4>
+                    <ol>
+                        <li>打开浏览器，访问 <a href="https://www.talk915.com" target="_blank">https://www.talk915.com</a></li>
+                        <li>登录您的管理员账号</li>
+                        <li>按 F12 打开开发者工具</li>
+                        <li>切换到「Network (网络)」标签页</li>
+                        <li>刷新页面或点击任意操作，触发网络请求</li>
+                        <li>在请求列表中找到任意一个请求，点击查看详情</li>
+                        <li>在「Headers (请求头)」部分找到 <code>token</code> 字段</li>
+                        <li>复制 token 的值，粘贴到上方输入框中</li>
+                    </ol>
+                    <p style="margin: 8px 0 0 0;"><strong>注意：</strong> Token 会定期过期，请在过期后重新获取。</p>
+                </div>
+            </div>
+            
+            <!-- 登录结果展示 -->
+            <div id="resultSection" class="result-section" style="display: none;">
+                <div class="result-title">📌 登录结果：</div>
+                <div id="resultMessage"></div>
+                
+                <div style="margin-top: 12px;">
+                    <div class="result-title">Token：</div>
+                    <div id="tokenDisplay" class="token-display"></div>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                    <div class="result-title">用户ID：</div>
+                    <div id="userIdDisplay" class="userid-display"></div>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                    <div class="result-title">用户信息：</div>
+                    <div id="userInfoDisplay" class="response-data"></div>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                    <div class="result-title">完整响应：</div>
+                    <div id="responseData" class="response-data"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ VIP课表查询 Tab ============ -->
+        <div id="queryTab" class="tab-content">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+                <div class="form-group" style="min-width: 150px; flex: 1 1 150px; margin-bottom: 0;">
+                    <label for="startDate">开始日期</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-group" style="min-width: 150px; flex: 1 1 150px; margin-bottom: 0;">
+                    <label for="endDate">结束日期</label>
+                    <input type="date" id="endDate">
+                </div>
+                <button id="queryBtn" style="flex: 0 0 auto;">📊 查询VIP课表到期记录</button>
+                <button id="queryFollowerBtn" class="btn-info" style="flex: 0 0 auto;">👤 查询跟进人信息</button>
+                <button id="exportBtn" class="btn-success" style="flex: 0 0 auto;">⬇️ 导出Excel</button>
+                <button id="clearBtn" class="btn-danger" style="flex: 0 0 auto;">🗑️ 清空</button>
+                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; padding: 10px 12px; background: #fff3cd; border: 1px solid #ffe0a1; border-radius: 4px; white-space: nowrap; flex: 0 0 auto;">
+                    <input type="checkbox" id="exportEmpOnly" checked style="width: auto; margin: 0;">
+                    仅导出<strong>emp</strong>开头
+                </label>
+            </div>
+            
+            <!-- 状态消息 -->
+            <div id="statusMessage" class="status-message"></div>
+            
+            <!-- 统计信息 -->
+            <div id="statsInfo" class="stats-info" style="display: none;"></div>
+            
+            <!-- 表格区域 -->
+            <div id="tableSection" style="display: none;">
+                <h3 style="margin-bottom: 10px; color: #333;">查询结果</h3>
+                <div class="table-container">
+                    <table id="resultTable">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>用户编号 userId</th>
+                                <th>短信内容 smsContent</th>
+                                <th>顾问姓名</th>
+                                <th>顾问ID</th>
+                                <th>顾问empID</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ===== 全局状态 =====
+        let smsRecords = [];
+        let followerInfoCache = new Map();
+        
+        // ===== Tab 切换 =====
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                const tabId = this.id.replace('tab', '').toLowerCase();
+                const targetId = tabId === 'login' ? 'loginTab' : 'queryTab';
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+        
+        // ===== 工具函数 =====
+        function getToken() {
+            return localStorage.getItem('talk915_token') || '';
+        }
+        
+        function updateCurrentStatus() {
+            const statusEl = document.getElementById('currentStatus');
+            const token = getToken();
+            const userId = localStorage.getItem('talk915_userId') || '';
+            const userName = localStorage.getItem('talk915_userName') || '';
+            
+            if (token) {
+                statusEl.className = 'current-status show';
+                const nameDisplay = userName ? ` (${userName})` : '';
+                statusEl.innerHTML = `
+                    <div class="cs-title">✅ 已登录</div>
+                    <div class="cs-detail">用户名ID: <strong>${userId || '未知'}</strong>${nameDisplay} | Token: ${token.substring(0, 16)}...</div>
+                `;
+            } else {
+                statusEl.className = 'current-status show not-logged';
+                statusEl.innerHTML = `
+                    <div class="cs-title">⚠️ 未检测到登录状态</div>
+                    <div class="cs-detail">请先切换到「登录」Tab完成登录</div>
+                `;
+            }
+        }
+        
+        function getYesterdayDateStr() {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            return formatDate(d);
+        }
+        
+        function formatDate(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        
+        function parseDate(str) {
+            const p = str.split('-');
+            return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+        }
+        
+        function generateDateList(startStr, endStr) {
+            const list = [];
+            const cur = parseDate(startStr);
+            const end = parseDate(endStr);
+            while (cur <= end) {
+                list.push(formatDate(cur));
+                cur.setDate(cur.getDate() + 1);
+            }
+            return list;
+        }
+        
+        // ===== 状态/进度 =====
+        function showStatus(msg, type = 'info') {
+            const el = document.getElementById('statusMessage');
+            el.className = `status-message status-${type}`;
+            el.textContent = msg;
+        }
+        
+        // showProgress / hideProgress 已移除，用 status 消息里的 x/y 提示替代
+        function showProgress(cur, total, label) {
+            const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
+            showStatus(`${label}: ${cur}/${total} (${pct}%)`, 'info');
+        }
+        function hideProgress() { /* no-op */ }
+        
+        // ===== 带重试的fetch =====
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            let retries = 0;
+            while (retries < maxRetries) {
+                try {
+                    const resp = await fetch(url, options);
+                    if (resp.status === 429) {
+                        retries++;
+                        if (retries >= maxRetries) return resp;
+                        await new Promise(r => setTimeout(r, 2000 * Math.pow(2, retries - 1)));
+                        continue;
+                    }
+                    return resp;
+                } catch (e) {
+                    retries++;
+                    if (retries >= maxRetries) throw e;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries - 1)));
+                }
+            }
+        }
+        
+        // ============ 登录功能 ============
+        
+        // ===== 独立登录函数（供表单提交 和 URL自动执行 共用） =====
+        async function doLogin(loginId, password) {
+            const resp = await fetch('https://www.talk915.com/users/user/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/plain, */*',
+                    'User-Agent': navigator.userAgent,
+                    'Referer': 'https://www.talk915.com/student/login',
+                    'Origin': 'https://www.talk915.com',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-site'
+                },
+                body: JSON.stringify({ isApp: 2, loginId, loginMode: 1, password }),
+                credentials: 'include'
+            });
+            const data = await resp.json();
+            if (resp.ok && data.resultCode === 0) {
+                const r = data.resultData || {};
+                const token = r.token || '';
+                const userId = r.userId || '';
+                const userName = r.userName || '';
+                localStorage.setItem('talk915_token', token);
+                localStorage.setItem('talk915_userId', userId.toString());
+                localStorage.setItem('talk915_userName', userName);
+                localStorage.setItem('talk915_login_data', JSON.stringify({
+                    loginId, loginTime: new Date().toISOString(),
+                    token, userId, userName, response: data
+                }));
+                updateCurrentStatus();
+                return { success: true, token, userId, userName, raw: data };
+            }
+            return { success: false, msg: data.resultMessage || '登录失败', raw: data };
+        }
+        
+        // 登录表单提交
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loginBtn = document.getElementById('loginBtn');
+            const loginId = document.getElementById('loginId').value;
+            const password = document.getElementById('password').value;
+            const resultSection = document.getElementById('resultSection');
+            const resultMessage = document.getElementById('resultMessage');
+            const tokenDisplay = document.getElementById('tokenDisplay');
+            const userIdDisplay = document.getElementById('userIdDisplay');
+            const userInfoDisplay = document.getElementById('userInfoDisplay');
+            const responseData = document.getElementById('responseData');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            resultSection.style.display = 'none';
+            showStatus('正在发送登录请求...', 'info');
+            
+            try {
+                const res = await doLogin(loginId, password);
+                if (res.success) {
+                    const r = res.raw.resultData || {};
+                    resultMessage.innerHTML = '<span style="color:#155724;font-weight:bold;">✅ 登录成功！</span>';
+                    tokenDisplay.textContent = res.token || '未找到';
+                    userIdDisplay.textContent = res.userId || '未找到';
+                    let infoHtml = '';
+                    infoHtml += `<div class="key-value-pair"><span class="key">用户名:</span><span>${r.userName || '-'}</span></div>`;
+                    infoHtml += `<div class="key-value-pair"><span class="key">用户类型:</span><span>${r.userType || '-'}</span></div>`;
+                    infoHtml += `<div class="key-value-pair"><span class="key">是否机构用户:</span><span>${r.isOrgUser ? '是' : '否'}</span></div>`;
+                    infoHtml += `<div class="key-value-pair"><span class="key">会员状态:</span><span>${r.memberStatus || '-'}</span></div>`;
+                    infoHtml += `<div class="key-value-pair"><span class="key">手机号:</span><span>${r.phone || '-'}</span></div>`;
+                    infoHtml += `<div class="key-value-pair"><span class="key">邮箱:</span><span>${r.email || '-'}</span></div>`;
+                    userInfoDisplay.innerHTML = infoHtml;
+                    responseData.textContent = JSON.stringify(res.raw, null, 2);
+                    resultSection.style.display = 'block';
+                    showStatus('✅ 登录成功，Token已保存！现在切换到「VIP课表到期查询」Tab开始查询吧', 'success');
+                } else {
+                    resultMessage.innerHTML = `<span style="color:#721c24;font-weight:bold;">❌ 登录失败：${res.msg}</span>`;
+                    tokenDisplay.textContent = 'N/A';
+                    userIdDisplay.textContent = 'N/A';
+                    userInfoDisplay.textContent = 'N/A';
+                    responseData.textContent = JSON.stringify(res.raw, null, 2);
+                    resultSection.style.display = 'block';
+                    showStatus('登录失败：' + res.msg, 'error');
+                }
+            } catch (err) {
+                resultMessage.innerHTML = `<span style="color:#721c24;font-weight:bold;">❌ 请求失败：${err.message}</span>`;
+                resultSection.style.display = 'block';
+                showStatus('网络请求出错：' + err.message, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录';
+            }
+        });
+        
+        // 手动输入Token
+        document.getElementById('saveTokenBtn').addEventListener('click', function() {
+            const manualToken = document.getElementById('manualToken').value.trim();
+            const manualUserId = document.getElementById('manualUserId').value.trim();
+            
+            if (!manualToken) {
+                showStatus('请输入Token', 'error');
+                return;
+            }
+            
+            localStorage.setItem('talk915_token', manualToken);
+            if (manualUserId) localStorage.setItem('talk915_userId', manualUserId);
+            localStorage.setItem('talk915_userName', '手动输入');
+            localStorage.setItem('talk915_login_data', JSON.stringify({
+                loginId: '手动输入',
+                loginTime: new Date().toISOString(),
+                token: manualToken,
+                userId: manualUserId || '手动输入',
+                userName: '手动输入'
+            }));
+            
+            updateCurrentStatus();
+            showStatus('✅ Token已保存到本地！现在可以切换到查询Tab了', 'success');
+        });
+        
+        // ============ VIP课表查询功能 ============
+        
+        // 查询单日短信
+        async function querySmsLog(date, pageSize = 1000) {
+            const token = getToken();
+            if (!token) throw new Error('未获取到token，请先登录');
+            
+            const payload = {
+                "phone": "",
+                "sendStartTime": date,
+                "sendEndTime": date,
+                "smsType": "31",
+                "status": "",
+                "channelType": "",
+                "userId": "",
+                "currPage": 0,
+                "pageSize": pageSize
+            };
+            
+            const resp = await fetchWithRetry('https://www.talk915.com/record/adminOperationLog/querySmsLogList', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/plain, */*',
+                    'User-Agent': navigator.userAgent,
+                    'Referer': 'https://www.talk915.com/admin/operationRecord/SmsRecord',
+                    'Origin': 'https://www.talk915.com',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'token': token
+                },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+            
+            return await resp.json();
+        }
+        
+        // 查询多天短信并自动处理totalCount>1000
+        async function queryAllSmsLogs(startStr, endStr) {
+            const dateList = generateDateList(startStr, endStr);
+            const all = [];
+            const seen = new Set();
+            
+            showStatus(`开始查询 ${dateList.length} 天的数据...`, 'info');
+            
+            for (let i = 0; i < dateList.length; i++) {
+                const date = dateList[i];
+                showProgress(i + 1, dateList.length, `查询日期 ${date}`);
+                
+                try {
+                    let data = await querySmsLog(date, 1000);
+                    if (data.resultCode !== 0) {
+                        console.warn(`日期 ${date} 查询失败:`, data.resultMessage);
+                        continue;
+                    }
+                    
+                    let records = data.resultData || [];
+                    let total = data.totalCount || 0;
+                    
+                    // 如果totalCount > 1000，用totalCount再查一次
+                    if (total > 1000 && records.length >= 1000) {
+                        showStatus(`日期 ${date} 数据量${total}条超过1000，进行全量查询...`, 'info');
+                        data = await querySmsLog(date, total);
+                        if (data.resultCode === 0) {
+                            records = data.resultData || [];
+                            total = data.totalCount || total;
+                        }
+                    }
+                    
+                    for (const r of records) {
+                        const key = `${r.userId}-${r.sendTime}-${r.messageId}`;
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            all.push({
+                                userId: r.userId,
+                                smsContent: r.smsContent || '',
+                                sendTime: r.sendTime || '',
+                                hidePhone: r.hidePhone || ''
+                            });
+                        }
+                    }
+                    
+                    showStatus(`日期 ${date}: 获取${records.length}条，累计${all.length}条`, 'info');
+                    await new Promise(r => setTimeout(r, 300 + Math.random() * 200));
+                } catch (err) {
+                    console.error(`日期 ${date} 查询异常:`, err);
+                    showStatus(`日期 ${date} 查询异常: ${err.message}`, 'error');
+                }
+            }
+            
+            hideProgress();
+            return all;
+        }
+        
+        // ===== 用户跟进人查询（三级查询，与主工具一致） =====
+        
+        // 动态延迟（与主工具一致，基础300ms，响应快则缩短、响应慢则延长）
+        let lastRespTime = 300;
+        async function dynamicDelay() {
+            // 基础300ms，比主工具稍快（主工具500ms基础），在安全范围内
+            let delay = 300;
+            if (lastRespTime > 800) {
+                delay = Math.min(1500, 300 + (lastRespTime - 800));
+            } else if (lastRespTime < 200) {
+                delay = Math.max(200, 300 - 100);
+            }
+            await new Promise(r => setTimeout(r, delay));
+        }
+        
+        // 判断结果是否为失败态（与主工具失败口径一致）
+        function isFailedFollowResult(result) {
+            return !result || result.remark === '查询失败' || result.remark === '未找到数据' || result.remark === '无权限查询' || result.remark === '查询异常';
+        }
+        
+        // 单条带重试的查询包装器（失败重查3次，指数退避）
+        async function queryFollowUpInfoWithRetry(userId, maxRetries = 3) {
+            let retries = 0;
+            let result;
+            
+            while (retries < maxRetries) {
+                try {
+                    result = await queryFollowUpInfo(userId);
+                    // 查询成功（不是失败态）立即返回
+                    if (!isFailedFollowResult(result)) return result;
+                } catch (e) {
+                    result = { userId, staffName: '-', staffUserId: '-', staffTalkId: '-', remark: '查询失败: ' + e.message };
+                }
+                
+                retries++;
+                if (retries < maxRetries) {
+                    const delay = 800 * Math.pow(2, retries); // 1600 → 3200ms
+                    console.warn(`用户 ${userId} 跟进人查询失败(${result ? result.remark : '未知'}), ${delay}ms 后第 ${retries} 次重试...`);
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
+            
+            return result; // 达到最大重试次数，返回最终结果
+        }
+        
+        async function queryFollowUpInfo(userId) {
+            if (followerInfoCache.has(userId)) return followerInfoCache.get(userId);
+            
+            const token = getToken();
+            let processedValue = userId.toString().replace(/\+/g, '').replace(/\s+/g, '');
+            if (processedValue.startsWith('86')) processedValue = processedValue.substring(2);
+            
+            let result = { userId, staffName: '-', staffUserId: '-', staffTalkId: '-', remark: '' };
+            
+            if (!token) { result.remark = '未获取到token'; return result; }
+            
+            try {
+                // ========== 第一次查询：公海池进出记录 ==========
+                const payload1 = {
+                    "userRegisterType": "", "teachCourse": "", "userInfo": processedValue,
+                    "staffInfo": "", "operatorInfo": "", "createStartTime": "", "createEndTime": "",
+                    "changeReason": "", "status": "", "currPage": 0, "pageSize": 10
+                };
+                
+                const _t1 = Date.now();
+                const resp1 = await fetchWithRetry('https://www.talk915.com/users/adminSeaPool/querySeaPoolFootfallRecord', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*',
+                        'User-Agent': navigator.userAgent,
+                        'Referer': 'https://www.talk915.com/admin/publicPoolManage/operationRecord/stuInAndOutRecord',
+                        'Origin': 'https://www.talk915.com', 'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Site': 'same-origin', 'token': token
+                    },
+                    body: JSON.stringify(payload1), credentials: 'include'
+                });
+                lastRespTime = Date.now() - _t1;
+                await dynamicDelay();
+                
+                const data1 = await resp1.json();
+                
+                if (data1.resultCode === 0 && data1.resultData && data1.resultData.length > 0) {
+                    const records = data1.resultData;
+                    records.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+                    const latest = records[0];
+                    
+                    if (latest.staffName) {
+                        result.staffName = latest.staffName || '-';
+                        result.staffUserId = latest.staffUserId || '-';
+                        result.staffTalkId = latest.staffTalkId || '-';
+                    } else if (records.length > 1) {
+                        result.staffName = records[1].staffName || '-';
+                        result.staffUserId = records[1].staffUserId || '-';
+                        result.staffTalkId = records[1].staffTalkId || '-';
+                        result.remark = '用户已退回公海';
+                    } else {
+                        result.remark = '公海未领取用户';
+                    }
+                    
+                    const staffRecs = records.filter(r => r.staffName);
+                    if (staffRecs.length > 0) {
+                        const fmtd = staffRecs.map(r => {
+                            const d = new Date(r.createTime);
+                            return `${formatDate(d)}:${r.staffName}`;
+                        }).join(', ');
+                        result.remark = result.remark ? `${result.remark}，${fmtd}` : fmtd;
+                    }
+                } else {
+                    // ========== 第二次查询：公海池跟进列表 ==========
+                    const queryFollowList = async (listType, remarkPrefix) => {
+                        const secondaryPayload = {
+                            "listType": listType, "sortType": 1, "userBindType": 1, "sortItem": 3,
+                            "seaNotDealNum": "", "contactType": "", "finalActiveStartTime": "",
+                            "finalActiveEndTime": "", "packagePast": "", "seaNotInteractNum": "",
+                            "shareUserId": "", "getTrialClass": "", "bindNotDealNum": "",
+                            "bindNotInteractNum": "", "remarkByAgent": "", "userInfo": processedValue,
+                            "staffInfo": "", "isAudition": "", "isDeal": "", "receiveStartTime": "",
+                            "receiveEndTime": "", "createStartTime": "", "createEndTime": "",
+                            "mobileArea": "", "teachCourse": "", "feedbackType": "",
+                            "salesmanTalkId": "", "isHasShareUserId": "", "changeReason": "",
+                            "status": "", "currPage": 0, "pageSize": 10
+                        };
+                        
+                        const _t2 = Date.now();
+                        const resp = await fetchWithRetry('https://www.talk915.com/users/adminSeaPool/querySeaPoolFollow', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*',
+                                'User-Agent': navigator.userAgent,
+                                'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList',
+                                'Origin': 'https://www.talk915.com', 'Sec-Fetch-Dest': 'empty',
+                                'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Site': 'same-origin', 'token': token
+                            },
+                            body: JSON.stringify(secondaryPayload), credentials: 'include'
+                        });
+                        lastRespTime = Date.now() - _t2;
+                        await dynamicDelay();
+                        
+                        const d = await resp.json();
+                        if (!(d.resultCode === 0 && d.resultData && d.resultData.length > 0)) return null;
+                        
+                        const rec = d.resultData[0];
+                        let sn = '-', su = '-', st = '-', found = false;
+                        if (rec.staffName) { sn = rec.staffName || '-'; su = rec.staffUserId || '-'; st = rec.staffTalkId || '-'; found = true; }
+                        
+                        const sRecs = d.resultData.filter(r => r.staffName);
+                        let remark = remarkPrefix;
+                        if (sRecs.length > 0) {
+                            const fmtd = sRecs.map(r => {
+                                const dt = new Date(r.createTime);
+                                return `${formatDate(dt)}:${r.staffName}`;
+                            }).join(', ');
+                            remark = `${remarkPrefix}，${fmtd}`;
+                        }
+                        if (!found) return null;
+                        return { userId, staffName: sn, staffUserId: su, staffTalkId: st, remark };
+                    };
+                    
+                    const fResult = await queryFollowList(1, '二次查询获取') || await queryFollowList(2, '二次查询获取(跟进记录)');
+                    if (fResult) {
+                        result = fResult;
+                    } else {
+                        result = await queryThirdLevel(processedValue, token, userId);
+                    }
+                }
+            } catch (e) {
+                console.error('跟进人查询异常:', e);
+                result = await queryThirdLevel(processedValue, token, userId);
+                if (!result.remark) result.remark = '查询异常';
+            }
+            
+            followerInfoCache.set(userId, result);
+            return result;
+        }
+        
+        // 第三次查询：推荐人 + 辅助查询
+        async function queryThirdLevel(processedValue, token, originalUserId) {
+            let result = { userId: originalUserId, staffName: '-', staffUserId: '-', staffTalkId: '-', remark: '' };
+            let targetId = processedValue;
+            let is11digit = /^\d{11}$/.test(processedValue);
+            
+            // 11位手机号先查userId
+            if (is11digit) {
+                try {
+                    const studentPayload = {
+                        "accountName": processedValue, "user": "", "date1": "", "date2": "", "majoy": "",
+                        "accountType": "-1", "isFreeClass": "0", "isPay": "0", "source": "-1",
+                        "isStuCategory": "0", "lid": "", "cooperativeUser": 1, "classesTool": "-1",
+                        "accountStatus": "0", "currPage": 0, "pageSize": 10
+                    };
+                    const _t3a = Date.now();
+                    const sResp = await fetchWithRetry('https://www.talk915.com/users/studentManage/queryStudentManageList', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': navigator.userAgent, 'Referer': 'https://www.talk915.com/admin/userManagement/student/stuManage', 'Origin': 'https://www.talk915.com', 'token': token },
+                        body: JSON.stringify(studentPayload), credentials: 'include'
+                    });
+                    lastRespTime = Date.now() - _t3a;
+                    await dynamicDelay();
+                    const sData = await sResp.json();
+                    if (sData.resultCode === 0 && sData.resultData && sData.resultData.length > 0) {
+                        targetId = sData.resultData[0].userId.toString();
+                    }
+                } catch (e) { console.error('查询userId失败:', e); }
+            }
+            
+            // 查推荐人
+            try {
+                const _t3b = Date.now();
+                const rResp = await fetchWithRetry(`https://www.talk915.com/users/studentManage/getRecommendedMsg/${targetId}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json, text/plain, */*', 'User-Agent': navigator.userAgent, 'Referer': 'https://www.talk915.com/admin/publicPoolManage/customerManage/followUpList', 'Origin': 'https://www.talk915.com', 'token': token },
+                    credentials: 'include'
+                });
+                lastRespTime = Date.now() - _t3b;
+                await dynamicDelay();
+                
+                if (rResp.status === 403) {
+                    result.remark = '无权限查询';
+                } else {
+                    const rData = await rResp.json();
+                    if (rData.resultCode === 0 && rData.resultData && (Array.isArray(rData.resultData) ? rData.resultData.length > 0 : true)) {
+                        if (Array.isArray(rData.resultData)) {
+                            const last = rData.resultData[rData.resultData.length - 1];
+                            result.staffName = last.userName || '-';
+                            result.staffUserId = last.userId || '-';
+                            result.staffTalkId = last.talkId || '-';
+                            result.remark = rData.resultData.map(i => `${i.userType || '-'}-${i.userName || '-'}-${i.userId || '-'}-${i.talkId || '-'}`).join('；');
+                        } else {
+                            const msg = rData.resultData;
+                            result.staffName = msg.userName || '-';
+                            result.staffUserId = msg.userId || '-';
+                            result.staffTalkId = msg.talkId || '-';
+                            result.remark = `${msg.userType || '-'}-${result.staffName}-${result.staffUserId}-${result.staffTalkId}`;
+                        }
+                    } else {
+                        result = await queryAuxiliary(targetId, token, originalUserId);
+                    }
+                }
+            } catch (e) {
+                console.error('推荐人查询失败:', e);
+                result = await queryAuxiliary(targetId, token, originalUserId);
+            }
+            
+            return result;
+        }
+        
+        // 辅助查询：viewUserBelong
+        async function queryAuxiliary(targetId, token, originalUserId) {
+            let result = { userId: originalUserId, staffName: '-', staffUserId: '-', staffTalkId: '-', remark: '无最初推荐人' };
+            let followUser = '-', followDealer = '-', hasValid = false;
+            
+            try {
+                // viewType=2 业务员
+                const _t4a = Date.now();
+                const salesResp = await fetchWithRetry('https://www.talk915.com/users/studentManage/viewUserBelong', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': navigator.userAgent, 'Referer': 'https://www.talk915.com/admin/userManagement/student/stuManage', 'Origin': 'https://www.talk915.com', 'token': token },
+                    body: JSON.stringify({ userId: parseInt(targetId), viewType: 2 }), credentials: 'include'
+                });
+                lastRespTime = Date.now() - _t4a;
+                await dynamicDelay();
+                const sData = await salesResp.json();
+                if (sData.resultCode === 0 && sData.resultData && sData.resultData.followUser) {
+                    followUser = sData.resultData.followUser; hasValid = true;
+                }
+                
+                // viewType=1 经销商
+                const _t4b = Date.now();
+                const dealerResp = await fetchWithRetry('https://www.talk915.com/users/studentManage/viewUserBelong', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': navigator.userAgent, 'Referer': 'https://www.talk915.com/admin/userManagement/student/stuManage', 'Origin': 'https://www.talk915.com', 'token': token },
+                    body: JSON.stringify({ userId: parseInt(targetId), viewType: 1 }), credentials: 'include'
+                });
+                lastRespTime = Date.now() - _t4b;
+                await dynamicDelay();
+                const dData = await dealerResp.json();
+                if (dData.resultCode === 0 && dData.resultData && dData.resultData.followUser) {
+                    followDealer = dData.resultData.followUser; hasValid = true;
+                }
+                
+                if (hasValid) {
+                    result.staffName = followUser;
+                    result.staffTalkId = followDealer;
+                }
+            } catch (e) { console.error('辅助查询失败:', e); }
+            
+            return result;
+        }
+        
+        // ===== 表格渲染 =====
+        function renderTable() {
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
+            
+            for (let i = 0; i < smsRecords.length; i++) {
+                const r = smsRecords[i];
+                const f = r.followerInfo || { staffName: '-', staffUserId: '-', staffTalkId: '-', remark: '-' };
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${r.userId}</td>
+                    <td style="max-width: 500px; white-space: normal;">${r.smsContent}</td>
+                    <td>${f.staffName}</td>
+                    <td>${f.staffUserId}</td>
+                    <td>${f.staffTalkId}</td>
+                    <td style="max-width: 300px; white-space: normal;">${f.remark || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+            
+            document.getElementById('tableSection').style.display = 'block';
+            updateStats();
+        }
+        
+        function updateStats() {
+            const el = document.getElementById('statsInfo');
+            if (smsRecords.length === 0) { el.style.display = 'none'; return; }
+            
+            let infoText = `共查询到 <strong>${smsRecords.length}</strong> 条VIP课表到期记录`;
+            if (smsRecords[0].followerInfo !== undefined) {
+                const withF = smsRecords.filter(r => r.followerInfo && r.followerInfo.staffName && r.followerInfo.staffName !== '-').length;
+                infoText += ` | 有跟进人: <strong>${withF}</strong> | 无跟进人/公海: <strong>${smsRecords.length - withF}</strong>`;
+            } else {
+                infoText += ' （尚未查询跟进人）';
+            }
+            el.innerHTML = infoText;
+            el.style.display = 'block';
+        }
+        
+        // ===== 事件绑定 =====
+        
+        // 页面加载 —— 解析 URL 参数，支持 ?user=xxx&pass=xxx&type=day|week|month 或 ?user=xxx&pass=xxx&start=2026-11-01&end=2026-11-05
+        window.addEventListener('load', async function() {
+            // 1. 默认日期 = 前一日
+            document.getElementById('startDate').value = getYesterdayDateStr();
+            document.getElementById('endDate').value = getYesterdayDateStr();
+            updateCurrentStatus();
+            
+            // 2. 解析 URL 参数
+            const params = new URLSearchParams(window.location.search);
+            const autoUser = params.get('user') || params.get('username');
+            const autoPass = params.get('pass') || params.get('password');
+            
+            if (!autoUser || !autoPass) {
+                // 没有 URL 参数，正常手动操作模式
+                return;
+            }
+            
+            // ===== 有 user+pass → 自动执行完整流程 =====
+            showStatus('🔧 检测到 URL 参数，开始自动执行...', 'info');
+            
+            // 解析导出范围参数
+            const exportScope = (params.get('export') || 'emp').toLowerCase();
+            const exportEmpOnlyCheckbox = document.getElementById('exportEmpOnly');
+            if (exportScope === 'all') {
+                exportEmpOnlyCheckbox.checked = false;
+                showStatus('📦 URL 参数 export=all → 导出全部记录', 'info');
+            } else {
+                exportEmpOnlyCheckbox.checked = true;
+                showStatus('📦 默认仅导出 emp 开头的顾问', 'info');
+            }
+            
+            // 2a. 计算日期范围
+            const type = (params.get('type') || 'day').toLowerCase();
+            let startStr = params.get('start');
+            let endStr = params.get('end');
+            
+            const today = new Date();
+            const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+            
+            if (startStr && endStr) {
+                // 自定义范围
+            } else if (type === 'week' || type === 'lastweek') {
+                // 前一周 周一~周日
+                const monday = new Date();
+                monday.setDate(today.getDate() - today.getDay() - 6); // 上一个周一
+                const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+                startStr = formatDate(monday);
+                endStr = formatDate(sunday);
+            } else if (type === 'month') {
+                // 本月 1号 ~ 今天
+                startStr = formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
+                endStr = formatDate(today);
+            } else {
+                // 默认 day → 前一日
+                startStr = formatDate(yesterday);
+                endStr = formatDate(yesterday);
+            }
+            
+            document.getElementById('startDate').value = startStr;
+            document.getElementById('endDate').value = endStr;
+            showStatus(`📅 自动设置日期范围: ${startStr} ~ ${endStr}`, 'info');
+            
+            // 2b. 自动登录
+            showStatus(`🔑 自动登录用户: ${autoUser} ...`, 'info');
+            try {
+                const loginRes = await doLogin(autoUser, autoPass);
+                if (!loginRes.success) {
+                    showStatus('❌ 自动登录失败: ' + loginRes.msg + '，请检查用户名密码', 'error');
+                    document.getElementById('tabLogin').click();
+                    return;
+                }
+                showStatus('✅ 自动登录成功！', 'success');
+            } catch (e) {
+                showStatus('❌ 自动登录异常: ' + e.message, 'error');
+                return;
+            }
+            
+            // 2c. 切换到查询 Tab
+            document.getElementById('tabQuery').click();
+            
+            // 2d. 自动查询短信
+            showStatus('📊 自动查询 VIP 课表到期记录...', 'info');
+            try {
+                smsRecords = await queryAllSmsLogs(startStr, endStr);
+                for (const r of smsRecords) r.followerInfo = undefined;
+                if (smsRecords.length === 0) {
+                    showStatus('❌ 查询完成但无数据，终止自动流程', 'error');
+                    return;
+                }
+                renderTable();
+                showStatus(`✅ 短信查询完成，共 ${smsRecords.length} 条记录`, 'success');
+            } catch (err) {
+                showStatus('❌ 短信查询异常: ' + err.message, 'error');
+                return;
+            }
+            
+            // 2e. 自动查询跟进人
+            const uniqueIds = [...new Set(smsRecords.map(r => r.userId))];
+            const total = uniqueIds.length;
+            showStatus(`👤 自动查询 ${total} 个用户的跟进人信息...`, 'info');
+            showProgress(0, total, '自动查询跟进人');
+            let failCount = 0;
+            
+            for (const uid of uniqueIds) {
+                const info = await queryFollowUpInfoWithRetry(uid, 3);
+                if (isFailedFollowResult(info)) failCount++;
+                for (const r of smsRecords) if (r.userId === uid) r.followerInfo = info;
+                showProgress(uniqueIds.indexOf(uid) + 1, total, '自动查询跟进人');
+            }
+            hideProgress();
+            renderTable();
+            showStatus(`✅ 跟进人查询完成（失败 ${failCount}/${total}）`, failCount > 0 ? 'error' : 'success');
+            
+            // 2f. 自动导出 Excel
+            showStatus('⬇️ 自动导出 Excel...', 'info');
+            document.getElementById('exportBtn').click();
+            showStatus('🎉 自动执行完成！Excel 已触发下载', 'success');
+        });
+        
+        // 查询短信记录
+        document.getElementById('queryBtn').addEventListener('click', async function() {
+            if (!getToken()) {
+                showStatus('⚠️ 未登录！请先切换到「登录」Tab完成登录', 'error');
+                document.getElementById('tabLogin').click();
+                return;
+            }
+            
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (!start || !end) { showStatus('请选择查询日期范围', 'error'); return; }
+            if (start > end) { showStatus('开始日期不能晚于结束日期', 'error'); return; }
+            
+            const btn = this;
+            btn.disabled = true; btn.textContent = '查询中...';
+            
+            try {
+                smsRecords = await queryAllSmsLogs(start, end);
+                for (const r of smsRecords) r.followerInfo = undefined;
+                
+                if (smsRecords.length === 0) {
+                    showStatus('查询完成，未找到VIP课表到期记录', 'info');
+                    document.getElementById('tableSection').style.display = 'none';
+                    document.getElementById('statsInfo').style.display = 'none';
+                } else {
+                    renderTable();
+                    showStatus(`✅ 查询完成，共获取${smsRecords.length}条VIP课表到期记录！点击「查询跟进人信息」继续处理`, 'success');
+                }
+            } catch (err) {
+                console.error('查询异常:', err);
+                showStatus('查询异常: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '📊 查询VIP课表到期记录';
+            }
+        });
+        
+        // 查询跟进人 —— 严格串行 + 失败重试（与主工具 queryFollowUpInfoWorkerPool 机制一致）
+        document.getElementById('queryFollowerBtn').addEventListener('click', async function() {
+            if (!getToken()) {
+                showStatus('⚠️ 未登录！请先切换到「登录」Tab完成登录', 'error');
+                document.getElementById('tabLogin').click();
+                return;
+            }
+            if (smsRecords.length === 0) { showStatus('请先查询VIP课表到期记录', 'error'); return; }
+            
+            const btn = this;
+            btn.disabled = true; btn.textContent = '查询中...';
+            
+            // ID去重，重复ID只查一次
+            const uniqueIds = [...new Set(smsRecords.map(r => r.userId))];
+            const total = uniqueIds.length;
+            showStatus(`开始查询 ${total} 个唯一用户的跟进人信息（严格串行，每条自动重试3次）...`, 'info');
+            showProgress(0, total, '查询跟进人');
+            
+            let completed = 0;
+            let failCount = 0;
+            
+            // 严格串行：for...of + await，确保一条完成后再下一条
+            // 单条内部 API 间由 dynamicDelay 控制间隔（200~1500ms 动态调整）
+            // 外层不加额外延时，避免与内部延时叠加造成整体过慢
+            for (const uid of uniqueIds) {
+                // 带重试的查询
+                const info = await queryFollowUpInfoWithRetry(uid, 3);
+                
+                // 失败计数
+                if (isFailedFollowResult(info)) failCount++;
+                
+                // 结果写入所有相同userId的记录
+                for (const r of smsRecords) if (r.userId === uid) r.followerInfo = info;
+                
+                completed++;
+                showProgress(completed, total, '查询跟进人');
+            }
+            
+            hideProgress();
+            renderTable();
+            
+            // 聚合结果提示
+            let summary = `✅ 跟进人信息查询完成！共 ${total} 个唯一用户`;
+            if (failCount > 0) summary += `，其中 ${failCount} 个查询失败/无权限（已重试3次）`;
+            summary += '，可以导出Excel了';
+            showStatus(summary, failCount > 0 ? 'error' : 'success');
+            
+            btn.disabled = false; btn.textContent = '👤 查询跟进人信息';
+        });
+        
+        // 导出Excel（根据开关筛选：仅保留 emp 开头的顾问empID）
+        function doExport() {
+            if (smsRecords.length === 0) { showStatus('没有数据可以导出', 'error'); return; }
+            
+            const empOnly = document.getElementById('exportEmpOnly').checked;
+            let filtered = smsRecords;
+            
+            if (empOnly) {
+                filtered = smsRecords.filter(r => {
+                    const talkId = (r.followerInfo && r.followerInfo.staffTalkId) || '';
+                    return /^emp/i.test(String(talkId).trim());
+                });
+            }
+            
+            if (filtered.length === 0) {
+                showStatus(empOnly 
+                    ? `筛选后 0 条符合条件（emp开头），共 ${smsRecords.length} 条无匹配。请关闭开关后再导出。`
+                    : '没有数据可以导出',
+                    'error');
+                return;
+            }
+            
+            const data = filtered.map((r, i) => {
+                const f = r.followerInfo || { staffName: '-', staffUserId: '-', staffTalkId: '-', remark: '-' };
+                return {
+                    '序号': i + 1,
+                    '用户编号 userId': r.userId,
+                    '短信内容 smsContent': r.smsContent,
+                    '顾问姓名': f.staffName,
+                    '顾问ID': f.staffUserId,
+                    '顾问empID': f.staffTalkId,
+                    '备注': f.remark || '-'
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [
+                { wch: 6 }, { wch: 12 }, { wch: 65 },
+                { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 35 }
+            ];
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'VIP课表到期人员');
+            
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            const now = new Date();
+            const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+            const suffix = empOnly ? '_仅emp开头' : '_全部';
+            XLSX.writeFile(wb, `VIP课表到期人员_${start}_${end}${suffix}_${ts}.xlsx`);
+            
+            const msg = empOnly
+                ? `✅ 导出成功（仅emp开头 ${filtered.length} / 总 ${smsRecords.length}）`
+                : `✅ 导出成功（全部 ${filtered.length} 条）`;
+            showStatus(msg, 'success');
+        }
+        
+        document.getElementById('exportBtn').addEventListener('click', doExport);
+        
+        // 清空
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            smsRecords = [];
+            followerInfoCache.clear();
+            document.getElementById('resultTableBody').innerHTML = '';
+            document.getElementById('tableSection').style.display = 'none';
+            document.getElementById('statsInfo').style.display = 'none';
+            hideProgress();
+            showStatus('数据已清空', 'info');
+        });
+    </script>
+</body>
+</html>
