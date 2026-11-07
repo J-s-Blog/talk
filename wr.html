@@ -528,6 +528,9 @@
                         <label class="unread-toggle" title="勾选后仅显示当前账号未阅读的文章（已读状态在列表加载后自动检查，并逐步生效）">
                             <input type="checkbox" id="unreadFilter" onchange="onNewsFilterChange()">只看未读
                         </label>
+                        <label class="unread-toggle" title="勾选后打开文章会自动标记为已学习（默认不勾选，避免增加已读数量统计）">
+                            <input type="checkbox" id="autoMarkRead" onchange="onAutoMarkReadChange()">自动已读
+                        </label>
                     </div>
                     <div class="news-bulk-bar" id="newsBulkBar">
                         <span class="bulk-count" id="newsBulkCount">☑ 已选 0 篇</span>
@@ -2605,7 +2608,26 @@ function renderNewsDetail(d, panelId = 'newsDetailPanel', opts = {}) {
 }
 
 // ==================== 已学习清单 / 标记已读 ====================
-// 打开文章后自动执行：获取已学习人员清单；若当前登录用户不在清单中，则调用接口标记为已读并刷新清单
+// 判断是否开启了自动已读开关（读取文章时是否自动标记为已学习）
+function isAutoMarkReadOn() {
+    return document.getElementById('autoMarkRead')?.checked === true;
+}
+// 自动已读开关变更：持久化到 localStorage，下次打开自动恢复
+function onAutoMarkReadChange() {
+    try { localStorage.setItem('kc_autoMarkRead', String(isAutoMarkReadOn())); } catch (e) {}
+}
+// 启动时恢复自动已读开关状态（默认不勾选）
+(function restoreAutoMarkRead() {
+    try {
+        const saved = localStorage.getItem('kc_autoMarkRead');
+        if (saved !== null) {
+            const el = document.getElementById('autoMarkRead');
+            if (el) el.checked = saved === 'true';
+        }
+    } catch (e) {}
+})();
+
+// 打开文章后自动执行：获取已学习人员清单；若当前登录用户不在清单中，则根据开关决定是否标记已读
 async function ensureLearnList(postId) {
     try {
         let users = await fetchLearnList(postId);
@@ -2624,7 +2646,8 @@ async function ensureLearnList(postId) {
         // 同步已读缓存：自己发的记为 'self'（不显示已读徽章、也不算未读），已学习记为 true（均持久化）
         if (isSelfAuthor) setNewsRead(postId, 'self');
         else if (selfLearned) setNewsRead(postId, true);
-        if (!selfLearned && !isSelfAuthor) {
+        // 未读且非自己发的帖子：仅当开关勾选时才自动标记已读
+        if (!selfLearned && !isSelfAuthor && isAutoMarkReadOn()) {
             const ok = await markArticleRead(postId);
             if (ok) {
                 setNewsRead(postId, true); // 未读→已读的变化也记录到本地缓存
