@@ -472,6 +472,9 @@
                     <option value="300">每页300</option>
                     <option value="all">全部</option>
                 </select>
+                <label class="unread-toggle" id="autoMarkReadWrap" style="display:none; align-items:center; gap:4px; font-size:12px; height:32px; padding:0 6px; border:2px solid #e0e0e0; border-radius:10px; background:#fafafa; cursor:pointer; white-space:nowrap; box-sizing:border-box;" title="勾选后打开文章会自动标记为已学习（默认不勾选，避免增加已读数量统计）">
+                    <input type="checkbox" id="autoMarkRead" onchange="onAutoMarkReadChange()" style="margin:0; cursor:pointer;">自动已读
+                </label>
             </div>
             <div class="cred-group">
                 <input type="text" id="phoneInput" class="cred-input" placeholder="登录账号" autocomplete="username" title="登录账号（可修改）">
@@ -527,9 +530,6 @@
                         <input type="search" id="newsSearch" placeholder="搜索标题/作者" oninput="onNewsFilterChange()" title="输入后可点击右侧 ✕ 一键清除">
                         <label class="unread-toggle" title="勾选后仅显示当前账号未阅读的文章（已读状态在列表加载后自动检查，并逐步生效）">
                             <input type="checkbox" id="unreadFilter" onchange="onNewsFilterChange()">未读
-                        </label>
-                        <label class="unread-toggle" title="勾选后打开文章会自动标记为已学习（默认不勾选，避免增加已读数量统计）">
-                            <input type="checkbox" id="autoMarkRead" onchange="onAutoMarkReadChange()">自动已读
                         </label>
                     </div>
                     <div class="news-bulk-bar" id="newsBulkBar">
@@ -1637,6 +1637,7 @@ function switchView(view) {
     document.getElementById('tabBtnExport').style.display = isWeekly ? '' : 'none';
     document.getElementById('loadNewsBtn').style.display = isNews ? '' : 'none';
     document.getElementById('newsPageSizeSel').style.display = isNews ? '' : 'none';
+    document.getElementById('autoMarkReadWrap').style.display = isNews ? 'inline-flex' : 'none';
     document.getElementById('loadMsgBtn').style.display = isMsg ? '' : 'none';
     // 日期范围仅周报视图需要
     document.getElementById('dateRangeWrap').style.display = isWeekly ? '' : 'none';
